@@ -1,0 +1,174 @@
+/**
+ * Parity guard for the Phase 1 data-model generalization (issues #3-#7).
+ *
+ * `DERIVED_STATS_BASELINE` was captured from the pre-generalization
+ * implementation. Every rename commit and, most importantly, the data-driven
+ * rewrite in #6 must keep these numbers identical for the Afterworlds
+ * ruleset — if a case here moves, user-visible stat numbers moved with it.
+ */
+import { AVAILABLE_PERKS, PerkTag } from '@/models/gameData';
+import { SPECIES_BASE_STATS, type Species } from '@/models/speciesTypes';
+import { calculateDerivedStats } from '@/utils/derivedStats';
+import type { Cyberware, GameCharacter } from '@/models/types';
+import { DERIVED_STATS_BASELINE } from '../fixtures/derivedStatsBaseline';
+
+const TS = '2026-01-01T00:00:00.000Z';
+
+/**
+ * Pristine copy of the base stats, taken at import time before anything has
+ * had a chance to mutate them. The pre-#6 implementation applies cyberware
+ * cap modifiers straight onto the shared SPECIES_BASE_STATS entries, so
+ * without restoring between cases the evaluation order of this file would
+ * leak caps from one character into the next. Becomes a no-op once #6 stops
+ * mutating shared state.
+ */
+const PRISTINE_BASE_STATS: Record<string, Record<string, unknown>> = JSON.parse(
+  JSON.stringify(SPECIES_BASE_STATS)
+);
+
+const restoreBaseStats = (): void => {
+  Object.entries(PRISTINE_BASE_STATS).forEach(([species, stats]) => {
+    Object.assign(SPECIES_BASE_STATS[species as Species], stats);
+  });
+};
+
+const make = (
+  species: Species,
+  perkIds: string[],
+  cyberware?: Cyberware[]
+): GameCharacter =>
+  ({
+    id: 'c',
+    name: 'c',
+    species,
+    perkIds,
+    distinctionIds: [],
+    factions: [],
+    relationships: [],
+    cyberware,
+    createdAt: TS,
+    updatedAt: TS,
+  }) as GameCharacter;
+
+/** Unrestricted perks of a tag, in declaration order. */
+const openPerksByTag = (tag: PerkTag, n: number): string[] =>
+  AVAILABLE_PERKS.filter(p => p.tag === tag && !p.allowedSpecies)
+    .slice(0, n)
+    .map(p => p.id);
+
+const MUTANT_RESTRICTED = ['agility_15', 'charisma_17'];
+
+const CAP_CYBERWARE: Cyberware[] = [
+  {
+    name: 'Reinforced Frame',
+    description: '',
+    statModifiers: { healthCap: 3, limitCap: 2, health: 5, limit: 5 },
+  },
+] as Cyberware[];
+
+/** The full case matrix, keyed to match the baseline fixture. */
+export const buildParityCases = (): Record<string, GameCharacter> => {
+  const cases: Record<string, GameCharacter> = {};
+
+  (Object.keys(SPECIES_BASE_STATS) as Species[]).forEach(s => {
+    cases[`bare:${s}`] = make(s, []);
+  });
+
+  [3, 6, 10].forEach(n => {
+    cases[`endurance${n}:Human`] = make(
+      'Human',
+      openPerksByTag(PerkTag.Endurance, n)
+    );
+  });
+
+  const openAgility = openPerksByTag(PerkTag.Agility, 3);
+  cases['pm:restricted'] = make('Perfect Mutant', [
+    ...MUTANT_RESTRICTED,
+    ...openAgility,
+  ]);
+  cases['mutant:restricted'] = make('Mutant', [
+    ...MUTANT_RESTRICTED,
+    ...openAgility,
+  ]);
+
+  cases['perkCaps:Human'] = make('Human', ['smarts_20']);
+  cases['perkCapsDiscriminating'] = make('Human', [
+    'smarts_20',
+    ...openPerksByTag(PerkTag.Smarts, 10),
+  ]);
+
+  cases['cyberCaps:Human'] = make('Human', [], CAP_CYBERWARE);
+  cases['afterCyber:Human'] = make('Human', []);
+  cases['afterCyber:endurance10'] = make(
+    'Human',
+    openPerksByTag(PerkTag.Endurance, 10)
+  );
+
+  cases['cyberTags:Human'] = make('Human', [], [
+    {
+      name: 'Targeting Suite',
+      description: '',
+      statModifiers: { tagModifiers: { [PerkTag.Agility]: 3 } },
+    },
+  ] as Cyberware[]);
+
+  return cases;
+};
+
+describe('derived stats — Afterworlds parity', () => {
+  const cases = buildParityCases();
+
+  it('covers every baseline case', () => {
+    expect(Object.keys(cases).sort()).toEqual(
+      Object.keys(DERIVED_STATS_BASELINE).sort()
+    );
+  });
+
+  beforeEach(restoreBaseStats);
+
+  Object.entries(cases).forEach(([label, character]) => {
+    it(`matches the baseline for ${label}`, () => {
+      const stats = calculateDerivedStats(character);
+      const expected = DERIVED_STATS_BASELINE[label];
+
+      expect(stats.maxHealth).toBe(expected.maxHealth);
+      expect(stats.maxLimit).toBe(expected.maxLimit);
+      expect(Object.fromEntries(stats.tagScores ?? new Map())).toEqual(
+        expected.tagScores
+      );
+    });
+  });
+});
+
+describe('derived stats — shared base-stat mutation (issue #6)', () => {
+  beforeEach(restoreBaseStats);
+
+  /**
+   * Regression guard for derivedStats.ts:79-83. Cap modifiers were applied
+   * to `SPECIES_BASE_STATS[species]` directly, which is a shared reference,
+   * so one character's cyberware permanently raised the cap for every other
+   * character of that species in the same process.
+   *
+   * Deliberately does NOT restore base stats between the two calls inside
+   * the test — that leak is exactly what is being asserted against.
+   *
+   * Marked `it.failing` until #6 lands: it documents the bug and Jest will
+   * error the moment the leak is fixed, forcing this to flip to a plain
+   * `it` rather than being quietly forgotten.
+   */
+  it.failing(
+    'does not leak a cap bonus onto other characters of the same archetype',
+    () => {
+      // A Human whose raw health (6) exceeds Human's real healthCap of 5.
+      const plain = make('Human', openPerksByTag(PerkTag.Endurance, 10));
+      const before = calculateDerivedStats(plain).maxHealth;
+
+      calculateDerivedStats(make('Human', [], CAP_CYBERWARE));
+
+      const after = calculateDerivedStats(plain).maxHealth;
+
+      expect(before).toBe(5);
+      expect(after).toBe(before);
+    }
+  );
+});
