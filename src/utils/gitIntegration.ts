@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import { Buffer } from 'buffer';
 import { exportDataset, applyMergedDataset } from './characterStorage';
 import { normalizeDatasetRulesetFields } from './rulesetFieldMigration';
+import { afterworldsRuleset } from '@/ruleset';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { classifySyncError, SyncError, SyncErrorKind } from './syncErrors';
 import {
@@ -549,7 +550,7 @@ export const exportToGitHub = async (
       title: `Data export by ${user.login}`,
       head: branchName,
       base: DATA_REPO_BRANCH,
-      body: `Automated data export from Junktown Intelligence.
+      body: `Automated data export from ${afterworldsRuleset.branding.appName}.
 
 **Export Details:**
 - User: ${user.login}

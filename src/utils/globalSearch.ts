@@ -244,7 +244,7 @@ const searchQuests = (
       [
         quest.details,
         quest.notes,
-        quest.junktownOffice,
+        quest.sponsor,
         ...(quest.factionNames ?? []),
       ],
       query

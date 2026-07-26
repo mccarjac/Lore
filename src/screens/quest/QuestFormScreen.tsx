@@ -80,7 +80,7 @@ interface QuestFormData {
   locationId: string;
   factionNames: string[];
   eventIds: string[];
-  junktownOffice: string;
+  sponsor: string;
   requiredMaterials: QuestMaterial[];
   teamSize: string;
   notes: string;
@@ -98,7 +98,7 @@ const emptyFormData = (): QuestFormData => ({
   locationId: '',
   factionNames: [],
   eventIds: [],
-  junktownOffice: '',
+  sponsor: '',
   requiredMaterials: [],
   teamSize: '',
   notes: '',
@@ -263,7 +263,7 @@ export const QuestFormScreen: React.FC = () => {
         locationId: quest.locationId || '',
         factionNames: quest.factionNames || [],
         eventIds: quest.eventIds || [],
-        junktownOffice: quest.junktownOffice || '',
+        sponsor: quest.sponsor || '',
         requiredMaterials: quest.requiredMaterials || [],
         teamSize: quest.teamSize !== undefined ? String(quest.teamSize) : '',
         notes: quest.notes || '',
@@ -413,7 +413,7 @@ export const QuestFormScreen: React.FC = () => {
         locationId: formData.locationId || undefined,
         factionNames: formData.factionNames,
         eventIds: formData.eventIds,
-        junktownOffice: formData.junktownOffice.trim() || undefined,
+        sponsor: formData.sponsor.trim() || undefined,
         requiredMaterials: formData.requiredMaterials,
         teamSize:
           formData.teamSize && !isNaN(parsedTeamSize)
@@ -692,19 +692,17 @@ export const QuestFormScreen: React.FC = () => {
         />
       </View>
 
-      {/* Junktown office */}
+      {/* Quest sponsor */}
       <View style={styles.section}>
         <Text style={styles.label}>
           Related {label('questSponsor.singular')}
         </Text>
         <TextInput
           style={styles.input}
-          placeholder="Office name (optional)"
+          placeholder={`${label('questSponsor.singular')} name (optional)`}
           placeholderTextColor={themeColors.text.muted}
-          value={formData.junktownOffice}
-          onChangeText={junktownOffice =>
-            setFormData({ ...formData, junktownOffice })
-          }
+          value={formData.sponsor}
+          onChangeText={sponsor => setFormData({ ...formData, sponsor })}
         />
       </View>
 

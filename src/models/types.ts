@@ -176,7 +176,7 @@ export interface GameQuest {
   locationId?: string; // Reference to GameLocation.id
   factionNames?: string[]; // Faction names related to the quest
   eventIds?: string[]; // References to GameEvent.id
-  junktownOffice?: string; // Related Junktown office (free text)
+  sponsor?: string; // Who commissioned the quest (free text)
   requiredMaterials?: QuestMaterial[];
   teamSize?: number; // Desired team size for proposal generation
   notes?: string;

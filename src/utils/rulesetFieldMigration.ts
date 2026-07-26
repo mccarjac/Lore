@@ -31,6 +31,11 @@ const CHARACTER_RENAMES: Record<string, string> = {
   cyberware: 'modifications', // #5
 };
 
+/** old field name -> current field name, applied to a stored quest. */
+const QUEST_RENAMES: Record<string, string> = {
+  junktownOffice: 'sponsor', // #7
+};
+
 /** old field name -> current field name, applied to quest preferences. */
 const PREFERENCE_RENAMES: Record<string, string> = {
   species: 'archetypeIds', // #3
@@ -161,17 +166,20 @@ const normalizePreferences = (
  * already current.
  */
 export const normalizeQuestRulesetFields = (quest: GameQuest): GameQuest => {
+  const renamed = applyRenames(quest as unknown as LooseRecord, QUEST_RENAMES);
+  const base = (renamed ?? quest) as unknown as GameQuest;
+
   const desirable = normalizePreferences(
-    quest.desirable as LooseRecord | undefined
+    base.desirable as LooseRecord | undefined
   );
   const undesirable = normalizePreferences(
-    quest.undesirable as LooseRecord | undefined
+    base.undesirable as LooseRecord | undefined
   );
 
-  if (!desirable.changed && !undesirable.changed) return quest;
+  if (!renamed && !desirable.changed && !undesirable.changed) return quest;
 
   return {
-    ...quest,
+    ...base,
     desirable: desirable.value,
     undesirable: undesirable.value,
   } as GameQuest;

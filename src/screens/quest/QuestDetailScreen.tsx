@@ -209,12 +209,12 @@ export const QuestDetailScreen: React.FC = () => {
             <Text style={styles.overviewValue}>{quest.locationName}</Text>
           </View>
         )}
-        {quest.junktownOffice && (
+        {quest.sponsor && (
           <View style={styles.overviewRow}>
             <Text style={styles.overviewLabel}>
               {label('questSponsor.singular')}
             </Text>
-            <Text style={styles.overviewValue}>{quest.junktownOffice}</Text>
+            <Text style={styles.overviewValue}>{quest.sponsor}</Text>
           </View>
         )}
       </Section>

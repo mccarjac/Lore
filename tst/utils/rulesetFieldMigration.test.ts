@@ -147,6 +147,27 @@ describe('normalizeQuestRulesetFields', () => {
     expect(result.desirable?.qualityIds).toEqual(['d1']);
   });
 
+  it('rewrites junktownOffice to sponsor (#7)', () => {
+    const result = normalizeQuestRulesetFields(
+      quest({ junktownOffice: 'Scrap Office' } as unknown as Partial<GameQuest>)
+    );
+
+    expect(result.sponsor).toBe('Scrap Office');
+    expect('junktownOffice' in result).toBe(false);
+  });
+
+  it('keeps sponsor when a stale junktownOffice is also present', () => {
+    const result = normalizeQuestRulesetFields(
+      quest({
+        sponsor: 'New',
+        junktownOffice: 'Old',
+      } as unknown as Partial<GameQuest>)
+    );
+
+    expect(result.sponsor).toBe('New');
+    expect('junktownOffice' in result).toBe(false);
+  });
+
   it('returns the same reference when already migrated', () => {
     const input = quest({ desirable: { archetypeIds: ['Human'] } });
     expect(normalizeQuestRulesetFields(input)).toBe(input);
