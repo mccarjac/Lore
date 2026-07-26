@@ -24,6 +24,7 @@ import {
   GameLocation,
   Relationship,
   RelationshipStanding,
+  Modification,
 } from '@models/types';
 import { SPECIES_BASE_STATS } from '@models/speciesTypes';
 import {
@@ -43,6 +44,49 @@ import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { BaseFormScreen } from '@/components';
 import { useLabels, useRuleset } from '@/ruleset';
+
+/**
+ * Modification resource modifiers are nested under `values`/`caps` keyed by
+ * resource id since #5, so a flat `{ ...cyber.statModifiers, health: n }`
+ * spread no longer works. These keep the per-input update readable without
+ * restructuring the editor — #8 replaces this whole section with a loop over
+ * `ruleset.resources`.
+ */
+const setResourceModifier = (
+  modification: Modification,
+  group: 'values' | 'caps',
+  resourceId: string,
+  numValue: number | undefined
+): Modification => {
+  const existing = modification.resourceModifiers ?? {};
+  const groupValues = { ...(existing[group] ?? {}) };
+
+  if (numValue === undefined) {
+    delete groupValues[resourceId];
+  } else {
+    groupValues[resourceId] = numValue;
+  }
+
+  return {
+    ...modification,
+    resourceModifiers: {
+      ...existing,
+      [group]: Object.keys(groupValues).length > 0 ? groupValues : undefined,
+    },
+  };
+};
+
+const setCategoryModifiers = (
+  modification: Modification,
+  categoryModifiers: Record<string, number>
+): Modification => ({
+  ...modification,
+  resourceModifiers: {
+    ...(modification.resourceModifiers ?? {}),
+    categoryModifiers:
+      Object.keys(categoryModifiers).length > 0 ? categoryModifiers : undefined,
+  },
+});
 
 type CharacterFormRouteProp = RouteProp<RootStackParamList, 'CharacterForm'>;
 
@@ -72,7 +116,7 @@ export const CharacterFormScreen: React.FC = () => {
           name: editingCharacter.name,
           archetypeId: editingCharacter.archetypeId,
           traitIds: [...editingCharacter.traitIds],
-          distinctionIds: [...editingCharacter.distinctionIds],
+          qualityIds: [...editingCharacter.qualityIds],
           factions: [...editingCharacter.factions],
           relationships: [...(editingCharacter.relationships || [])],
           notes: editingCharacter.notes || '',
@@ -80,13 +124,13 @@ export const CharacterFormScreen: React.FC = () => {
           imageUris: editingCharacter.imageUris || [],
           locationId: editingCharacter.locationId,
           retired: editingCharacter.retired,
-          cyberware: [...(editingCharacter.cyberware || [])],
+          modifications: [...(editingCharacter.modifications || [])],
         }
       : {
           name: '',
           archetypeId: 'Human',
           traitIds: [],
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           notes: '',
@@ -94,7 +138,7 @@ export const CharacterFormScreen: React.FC = () => {
           imageUris: [],
           locationId: undefined,
           retired: false,
-          cyberware: [],
+          modifications: [],
         }
   );
 
@@ -460,27 +504,25 @@ export const CharacterFormScreen: React.FC = () => {
                 key={distinction.id}
                 style={[
                   styles.selectionItem,
-                  form.distinctionIds.includes(distinction.id) &&
+                  form.qualityIds.includes(distinction.id) &&
                     styles.selectedItem,
                 ]}
                 onPress={() => {
-                  const isSelected = form.distinctionIds.includes(
-                    distinction.id
-                  );
+                  const isSelected = form.qualityIds.includes(distinction.id);
 
                   if (isSelected) {
                     // Allow deselection
-                    const newDistinctionIds = form.distinctionIds.filter(
+                    const newDistinctionIds = form.qualityIds.filter(
                       id => id !== distinction.id
                     );
-                    handleChange('distinctionIds', newDistinctionIds);
-                  } else if (form.distinctionIds.length < maxQualities) {
+                    handleChange('qualityIds', newDistinctionIds);
+                  } else if (form.qualityIds.length < maxQualities) {
                     // Allow selection if under limit
                     const newDistinctionIds = [
-                      ...form.distinctionIds,
+                      ...form.qualityIds,
                       distinction.id,
                     ];
-                    handleChange('distinctionIds', newDistinctionIds);
+                    handleChange('qualityIds', newDistinctionIds);
                   } else {
                     // Show alert when limit reached
                     Alert.alert(
@@ -502,27 +544,27 @@ export const CharacterFormScreen: React.FC = () => {
 
       <View style={styles.formSection}>
         <Text style={styles.label}>{label('modification.plural')}</Text>
-        {form.cyberware &&
-          form.cyberware.map((cyber, index) => (
+        {form.modifications &&
+          form.modifications.map((cyber, index) => (
             <View key={index} style={styles.cyberwareContainer}>
               <View style={styles.cyberwareHeaderRow}>
                 <TextInput
                   style={styles.cyberwareName}
                   value={cyber.name}
                   onChangeText={value => {
-                    const newCyberware = [...(form.cyberware || [])];
+                    const newCyberware = [...(form.modifications || [])];
                     newCyberware[index] = { ...cyber, name: value };
-                    handleChange('cyberware', newCyberware);
+                    handleChange('modifications', newCyberware);
                   }}
                   placeholder={`${label('modification.singular')} name`}
                 />
                 <TouchableOpacity
                   style={styles.removeButton}
                   onPress={() => {
-                    const newCyberware = (form.cyberware || []).filter(
+                    const newCyberware = (form.modifications || []).filter(
                       (_, i) => i !== index
                     );
-                    handleChange('cyberware', newCyberware);
+                    handleChange('modifications', newCyberware);
                   }}
                 >
                   <Text style={styles.removeButtonText}>×</Text>
@@ -532,9 +574,9 @@ export const CharacterFormScreen: React.FC = () => {
                 style={styles.cyberwareDescription}
                 value={cyber.description}
                 onChangeText={value => {
-                  const newCyberware = [...(form.cyberware || [])];
+                  const newCyberware = [...(form.modifications || [])];
                   newCyberware[index] = { ...cyber, description: value };
-                  handleChange('cyberware', newCyberware);
+                  handleChange('modifications', newCyberware);
                 }}
                 placeholder="Description"
                 multiline
@@ -548,19 +590,21 @@ export const CharacterFormScreen: React.FC = () => {
                     <Text style={styles.modifierLabel}>Health:</Text>
                     <TextInput
                       style={styles.modifierField}
-                      value={cyber.statModifiers?.health?.toString() || ''}
+                      value={
+                        cyber.resourceModifiers?.values?.health?.toString() ||
+                        ''
+                      }
                       onChangeText={value => {
-                        const newCyberware = [...(form.cyberware || [])];
+                        const newCyberware = [...(form.modifications || [])];
                         const numValue =
                           value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = {
-                          ...cyber,
-                          statModifiers: {
-                            ...cyber.statModifiers,
-                            health: numValue,
-                          },
-                        };
-                        handleChange('cyberware', newCyberware);
+                        newCyberware[index] = setResourceModifier(
+                          cyber,
+                          'values',
+                          'health',
+                          numValue
+                        );
+                        handleChange('modifications', newCyberware);
                       }}
                       placeholder="0"
                       keyboardType="numeric"
@@ -570,19 +614,20 @@ export const CharacterFormScreen: React.FC = () => {
                     <Text style={styles.modifierLabel}>Limit:</Text>
                     <TextInput
                       style={styles.modifierField}
-                      value={cyber.statModifiers?.limit?.toString() || ''}
+                      value={
+                        cyber.resourceModifiers?.values?.limit?.toString() || ''
+                      }
                       onChangeText={value => {
-                        const newCyberware = [...(form.cyberware || [])];
+                        const newCyberware = [...(form.modifications || [])];
                         const numValue =
                           value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = {
-                          ...cyber,
-                          statModifiers: {
-                            ...cyber.statModifiers,
-                            limit: numValue,
-                          },
-                        };
-                        handleChange('cyberware', newCyberware);
+                        newCyberware[index] = setResourceModifier(
+                          cyber,
+                          'values',
+                          'limit',
+                          numValue
+                        );
+                        handleChange('modifications', newCyberware);
                       }}
                       placeholder="0"
                       keyboardType="numeric"
@@ -594,19 +639,20 @@ export const CharacterFormScreen: React.FC = () => {
                     <Text style={styles.modifierLabel}>Health Cap:</Text>
                     <TextInput
                       style={styles.modifierField}
-                      value={cyber.statModifiers?.healthCap?.toString() || ''}
+                      value={
+                        cyber.resourceModifiers?.caps?.health?.toString() || ''
+                      }
                       onChangeText={value => {
-                        const newCyberware = [...(form.cyberware || [])];
+                        const newCyberware = [...(form.modifications || [])];
                         const numValue =
                           value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = {
-                          ...cyber,
-                          statModifiers: {
-                            ...cyber.statModifiers,
-                            healthCap: numValue,
-                          },
-                        };
-                        handleChange('cyberware', newCyberware);
+                        newCyberware[index] = setResourceModifier(
+                          cyber,
+                          'caps',
+                          'health',
+                          numValue
+                        );
+                        handleChange('modifications', newCyberware);
                       }}
                       placeholder="0"
                       keyboardType="numeric"
@@ -616,19 +662,20 @@ export const CharacterFormScreen: React.FC = () => {
                     <Text style={styles.modifierLabel}>Limit Cap:</Text>
                     <TextInput
                       style={styles.modifierField}
-                      value={cyber.statModifiers?.limitCap?.toString() || ''}
+                      value={
+                        cyber.resourceModifiers?.caps?.limit?.toString() || ''
+                      }
                       onChangeText={value => {
-                        const newCyberware = [...(form.cyberware || [])];
+                        const newCyberware = [...(form.modifications || [])];
                         const numValue =
                           value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = {
-                          ...cyber,
-                          statModifiers: {
-                            ...cyber.statModifiers,
-                            limitCap: numValue,
-                          },
-                        };
-                        handleChange('cyberware', newCyberware);
+                        newCyberware[index] = setResourceModifier(
+                          cyber,
+                          'caps',
+                          'limit',
+                          numValue
+                        );
+                        handleChange('modifications', newCyberware);
                       }}
                       placeholder="0"
                       keyboardType="numeric"
@@ -643,8 +690,11 @@ export const CharacterFormScreen: React.FC = () => {
                   <View style={styles.tagModifiersList}>
                     {Object.values(PerkTag).map(tag => {
                       const currentValue =
-                        cyber.statModifiers?.tagModifiers?.[tag];
-                      if (currentValue === undefined && !cyber.statModifiers)
+                        cyber.resourceModifiers?.categoryModifiers?.[tag];
+                      if (
+                        currentValue === undefined &&
+                        !cyber.resourceModifiers
+                      )
                         return null;
 
                       return (
@@ -654,12 +704,15 @@ export const CharacterFormScreen: React.FC = () => {
                             style={styles.tagModifierField}
                             value={currentValue?.toString() || ''}
                             onChangeText={value => {
-                              const newCyberware = [...(form.cyberware || [])];
+                              const newCyberware = [
+                                ...(form.modifications || []),
+                              ];
                               const numValue =
                                 value === '' ? undefined : parseInt(value) || 0;
 
                               const currentTagModifiers = {
-                                ...(cyber.statModifiers?.tagModifiers || {}),
+                                ...(cyber.resourceModifiers
+                                  ?.categoryModifiers || {}),
                               };
 
                               if (numValue === undefined) {
@@ -668,20 +721,11 @@ export const CharacterFormScreen: React.FC = () => {
                                 currentTagModifiers[tag] = numValue;
                               }
 
-                              newCyberware[index] = {
-                                ...cyber,
-                                statModifiers: {
-                                  ...cyber.statModifiers,
-                                  tagModifiers:
-                                    Object.keys(currentTagModifiers).length > 0
-                                      ? (currentTagModifiers as Record<
-                                          PerkTag,
-                                          number
-                                        >)
-                                      : undefined,
-                                },
-                              };
-                              handleChange('cyberware', newCyberware);
+                              newCyberware[index] = setCategoryModifiers(
+                                cyber,
+                                currentTagModifiers
+                              );
+                              handleChange('modifications', newCyberware);
                             }}
                             placeholder="0"
                             keyboardType="numeric"
@@ -691,28 +735,19 @@ export const CharacterFormScreen: React.FC = () => {
                               style={styles.tagModifierRemove}
                               onPress={() => {
                                 const newCyberware = [
-                                  ...(form.cyberware || []),
+                                  ...(form.modifications || []),
                                 ];
                                 const currentTagModifiers = {
-                                  ...(cyber.statModifiers?.tagModifiers || {}),
+                                  ...(cyber.resourceModifiers
+                                    ?.categoryModifiers || {}),
                                 };
                                 delete currentTagModifiers[tag];
 
-                                newCyberware[index] = {
-                                  ...cyber,
-                                  statModifiers: {
-                                    ...cyber.statModifiers,
-                                    tagModifiers:
-                                      Object.keys(currentTagModifiers).length >
-                                      0
-                                        ? (currentTagModifiers as Record<
-                                            PerkTag,
-                                            number
-                                          >)
-                                        : undefined,
-                                  },
-                                };
-                                handleChange('cyberware', newCyberware);
+                                newCyberware[index] = setCategoryModifiers(
+                                  cyber,
+                                  currentTagModifiers
+                                );
+                                handleChange('modifications', newCyberware);
                               }}
                             >
                               <Text style={styles.tagModifierRemoveText}>
@@ -729,26 +764,18 @@ export const CharacterFormScreen: React.FC = () => {
                     onPress={() => {
                       // Find first tag that doesn't have a modifier
                       const currentTagModifiers =
-                        cyber.statModifiers?.tagModifiers || {};
+                        cyber.resourceModifiers?.categoryModifiers || {};
                       const availableTags = Object.values(PerkTag).filter(
                         tag => !(tag in currentTagModifiers)
                       );
 
                       if (availableTags.length > 0) {
-                        const newCyberware = [...(form.cyberware || [])];
-                        const newTagModifiers = {
+                        const newCyberware = [...(form.modifications || [])];
+                        newCyberware[index] = setCategoryModifiers(cyber, {
                           ...currentTagModifiers,
                           [availableTags[0]]: 1,
-                        } as Record<PerkTag, number>;
-
-                        newCyberware[index] = {
-                          ...cyber,
-                          statModifiers: {
-                            ...cyber.statModifiers,
-                            tagModifiers: newTagModifiers,
-                          },
-                        };
-                        handleChange('cyberware', newCyberware);
+                        });
+                        handleChange('modifications', newCyberware);
                       } else {
                         Alert.alert(
                           `All ${label('traitCategory.plural')} Added`,
@@ -771,8 +798,8 @@ export const CharacterFormScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
-            handleChange('cyberware', [
-              ...(form.cyberware || []),
+            handleChange('modifications', [
+              ...(form.modifications || []),
               {
                 name: '',
                 description: '',

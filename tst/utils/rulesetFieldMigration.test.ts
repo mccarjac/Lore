@@ -22,7 +22,7 @@ const legacyCharacter = (extra: Record<string, unknown> = {}): GameCharacter =>
     name: 'Legacy',
     species: 'Mutant',
     perkIds: ['agility_1'],
-    distinctionIds: [],
+    qualityIds: [],
     factions: [],
     relationships: [],
     createdAt: TS,
@@ -36,7 +36,7 @@ const currentCharacter = (extra: Partial<GameCharacter> = {}): GameCharacter =>
     name: 'Current',
     archetypeId: 'Mutant',
     traitIds: ['agility_1'],
-    distinctionIds: [],
+    qualityIds: [],
     factions: [],
     relationships: [],
     createdAt: TS,
@@ -140,11 +140,11 @@ describe('normalizeQuestRulesetFields', () => {
   it('leaves other preference keys alone', () => {
     const result = normalizeQuestRulesetFields(
       quest({
-        desirable: { species: ['Human'], distinctionIds: ['d1'] },
+        desirable: { species: ['Human'], qualityIds: ['d1'] },
       } as unknown as Partial<GameQuest>)
     );
 
-    expect(result.desirable?.distinctionIds).toEqual(['d1']);
+    expect(result.desirable?.qualityIds).toEqual(['d1']);
   });
 
   it('returns the same reference when already migrated', () => {
@@ -199,5 +199,121 @@ describe('array normalizers', () => {
 
     expect(result).not.toBe(input);
     expect(result[1].desirable?.archetypeIds).toEqual(['Human']);
+  });
+});
+
+describe('modification resource-modifier reshape (#5)', () => {
+  const withModifications = (modifications: unknown[]): GameCharacter =>
+    ({
+      id: 'c1',
+      name: 'Legacy',
+      archetypeId: 'Mutant',
+      traitIds: [],
+      qualityIds: [],
+      factions: [],
+      relationships: [],
+      modifications,
+      createdAt: TS,
+      updatedAt: TS,
+    }) as unknown as GameCharacter;
+
+  it('splits flat stat modifiers into values and caps', () => {
+    const result = normalizeCharacterRulesetFields(
+      withModifications([
+        {
+          name: 'Reinforced Frame',
+          description: '',
+          statModifiers: { health: 5, limit: 5, healthCap: 3, limitCap: 2 },
+        },
+      ])
+    );
+
+    expect(result.modifications?.[0].resourceModifiers).toEqual({
+      values: { health: 5, limit: 5 },
+      caps: { health: 3, limit: 2 },
+    });
+    expect('statModifiers' in (result.modifications?.[0] ?? {})).toBe(false);
+  });
+
+  it('renames tagModifiers to categoryModifiers', () => {
+    const result = normalizeCharacterRulesetFields(
+      withModifications([
+        {
+          name: 'Targeting Suite',
+          description: '',
+          statModifiers: { tagModifiers: { Agility: 3 } },
+        },
+      ])
+    );
+
+    expect(result.modifications?.[0].resourceModifiers).toEqual({
+      categoryModifiers: { Agility: 3 },
+    });
+  });
+
+  it('omits empty groups rather than emitting empty objects', () => {
+    const result = normalizeCharacterRulesetFields(
+      withModifications([
+        { name: 'Plating', description: '', statModifiers: { healthCap: 1 } },
+      ])
+    );
+
+    expect(result.modifications?.[0].resourceModifiers).toEqual({
+      caps: { health: 1 },
+    });
+  });
+
+  it('migrates cyberware entries reached through the #5 key rename', () => {
+    const legacy = {
+      id: 'c1',
+      name: 'Legacy',
+      species: 'Mutant',
+      perkIds: [],
+      distinctionIds: [],
+      factions: [],
+      relationships: [],
+      cyberware: [
+        { name: 'Frame', description: '', statModifiers: { health: 2 } },
+      ],
+      createdAt: TS,
+      updatedAt: TS,
+    } as unknown as GameCharacter;
+
+    const result = normalizeCharacterRulesetFields(legacy);
+
+    expect('cyberware' in result).toBe(false);
+    expect(result.modifications?.[0].resourceModifiers).toEqual({
+      values: { health: 2 },
+    });
+  });
+
+  it('is idempotent and preserves the reference when already nested', () => {
+    const current = withModifications([
+      {
+        name: 'Frame',
+        description: '',
+        resourceModifiers: { values: { health: 2 } },
+      },
+    ]);
+
+    expect(normalizeCharacterRulesetFields(current)).toBe(current);
+  });
+
+  it('drops a stale statModifiers when resourceModifiers already exists', () => {
+    const result = normalizeCharacterRulesetFields(
+      withModifications([
+        {
+          name: 'Frame',
+          description: '',
+          resourceModifiers: { values: { health: 9 } },
+          statModifiers: { health: 2 },
+        },
+      ])
+    );
+
+    expect(result.modifications?.[0].resourceModifiers).toEqual({
+      values: { health: 9 },
+    });
+    expect('statModifiers' in (result.modifications?.[0] ?? {})).toBe(false);
   });
 });

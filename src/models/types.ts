@@ -1,4 +1,5 @@
-import { AVAILABLE_DISTINCTIONS, type StatModifiers } from './gameData';
+import { AVAILABLE_DISTINCTIONS } from './gameData';
+import type { ResourceModifiers } from '@/ruleset/types';
 import type { Species } from './speciesTypes';
 
 export type DistinctionId = (typeof AVAILABLE_DISTINCTIONS)[number]['id'];
@@ -67,10 +68,16 @@ export interface Relationship {
   customName?: string;
 }
 
-export interface Cyberware {
+/**
+ * A free-text, per-character entry that attaches resource modifiers — the
+ * generic form of what the Afterworlds ruleset calls Cyberware. Authored per
+ * character rather than picked from a ruleset catalog, which is how it has
+ * always worked; a catalog could come later.
+ */
+export interface Modification {
   name: string;
   description: string;
-  statModifiers?: StatModifiers;
+  resourceModifiers?: ResourceModifiers;
 }
 
 export interface GameCharacter {
@@ -83,14 +90,14 @@ export interface GameCharacter {
   archetypeId: string;
   /** Ruleset trait ids (RulesetDefinition.traits[].id). Was `traitIds`. */
   traitIds: string[];
-  distinctionIds: DistinctionId[];
+  qualityIds: DistinctionId[];
   factions: Faction[];
   relationships: Relationship[];
   imageUris?: string[];
   notes?: string;
   locationId?: string; // Reference to GameLocation.id
   occupation?: string;
-  cyberware?: Cyberware[];
+  modifications?: Modification[];
   present?: boolean;
   retired?: boolean;
   createdAt: string;
@@ -152,7 +159,7 @@ export interface QuestMaterial {
 export interface QuestAttributePreferences {
   traitCategoryIds?: string[];
   archetypeIds?: string[];
-  distinctionIds?: DistinctionId[];
+  qualityIds?: DistinctionId[];
   traitIds?: string[];
 }
 

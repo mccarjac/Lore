@@ -254,7 +254,7 @@ export const CharacterDetailScreen: React.FC = () => {
   };
 
   const renderDistinctions = () => {
-    if (!character.distinctionIds || character.distinctionIds.length === 0) {
+    if (!character.qualityIds || character.qualityIds.length === 0) {
       return null;
     }
 
@@ -264,7 +264,7 @@ export const CharacterDetailScreen: React.FC = () => {
         defaultCollapsed={true}
       >
         {AVAILABLE_DISTINCTIONS.filter(distinction =>
-          character.distinctionIds.includes(distinction.id)
+          character.qualityIds.includes(distinction.id)
         ).map(distinction => (
           <View key={distinction.id} style={styles.itemContainer}>
             <Text style={styles.titleText}>{distinction.name}</Text>
@@ -354,47 +354,51 @@ export const CharacterDetailScreen: React.FC = () => {
   };
 
   const renderCyberware = () => {
-    if (!character.cyberware || character.cyberware.length === 0) {
+    if (!character.modifications || character.modifications.length === 0) {
       return null;
     }
 
     return (
       <Section title={label('modification.plural')}>
-        {character.cyberware.map((cyber, index) => (
+        {character.modifications.map((cyber, index) => (
           <View key={index} style={styles.itemContainer}>
             <Text style={styles.titleText}>{cyber.name}</Text>
             <Text style={styles.descriptionText}>{cyber.description}</Text>
-            {cyber.statModifiers && (
+            {cyber.resourceModifiers && (
               <View style={styles.cyberwareModifiersContainer}>
                 <Text style={styles.cyberwareModifiersTitle}>
                   Stat Modifiers:
                 </Text>
-                {cyber.statModifiers.health !== undefined && (
+                {cyber.resourceModifiers.values?.health !== undefined && (
                   <Text style={styles.cyberwareModifier}>
-                    • Health: {cyber.statModifiers.health > 0 ? '+' : ''}
-                    {cyber.statModifiers.health}
+                    • Health:{' '}
+                    {cyber.resourceModifiers.values.health > 0 ? '+' : ''}
+                    {cyber.resourceModifiers.values.health}
                   </Text>
                 )}
-                {cyber.statModifiers.limit !== undefined && (
+                {cyber.resourceModifiers.values?.limit !== undefined && (
                   <Text style={styles.cyberwareModifier}>
-                    • Limit: {cyber.statModifiers.limit > 0 ? '+' : ''}
-                    {cyber.statModifiers.limit}
+                    • Limit:{' '}
+                    {cyber.resourceModifiers.values.limit > 0 ? '+' : ''}
+                    {cyber.resourceModifiers.values.limit}
                   </Text>
                 )}
-                {cyber.statModifiers.healthCap !== undefined && (
+                {cyber.resourceModifiers.caps?.health !== undefined && (
                   <Text style={styles.cyberwareModifier}>
-                    • Health Cap: {cyber.statModifiers.healthCap > 0 ? '+' : ''}
-                    {cyber.statModifiers.healthCap}
+                    • Health Cap:{' '}
+                    {cyber.resourceModifiers.caps.health > 0 ? '+' : ''}
+                    {cyber.resourceModifiers.caps.health}
                   </Text>
                 )}
-                {cyber.statModifiers.limitCap !== undefined && (
+                {cyber.resourceModifiers.caps?.limit !== undefined && (
                   <Text style={styles.cyberwareModifier}>
-                    • Limit Cap: {cyber.statModifiers.limitCap > 0 ? '+' : ''}
-                    {cyber.statModifiers.limitCap}
+                    • Limit Cap:{' '}
+                    {cyber.resourceModifiers.caps.limit > 0 ? '+' : ''}
+                    {cyber.resourceModifiers.caps.limit}
                   </Text>
                 )}
-                {cyber.statModifiers.tagModifiers &&
-                  Object.entries(cyber.statModifiers.tagModifiers).map(
+                {cyber.resourceModifiers.categoryModifiers &&
+                  Object.entries(cyber.resourceModifiers.categoryModifiers).map(
                     ([tag, modifier]) => (
                       <Text key={tag} style={styles.cyberwareModifier}>
                         • {tag} Tag Score: {modifier > 0 ? '+' : ''}

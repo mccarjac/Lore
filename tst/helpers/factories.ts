@@ -19,7 +19,7 @@ export const makeCharacter = (
   name: 'Test Character',
   archetypeId: 'Human',
   traitIds: [],
-  distinctionIds: [],
+  qualityIds: [],
   factions: [],
   relationships: [],
   createdAt: TEST_TIMESTAMP,

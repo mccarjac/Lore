@@ -79,7 +79,7 @@ export const CharacterSearchScreen: React.FC = () => {
       // Check distinction
       if (
         searchCriteria.distinctionId &&
-        !character.distinctionIds.includes(searchCriteria.distinctionId)
+        !character.qualityIds.includes(searchCriteria.distinctionId)
       ) {
         return false;
       }

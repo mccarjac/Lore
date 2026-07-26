@@ -18,7 +18,7 @@ const makeCharacter = (
   name: `Character ${id}`,
   archetypeId: 'Human',
   traitIds: [],
-  distinctionIds: [],
+  qualityIds: [],
   factions: [],
   relationships: [],
   present: true,
@@ -107,18 +107,18 @@ describe('questProposal', () => {
     });
 
     it('rewards a desirable distinction match', () => {
-      const character = makeCharacter('a', { distinctionIds: ['d1'] });
+      const character = makeCharacter('a', { qualityIds: ['d1'] });
       const quest = makeQuest('q1', {
-        desirable: { distinctionIds: ['d1'] },
+        desirable: { qualityIds: ['d1'] },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeGreaterThan(0);
     });
 
     it('penalizes an undesirable distinction match', () => {
-      const character = makeCharacter('a', { distinctionIds: ['d1'] });
+      const character = makeCharacter('a', { qualityIds: ['d1'] });
       const quest = makeQuest('q1', {
-        undesirable: { distinctionIds: ['d1'] },
+        undesirable: { qualityIds: ['d1'] },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeLessThan(0);

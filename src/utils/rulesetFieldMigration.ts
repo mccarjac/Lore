@@ -27,6 +27,8 @@ export const UNKNOWN_ARCHETYPE_ID = 'Unknown';
 const CHARACTER_RENAMES: Record<string, string> = {
   species: 'archetypeId', // #3
   perkIds: 'traitIds', // #4
+  distinctionIds: 'qualityIds', // #5
+  cyberware: 'modifications', // #5
 };
 
 /** old field name -> current field name, applied to quest preferences. */
@@ -34,6 +36,58 @@ const PREFERENCE_RENAMES: Record<string, string> = {
   species: 'archetypeIds', // #3
   tags: 'traitCategoryIds', // #4
   perkIds: 'traitIds', // #4
+  distinctionIds: 'qualityIds', // #5
+};
+
+/**
+ * The one part of Phase 1 that reshapes values rather than renaming keys
+ * (#5). A modification's flat `StatModifiers` becomes the ruleset's nested
+ * `ResourceModifiers`, keyed by resource id instead of a hardcoded
+ * health/limit/healthCap/limitCap quartet:
+ *
+ *   { health, limit }         -> values: { health, limit }
+ *   { healthCap, limitCap }   -> caps:   { health, limit }
+ *   { tagModifiers }          -> categoryModifiers
+ */
+const normalizeModification = (entry: LooseRecord): LooseRecord | null => {
+  const legacy = entry.statModifiers as LooseRecord | undefined;
+  if (legacy === undefined) return null;
+
+  const { statModifiers, ...rest } = entry;
+  void statModifiers;
+
+  // An already-migrated entry keeps its resourceModifiers; a stale
+  // statModifiers alongside it is simply dropped.
+  if (rest.resourceModifiers !== undefined) return rest;
+
+  const values: LooseRecord = {};
+  const caps: LooseRecord = {};
+  if (legacy.health !== undefined) values.health = legacy.health;
+  if (legacy.limit !== undefined) values.limit = legacy.limit;
+  if (legacy.healthCap !== undefined) caps.health = legacy.healthCap;
+  if (legacy.limitCap !== undefined) caps.limit = legacy.limitCap;
+
+  const resourceModifiers: LooseRecord = {};
+  if (Object.keys(values).length > 0) resourceModifiers.values = values;
+  if (Object.keys(caps).length > 0) resourceModifiers.caps = caps;
+  if (legacy.tagModifiers !== undefined) {
+    resourceModifiers.categoryModifiers = legacy.tagModifiers;
+  }
+
+  return { ...rest, resourceModifiers };
+};
+
+/** Returns null when no entry in the list needed reshaping. */
+const normalizeModifications = (value: unknown): LooseRecord[] | null => {
+  if (!Array.isArray(value)) return null;
+
+  let changed = false;
+  const normalized = (value as LooseRecord[]).map(entry => {
+    const next = normalizeModification(entry);
+    if (next) changed = true;
+    return next ?? entry;
+  });
+  return changed ? normalized : null;
 };
 
 /**
@@ -72,13 +126,19 @@ export const normalizeCharacterRulesetFields = (
 ): GameCharacter => {
   const source = character as unknown as LooseRecord;
   const renamed = applyRenames(source, CHARACTER_RENAMES);
+  const base = renamed ?? source;
+
+  // Reshape modification entries after the key rename, so this sees the
+  // list under its current name whichever vintage the record came from.
+  const remodified = normalizeModifications(base.modifications);
 
   // A record with neither the old nor the new archetype key still needs one,
   // since `archetypeId` is required.
-  const needsArchetypeFallback = (renamed ?? source).archetypeId === undefined;
-  if (!renamed && !needsArchetypeFallback) return character;
+  const needsArchetypeFallback = base.archetypeId === undefined;
+  if (!renamed && !remodified && !needsArchetypeFallback) return character;
 
   const result = renamed ?? { ...source };
+  if (remodified) result.modifications = remodified;
   if (result.archetypeId === undefined) {
     result.archetypeId = UNKNOWN_ARCHETYPE_ID;
   }

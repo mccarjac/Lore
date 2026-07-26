@@ -432,7 +432,7 @@ const mergeCharacterProperties = (
     merged.updatedAt = imported.updatedAt;
   }
 
-  // Merge arrays (like traitIds, distinctionIds, factions)
+  // Merge arrays (like traitIds, qualityIds, factions)
   if (imported.traitIds && imported.traitIds.length > 0) {
     const existingPerkIds = new Set(existing.traitIds || []);
     const newPerks = imported.traitIds.filter(id => !existingPerkIds.has(id));
@@ -441,16 +441,13 @@ const mergeCharacterProperties = (
     }
   }
 
-  if (imported.distinctionIds && imported.distinctionIds.length > 0) {
-    const existingDistinctionIds = new Set(existing.distinctionIds || []);
-    const newDistinctions = imported.distinctionIds.filter(
+  if (imported.qualityIds && imported.qualityIds.length > 0) {
+    const existingDistinctionIds = new Set(existing.qualityIds || []);
+    const newDistinctions = imported.qualityIds.filter(
       id => !existingDistinctionIds.has(id)
     );
     if (newDistinctions.length > 0) {
-      merged.distinctionIds = [
-        ...(existing.distinctionIds || []),
-        ...newDistinctions,
-      ];
+      merged.qualityIds = [...(existing.qualityIds || []), ...newDistinctions];
     }
   }
 

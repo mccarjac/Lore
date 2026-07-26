@@ -148,12 +148,12 @@ export const QuestDetailScreen: React.FC = () => {
       ((quest.desirable.traitCategoryIds?.length ?? 0) > 0 ||
         (quest.desirable.archetypeIds?.length ?? 0) > 0 ||
         (quest.desirable.traitIds?.length ?? 0) > 0 ||
-        (quest.desirable.distinctionIds?.length ?? 0) > 0)) ||
+        (quest.desirable.qualityIds?.length ?? 0) > 0)) ||
     (quest.undesirable &&
       ((quest.undesirable.traitCategoryIds?.length ?? 0) > 0 ||
         (quest.undesirable.archetypeIds?.length ?? 0) > 0 ||
         (quest.undesirable.traitIds?.length ?? 0) > 0 ||
-        (quest.undesirable.distinctionIds?.length ?? 0) > 0));
+        (quest.undesirable.qualityIds?.length ?? 0) > 0));
 
   return (
     <BaseDetailScreen
@@ -280,7 +280,7 @@ export const QuestDetailScreen: React.FC = () => {
                     <Text style={styles.chipText}>{perkId}</Text>
                   </View>
                 ))}
-                {quest.desirable.distinctionIds?.map(distinctionId => (
+                {quest.desirable.qualityIds?.map(distinctionId => (
                   <View
                     key={`distinction-${distinctionId}`}
                     style={styles.chipPositive}
@@ -313,7 +313,7 @@ export const QuestDetailScreen: React.FC = () => {
                     <Text style={styles.chipText}>{perkId}</Text>
                   </View>
                 ))}
-                {quest.undesirable.distinctionIds?.map(distinctionId => (
+                {quest.undesirable.qualityIds?.map(distinctionId => (
                   <View
                     key={`distinction-${distinctionId}`}
                     style={styles.chipNegative}

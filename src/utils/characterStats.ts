@@ -82,7 +82,7 @@ export const calculateCharacterStats = (
   // Calculate most common distinctions
   const distinctionCount: Record<string, number> = {};
   characters.forEach(char => {
-    char.distinctionIds.forEach(distinctionId => {
+    char.qualityIds.forEach(distinctionId => {
       distinctionCount[distinctionId] =
         (distinctionCount[distinctionId] || 0) + 1;
     });

@@ -1666,7 +1666,7 @@ export const AVAILABLE_DISTINCTIONS: Distinction[] = [
     id: 'd11',
     name: 'Cybernetic Rejection',
     description:
-      'Your body rejects cybernetic enhancements. The drain value of any cyberware you have installed is tripled.',
+      'Your body rejects cybernetic enhancements. The drain value of any modifications you have installed is tripled.',
     allowedSpecies: [...ORGANIC_SPECIES],
   },
   {

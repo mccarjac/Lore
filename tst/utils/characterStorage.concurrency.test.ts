@@ -51,7 +51,7 @@ describe('characterStorage concurrency', () => {
     name: `Character ${id}`,
     archetypeId: 'Human',
     traitIds: [],
-    distinctionIds: [],
+    qualityIds: [],
     factions: [],
     relationships: [],
     present: false,

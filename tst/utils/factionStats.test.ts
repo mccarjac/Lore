@@ -145,7 +145,7 @@ describe('factionStats', () => {
           id: '1',
           name: 'Member A',
           traitIds: ['not-a-real-perk'],
-          distinctionIds: ['not-a-real-distinction'],
+          qualityIds: ['not-a-real-distinction'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],

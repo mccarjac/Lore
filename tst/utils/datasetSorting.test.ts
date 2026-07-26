@@ -65,7 +65,7 @@ describe('sortDatasetDeterministically', () => {
               },
             ],
             traitIds: ['perk3', 'perk1', 'perk2'],
-            distinctionIds: ['dist2', 'dist1'],
+            qualityIds: ['dist2', 'dist1'],
             imageUris: ['image3.jpg', 'image1.jpg', 'image2.jpg'],
           },
         ] as GameCharacter[],
@@ -79,7 +79,7 @@ describe('sortDatasetDeterministically', () => {
       expect(char.relationships[0].characterName).toBe('Alice');
       expect(char.relationships[1].characterName).toBe('Zoe');
       expect(char.traitIds).toEqual(['perk1', 'perk2', 'perk3']);
-      expect(char.distinctionIds).toEqual(['dist1', 'dist2']);
+      expect(char.qualityIds).toEqual(['dist1', 'dist2']);
       expect(char.imageUris).toEqual([
         'image1.jpg',
         'image2.jpg',

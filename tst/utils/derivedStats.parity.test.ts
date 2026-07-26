@@ -9,14 +9,14 @@
 import { AVAILABLE_PERKS, PerkTag } from '@/models/gameData';
 import { SPECIES_BASE_STATS, type Species } from '@/models/speciesTypes';
 import { calculateDerivedStats } from '@/utils/derivedStats';
-import type { Cyberware, GameCharacter } from '@/models/types';
+import type { Modification, GameCharacter } from '@/models/types';
 import { DERIVED_STATS_BASELINE } from '../fixtures/derivedStatsBaseline';
 
 const TS = '2026-01-01T00:00:00.000Z';
 
 /**
  * Pristine copy of the base stats, taken at import time before anything has
- * had a chance to mutate them. The pre-#6 implementation applies cyberware
+ * had a chance to mutate them. The pre-#6 implementation applies modifications
  * cap modifiers straight onto the shared SPECIES_BASE_STATS entries, so
  * without restoring between cases the evaluation order of this file would
  * leak caps from one character into the next. Becomes a no-op once #6 stops
@@ -35,17 +35,17 @@ const restoreBaseStats = (): void => {
 const make = (
   archetypeId: Species,
   traitIds: string[],
-  cyberware?: Cyberware[]
+  modifications?: Modification[]
 ): GameCharacter =>
   ({
     id: 'c',
     name: 'c',
     archetypeId,
     traitIds,
-    distinctionIds: [],
+    qualityIds: [],
     factions: [],
     relationships: [],
-    cyberware,
+    modifications,
     createdAt: TS,
     updatedAt: TS,
   }) as GameCharacter;
@@ -58,13 +58,16 @@ const openPerksByTag = (tag: PerkTag, n: number): string[] =>
 
 const MUTANT_RESTRICTED = ['agility_15', 'charisma_17'];
 
-const CAP_CYBERWARE: Cyberware[] = [
+const CAP_CYBERWARE: Modification[] = [
   {
     name: 'Reinforced Frame',
     description: '',
-    statModifiers: { healthCap: 3, limitCap: 2, health: 5, limit: 5 },
+    resourceModifiers: {
+      values: { health: 5, limit: 5 },
+      caps: { health: 3, limit: 2 },
+    },
   },
-] as Cyberware[];
+] as Modification[];
 
 /** The full case matrix, keyed to match the baseline fixture. */
 export const buildParityCases = (): Record<string, GameCharacter> => {
@@ -108,9 +111,9 @@ export const buildParityCases = (): Record<string, GameCharacter> => {
     {
       name: 'Targeting Suite',
       description: '',
-      statModifiers: { tagModifiers: { [PerkTag.Agility]: 3 } },
+      resourceModifiers: { categoryModifiers: { [PerkTag.Agility]: 3 } },
     },
-  ] as Cyberware[]);
+  ] as Modification[]);
 
   return cases;
 };
@@ -146,7 +149,7 @@ describe('derived stats — shared base-stat mutation (issue #6)', () => {
   /**
    * Regression guard for derivedStats.ts:79-83. Cap modifiers were applied
    * to `SPECIES_BASE_STATS[species]` directly, which is a shared reference,
-   * so one character's cyberware permanently raised the cap for every other
+   * so one character's modifications permanently raised the cap for every other
    * character of that species in the same process.
    *
    * Deliberately does NOT restore base stats between the two calls inside

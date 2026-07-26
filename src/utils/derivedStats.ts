@@ -74,25 +74,26 @@ export const calculateDerivedStats = (
     });
   });
 
-  // Apply cyberware modifiers
-  if (character.cyberware && character.cyberware.length > 0) {
-    character.cyberware.forEach(cyber => {
-      if (cyber.statModifiers) {
-        if (cyber.statModifiers.health) {
-          maxHealth += cyber.statModifiers.health;
+  // Apply modifications modifiers
+  if (character.modifications && character.modifications.length > 0) {
+    character.modifications.forEach(modification => {
+      const modifiers = modification.resourceModifiers;
+      if (modifiers) {
+        if (modifiers.values?.health) {
+          maxHealth += modifiers.values.health;
         }
-        if (cyber.statModifiers.limit) {
-          maxLimit += cyber.statModifiers.limit;
+        if (modifiers.values?.limit) {
+          maxLimit += modifiers.values.limit;
         }
-        if (cyber.statModifiers.healthCap) {
-          baseStats.healthCap += cyber.statModifiers.healthCap;
+        if (modifiers.caps?.health) {
+          baseStats.healthCap += modifiers.caps.health;
         }
-        if (cyber.statModifiers.limitCap) {
-          baseStats.limitCap += cyber.statModifiers.limitCap;
+        if (modifiers.caps?.limit) {
+          baseStats.limitCap += modifiers.caps.limit;
         }
-        // Tag modifiers can be added to tag scores if needed
-        if (cyber.statModifiers.tagModifiers) {
-          Object.entries(cyber.statModifiers.tagModifiers).forEach(
+        // Category modifiers can be added to tag scores if needed
+        if (modifiers.categoryModifiers) {
+          Object.entries(modifiers.categoryModifiers).forEach(
             ([tag, modifier]) => {
               const currentScore = tagScores.get(tag as PerkTag) || 0;
               tagScores.set(tag as PerkTag, currentScore + modifier);

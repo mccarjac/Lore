@@ -10,7 +10,7 @@ describe('derivedStats', () => {
         name: 'Test Human',
         archetypeId: 'Human',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
@@ -31,7 +31,7 @@ describe('derivedStats', () => {
         name: 'Test Mutant',
         archetypeId: 'Mutant',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
@@ -51,7 +51,7 @@ describe('derivedStats', () => {
         name: 'Test Rad-Titan',
         archetypeId: 'Rad-Titan',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
@@ -71,7 +71,7 @@ describe('derivedStats', () => {
         name: 'Test Unturned',
         archetypeId: 'Unturned',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
@@ -91,17 +91,19 @@ describe('derivedStats', () => {
         name: 'Test Human',
         archetypeId: 'Human',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: [
+        modifications: [
           {
-            name: 'Super Health Cyberware',
+            name: 'Super Health Modification',
             description: 'Adds lots of health',
-            statModifiers: {
-              health: 100, // Way over cap
+            resourceModifiers: {
+              values: {
+                health: 100, // Way over cap
+              },
             },
           },
         ],
@@ -119,17 +121,19 @@ describe('derivedStats', () => {
         name: 'Test Human',
         archetypeId: 'Human',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: [
+        modifications: [
           {
-            name: 'Super Limit Cyberware',
+            name: 'Super Limit Modification',
             description: 'Adds lots of limit',
-            statModifiers: {
-              limit: 100, // Way over cap
+            resourceModifiers: {
+              values: {
+                limit: 100, // Way over cap
+              },
             },
           },
         ],
@@ -141,23 +145,25 @@ describe('derivedStats', () => {
       expect(stats.maxLimit).toBeLessThanOrEqual(5);
     });
 
-    it('should apply cyberware health modifiers', () => {
+    it('should apply modifications health modifiers', () => {
       const character: GameCharacter = {
         id: '7',
         name: 'Test Cyborg',
         archetypeId: 'Cyborg',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: [
+        modifications: [
           {
             name: 'Health Boost',
             description: 'Adds 1 health',
-            statModifiers: {
-              health: 1,
+            resourceModifiers: {
+              values: {
+                health: 1,
+              },
             },
           },
         ],
@@ -165,27 +171,29 @@ describe('derivedStats', () => {
 
       const stats = calculateDerivedStats(character);
 
-      // Cyborg base health 2 + 1 from cyberware = 3
+      // Cyborg base health 2 + 1 from modifications = 3
       expect(stats.maxHealth).toBe(3);
     });
 
-    it('should apply cyberware limit modifiers', () => {
+    it('should apply modifications limit modifiers', () => {
       const character: GameCharacter = {
         id: '8',
         name: 'Test Cyborg',
         archetypeId: 'Cyborg',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: [
+        modifications: [
           {
             name: 'Limit Boost',
             description: 'Adds 2 limit',
-            statModifiers: {
-              limit: 2,
+            resourceModifiers: {
+              values: {
+                limit: 2,
+              },
             },
           },
         ],
@@ -193,34 +201,38 @@ describe('derivedStats', () => {
 
       const stats = calculateDerivedStats(character);
 
-      // Cyborg base limit 1 + 2 from cyberware = 3
+      // Cyborg base limit 1 + 2 from modifications = 3
       expect(stats.maxLimit).toBe(3);
     });
 
-    it('should apply multiple cyberware modifiers', () => {
+    it('should apply multiple modifications modifiers', () => {
       const character: GameCharacter = {
         id: '9',
         name: 'Test Cyborg',
         archetypeId: 'Cyborg',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: [
+        modifications: [
           {
             name: 'Health Boost',
             description: 'Adds 1 health',
-            statModifiers: {
-              health: 1,
+            resourceModifiers: {
+              values: {
+                health: 1,
+              },
             },
           },
           {
             name: 'Limit Boost',
             description: 'Adds 1 limit',
-            statModifiers: {
-              limit: 1,
+            resourceModifiers: {
+              values: {
+                limit: 1,
+              },
             },
           },
         ],
@@ -233,24 +245,28 @@ describe('derivedStats', () => {
       expect(stats.maxLimit).toBe(2);
     });
 
-    it('should apply cyberware health cap modifiers', () => {
+    it('should apply modifications health cap modifiers', () => {
       const character: GameCharacter = {
         id: '10',
         name: 'Test Human',
         archetypeId: 'Human',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: [
+        modifications: [
           {
             name: 'Cap Increase',
             description: 'Increases health cap',
-            statModifiers: {
-              health: 10, // Lots of health
-              healthCap: 10, // But also increase the cap
+            resourceModifiers: {
+              values: {
+                health: 10, // Lots of health
+              },
+              caps: {
+                health: 10, // But also increase the cap
+              },
             },
           },
         ],
@@ -263,23 +279,23 @@ describe('derivedStats', () => {
       expect(stats.maxHealth).toBe(12);
     });
 
-    it('should apply cyberware tag modifiers to tag scores', () => {
+    it('should apply modifications tag modifiers to tag scores', () => {
       const character: GameCharacter = {
         id: '11',
         name: 'Test Character',
         archetypeId: 'Human',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: [
+        modifications: [
           {
             name: 'Agility Boost',
             description: 'Adds to agility',
-            statModifiers: {
-              tagModifiers: {
+            resourceModifiers: {
+              categoryModifiers: {
                 [PerkTag.Agility]: 2,
               },
             },
@@ -293,18 +309,18 @@ describe('derivedStats', () => {
       expect(stats.tagScores?.get(PerkTag.Agility)).toBe(2);
     });
 
-    it('should handle character with no cyberware', () => {
+    it('should handle character with no modifications', () => {
       const character: GameCharacter = {
         id: '12',
         name: 'Test Character',
         archetypeId: 'Human',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: undefined,
+        modifications: undefined,
       };
 
       const stats = calculateDerivedStats(character);
@@ -313,18 +329,18 @@ describe('derivedStats', () => {
       expect(stats.maxLimit).toBe(2);
     });
 
-    it('should handle character with empty cyberware array', () => {
+    it('should handle character with empty modifications array', () => {
       const character: GameCharacter = {
         id: '13',
         name: 'Test Character',
         archetypeId: 'Human',
         traitIds: [],
-        distinctionIds: [],
+        qualityIds: [],
         factions: [],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
-        cyberware: [],
+        modifications: [],
       };
 
       const stats = calculateDerivedStats(character);
@@ -340,7 +356,7 @@ describe('derivedStats', () => {
           name: 'Test Character',
           archetypeId: 'Human',
           traitIds: ['agility_1', 'agility_2', 'defense_1'],
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -360,7 +376,7 @@ describe('derivedStats', () => {
           name: 'Test Android',
           archetypeId: 'Android',
           traitIds: ['defense_23'], // Rugged Construction: +1 health
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -379,7 +395,7 @@ describe('derivedStats', () => {
           name: 'Test Android',
           archetypeId: 'Android',
           traitIds: ['smarts_14'], // Adds +1 limit
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -398,7 +414,7 @@ describe('derivedStats', () => {
           name: 'Test Mutant',
           archetypeId: 'Mutant',
           traitIds: ['smarts_20'], // Big Brain: -1 health, +1 limit
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -418,7 +434,7 @@ describe('derivedStats', () => {
           name: 'Test Perfect Mutant',
           archetypeId: 'Perfect Mutant',
           traitIds: ['agility_15', 'smarts_21'], // Both restricted to MUTANT_SPECIES
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -439,7 +455,7 @@ describe('derivedStats', () => {
           name: 'Test Perfect Mutant',
           archetypeId: 'Perfect Mutant',
           traitIds: ['agility_1', 'defense_1'], // Not species restricted
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -460,7 +476,7 @@ describe('derivedStats', () => {
           name: 'Test Perfect Mutant',
           archetypeId: 'Perfect Mutant',
           traitIds: ['agility_16'], // Tunnel Rat, restricted to Nomad only
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -481,7 +497,7 @@ describe('derivedStats', () => {
           name: 'Test Perfect Mutant',
           archetypeId: 'Perfect Mutant',
           traitIds: ['smarts_20'], // Big Brain: MUTANT_SPECIES restricted with stat modifiers
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -504,7 +520,7 @@ describe('derivedStats', () => {
           name: 'Test Character',
           archetypeId: 'Human',
           traitIds: ['agility_1', 'agility_2', 'agility_3', 'agility_4'],
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -523,7 +539,7 @@ describe('derivedStats', () => {
           name: 'Test Character',
           archetypeId: 'Human',
           traitIds: ['agility_1'], // Has no stat modifiers
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -545,7 +561,7 @@ describe('derivedStats', () => {
           name: 'Test Android',
           archetypeId: 'Android',
           traitIds: ['defense_1', 'defense_23'], // defense_1 no modifiers, defense_23 has +1 health
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -566,7 +582,7 @@ describe('derivedStats', () => {
           name: 'Test Regular Mutant',
           archetypeId: 'Mutant',
           traitIds: ['agility_15', 'smarts_21'], // Both restricted to MUTANT_SPECIES
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -587,7 +603,7 @@ describe('derivedStats', () => {
           name: 'Test Tech-Mutant',
           archetypeId: 'Tech-Mutant',
           traitIds: ['agility_15', 'defense_25'], // agility_15 is MUTANT_SPECIES restricted
-          distinctionIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',

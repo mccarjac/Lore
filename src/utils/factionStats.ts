@@ -133,7 +133,7 @@ export const calculateFactionStats = (
   // Calculate most common distinctions
   const distinctionCount: Record<string, number> = {};
   members.forEach(member => {
-    member.distinctionIds.forEach(distinctionId => {
+    member.qualityIds.forEach(distinctionId => {
       distinctionCount[distinctionId] =
         (distinctionCount[distinctionId] || 0) + 1;
     });

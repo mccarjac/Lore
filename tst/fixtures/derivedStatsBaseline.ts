@@ -6,7 +6,7 @@
  *
  * Captured with a fresh module registry per case. That matters: the old
  * implementation mutated the shared SPECIES_BASE_STATS objects when applying
- * cyberware cap modifiers, so a single-process capture would have baked
+ * modifications cap modifiers, so a single-process capture would have baked
  * cross-character cap leakage into these numbers.
  */
 export interface BaselineEntry {

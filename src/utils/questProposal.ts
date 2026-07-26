@@ -54,13 +54,13 @@ export const scoreCharacterForQuest = (
     if (character.traitIds.includes(perkId)) score -= PERK_WEIGHT;
   });
 
-  desirable?.distinctionIds?.forEach(distinctionId => {
-    if (character.distinctionIds.includes(distinctionId)) {
+  desirable?.qualityIds?.forEach(distinctionId => {
+    if (character.qualityIds.includes(distinctionId)) {
       score += DISTINCTION_WEIGHT;
     }
   });
-  undesirable?.distinctionIds?.forEach(distinctionId => {
-    if (character.distinctionIds.includes(distinctionId)) {
+  undesirable?.qualityIds?.forEach(distinctionId => {
+    if (character.qualityIds.includes(distinctionId)) {
       score -= DISTINCTION_WEIGHT;
     }
   });

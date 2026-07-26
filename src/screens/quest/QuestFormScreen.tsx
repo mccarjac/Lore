@@ -57,14 +57,14 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
 interface PreferenceLists {
   traitCategoryIds: string[];
   archetypeIds: string[];
-  distinctionIds: DistinctionId[];
+  qualityIds: DistinctionId[];
   traitIds: string[];
 }
 
 const emptyPreferenceLists = (): PreferenceLists => ({
   traitCategoryIds: [],
   archetypeIds: [],
-  distinctionIds: [],
+  qualityIds: [],
   traitIds: [],
 });
 
@@ -251,13 +251,13 @@ export const QuestFormScreen: React.FC = () => {
         desirable: {
           traitCategoryIds: quest.desirable?.traitCategoryIds || [],
           archetypeIds: quest.desirable?.archetypeIds || [],
-          distinctionIds: quest.desirable?.distinctionIds || [],
+          qualityIds: quest.desirable?.qualityIds || [],
           traitIds: quest.desirable?.traitIds || [],
         },
         undesirable: {
           traitCategoryIds: quest.undesirable?.traitCategoryIds || [],
           archetypeIds: quest.undesirable?.archetypeIds || [],
-          distinctionIds: quest.undesirable?.distinctionIds || [],
+          qualityIds: quest.undesirable?.qualityIds || [],
           traitIds: quest.undesirable?.traitIds || [],
         },
         locationId: quest.locationId || '',
@@ -590,11 +590,9 @@ export const QuestFormScreen: React.FC = () => {
           label={label('quality.plural')}
           placeholder={`Select ${label('quality.singular', 'lower')} to add...`}
           options={DISTINCTION_OPTIONS}
-          selected={formData.desirable.distinctionIds}
-          onAdd={value => addPreference('desirable', 'distinctionIds', value)}
-          onRemove={value =>
-            removePreference('desirable', 'distinctionIds', value)
-          }
+          selected={formData.desirable.qualityIds}
+          onAdd={value => addPreference('desirable', 'qualityIds', value)}
+          onRemove={value => removePreference('desirable', 'qualityIds', value)}
         />
 
         <Text style={[styles.sublabel, styles.labelMargin]}>Undesirable</Text>
@@ -638,10 +636,10 @@ export const QuestFormScreen: React.FC = () => {
           label={label('quality.plural')}
           placeholder={`Select ${label('quality.singular', 'lower')} to add...`}
           options={DISTINCTION_OPTIONS}
-          selected={formData.undesirable.distinctionIds}
-          onAdd={value => addPreference('undesirable', 'distinctionIds', value)}
+          selected={formData.undesirable.qualityIds}
+          onAdd={value => addPreference('undesirable', 'qualityIds', value)}
           onRemove={value =>
-            removePreference('undesirable', 'distinctionIds', value)
+            removePreference('undesirable', 'qualityIds', value)
           }
         />
       </CollapsibleSection>

@@ -55,7 +55,7 @@ const archetypes: Archetype[] = Object.entries(SPECIES_BASE_STATS).map(
     baseValues: { health: stats.baseHealth, limit: stats.baseLimit },
     caps: { health: stats.healthCap, limit: stats.limitCap },
     capabilities: {
-      cyberware: stats.canUseCyberware,
+      modifications: stats.canUseCyberware,
       chems: stats.canUseChems,
       injuries: stats.canTakeInjuries,
       malfunctions: stats.canTakeMalfunctions,
@@ -126,8 +126,8 @@ export const afterworldsRuleset: RulesetDefinition = {
     'traitCategory.plural': 'Tags',
     'quality.singular': 'Distinction',
     'quality.plural': 'Distinctions',
-    'modification.singular': 'Cyberware',
-    'modification.plural': 'Cyberware',
+    'modification.singular': 'Modification',
+    'modification.plural': 'Modification',
     'resource.singular': 'Resource',
     'resource.plural': 'Resources',
     'recipe.singular': 'Recipe',
@@ -147,7 +147,7 @@ export const afterworldsRuleset: RulesetDefinition = {
     { id: 'android', label: 'Android' },
   ],
   capabilities: [
-    { id: 'cyberware', label: 'Can Use Cyberware' },
+    { id: 'modifications', label: 'Can Use Modification' },
     { id: 'chems', label: 'Can Use Chems' },
     { id: 'injuries', label: 'Can Take Injuries' },
     { id: 'malfunctions', label: 'Can Take Malfunctions' },
