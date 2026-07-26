@@ -94,7 +94,7 @@ describe('factionStats', () => {
           id: '1',
           name: 'Member A',
           archetypeId: 'Human',
-          perkIds: ['agility_1'],
+          traitIds: ['agility_1'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -103,7 +103,7 @@ describe('factionStats', () => {
           id: '2',
           name: 'Member B',
           archetypeId: 'Human',
-          perkIds: ['agility_1', 'agility_2'],
+          traitIds: ['agility_1', 'agility_2'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Friend },
           ],
@@ -112,7 +112,7 @@ describe('factionStats', () => {
           id: '3',
           name: 'Member C',
           archetypeId: 'Mutant',
-          perkIds: [],
+          traitIds: [],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -144,7 +144,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Member A',
-          perkIds: ['not-a-real-perk'],
+          traitIds: ['not-a-real-perk'],
           distinctionIds: ['not-a-real-distinction'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
@@ -206,7 +206,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Brotherhood Member',
-          perkIds: ['agility_1'],
+          traitIds: ['agility_1'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -214,7 +214,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '2',
           name: 'Ally Member',
-          perkIds: ['agility_1'],
+          traitIds: ['agility_1'],
           factions: [
             { name: 'Scavengers', standing: RelationshipStanding.Ally },
           ],

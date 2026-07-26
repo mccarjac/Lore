@@ -28,7 +28,6 @@ import {
   GameEvent,
   QuestStatus,
   QuestMaterial,
-  PerkId,
   DistinctionId,
 } from '@models/types';
 import {
@@ -56,17 +55,17 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
 };
 
 interface PreferenceLists {
-  tags: PerkTag[];
+  traitCategoryIds: string[];
   archetypeIds: string[];
   distinctionIds: DistinctionId[];
-  perkIds: PerkId[];
+  traitIds: string[];
 }
 
 const emptyPreferenceLists = (): PreferenceLists => ({
-  tags: [],
+  traitCategoryIds: [],
   archetypeIds: [],
   distinctionIds: [],
-  perkIds: [],
+  traitIds: [],
 });
 
 interface QuestFormData {
@@ -186,8 +185,8 @@ const SPECIES_OPTIONS: Option<Species>[] = Object.keys(SPECIES_BASE_STATS).map(
   })
 );
 
-const PERK_OPTIONS: Option<PerkId>[] = AVAILABLE_PERKS.map(perk => ({
-  value: perk.id as PerkId,
+const PERK_OPTIONS: Option<string>[] = AVAILABLE_PERKS.map(perk => ({
+  value: perk.id,
   label: `${perk.name} (${perk.tag})`,
 }));
 
@@ -250,16 +249,16 @@ export const QuestFormScreen: React.FC = () => {
         status: quest.status,
         assignedCharacterIds: quest.assignedCharacterIds || [],
         desirable: {
-          tags: quest.desirable?.tags || [],
+          traitCategoryIds: quest.desirable?.traitCategoryIds || [],
           archetypeIds: quest.desirable?.archetypeIds || [],
           distinctionIds: quest.desirable?.distinctionIds || [],
-          perkIds: quest.desirable?.perkIds || [],
+          traitIds: quest.desirable?.traitIds || [],
         },
         undesirable: {
-          tags: quest.undesirable?.tags || [],
+          traitCategoryIds: quest.undesirable?.traitCategoryIds || [],
           archetypeIds: quest.undesirable?.archetypeIds || [],
           distinctionIds: quest.undesirable?.distinctionIds || [],
-          perkIds: quest.undesirable?.perkIds || [],
+          traitIds: quest.undesirable?.traitIds || [],
         },
         locationId: quest.locationId || '',
         factionNames: quest.factionNames || [],
@@ -560,9 +559,11 @@ export const QuestFormScreen: React.FC = () => {
             'lower'
           )} to add...`}
           options={TAG_OPTIONS}
-          selected={formData.desirable.tags}
-          onAdd={value => addPreference('desirable', 'tags', value)}
-          onRemove={value => removePreference('desirable', 'tags', value)}
+          selected={formData.desirable.traitCategoryIds}
+          onAdd={value => addPreference('desirable', 'traitCategoryIds', value)}
+          onRemove={value =>
+            removePreference('desirable', 'traitCategoryIds', value)
+          }
         />
         <MultiSelectField
           label={label('archetype.plural')}
@@ -581,9 +582,9 @@ export const QuestFormScreen: React.FC = () => {
           label={label('trait.plural')}
           placeholder={`Select ${label('trait.singular', 'lower')} to add...`}
           options={PERK_OPTIONS}
-          selected={formData.desirable.perkIds}
-          onAdd={value => addPreference('desirable', 'perkIds', value)}
-          onRemove={value => removePreference('desirable', 'perkIds', value)}
+          selected={formData.desirable.traitIds}
+          onAdd={value => addPreference('desirable', 'traitIds', value)}
+          onRemove={value => removePreference('desirable', 'traitIds', value)}
         />
         <MultiSelectField
           label={label('quality.plural')}
@@ -604,9 +605,13 @@ export const QuestFormScreen: React.FC = () => {
             'lower'
           )} to add...`}
           options={TAG_OPTIONS}
-          selected={formData.undesirable.tags}
-          onAdd={value => addPreference('undesirable', 'tags', value)}
-          onRemove={value => removePreference('undesirable', 'tags', value)}
+          selected={formData.undesirable.traitCategoryIds}
+          onAdd={value =>
+            addPreference('undesirable', 'traitCategoryIds', value)
+          }
+          onRemove={value =>
+            removePreference('undesirable', 'traitCategoryIds', value)
+          }
         />
         <MultiSelectField
           label={label('archetype.plural')}
@@ -625,9 +630,9 @@ export const QuestFormScreen: React.FC = () => {
           label={label('trait.plural')}
           placeholder={`Select ${label('trait.singular', 'lower')} to add...`}
           options={PERK_OPTIONS}
-          selected={formData.undesirable.perkIds}
-          onAdd={value => addPreference('undesirable', 'perkIds', value)}
-          onRemove={value => removePreference('undesirable', 'perkIds', value)}
+          selected={formData.undesirable.traitIds}
+          onAdd={value => addPreference('undesirable', 'traitIds', value)}
+          onRemove={value => removePreference('undesirable', 'traitIds', value)}
         />
         <MultiSelectField
           label={label('quality.plural')}

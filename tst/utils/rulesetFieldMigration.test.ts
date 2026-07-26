@@ -21,7 +21,7 @@ const legacyCharacter = (extra: Record<string, unknown> = {}): GameCharacter =>
     id: 'c1',
     name: 'Legacy',
     species: 'Mutant',
-    perkIds: [],
+    perkIds: ['agility_1'],
     distinctionIds: [],
     factions: [],
     relationships: [],
@@ -35,7 +35,7 @@ const currentCharacter = (extra: Partial<GameCharacter> = {}): GameCharacter =>
     id: 'c1',
     name: 'Current',
     archetypeId: 'Mutant',
-    perkIds: [],
+    traitIds: ['agility_1'],
     distinctionIds: [],
     factions: [],
     relationships: [],
@@ -93,6 +93,13 @@ describe('normalizeCharacterRulesetFields', () => {
     expect('species' in result).toBe(false);
   });
 
+  it('rewrites perkIds to traitIds (#4)', () => {
+    const result = normalizeCharacterRulesetFields(legacyCharacter());
+
+    expect(result.traitIds).toEqual(['agility_1']);
+    expect('perkIds' in result).toBe(false);
+  });
+
   it('falls back to Unknown when neither field is present', () => {
     const orphan = legacyCharacter();
     delete (orphan as unknown as Record<string, unknown>).species;
@@ -117,14 +124,27 @@ describe('normalizeQuestRulesetFields', () => {
     expect('species' in (result.desirable ?? {})).toBe(false);
   });
 
-  it('leaves other preference keys alone', () => {
+  it('rewrites tags/perkIds to traitCategoryIds/traitIds (#4)', () => {
     const result = normalizeQuestRulesetFields(
       quest({
-        desirable: { species: ['Human'], perkIds: ['agility_1'] },
+        desirable: { tags: ['Agility'], perkIds: ['agility_1'] },
       } as unknown as Partial<GameQuest>)
     );
 
-    expect(result.desirable?.perkIds).toEqual(['agility_1']);
+    expect(result.desirable?.traitCategoryIds).toEqual(['Agility']);
+    expect(result.desirable?.traitIds).toEqual(['agility_1']);
+    expect('tags' in (result.desirable ?? {})).toBe(false);
+    expect('perkIds' in (result.desirable ?? {})).toBe(false);
+  });
+
+  it('leaves other preference keys alone', () => {
+    const result = normalizeQuestRulesetFields(
+      quest({
+        desirable: { species: ['Human'], distinctionIds: ['d1'] },
+      } as unknown as Partial<GameQuest>)
+    );
+
+    expect(result.desirable?.distinctionIds).toEqual(['d1']);
   });
 
   it('returns the same reference when already migrated', () => {

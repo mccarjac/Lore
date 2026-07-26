@@ -64,7 +64,7 @@ export const calculateCharacterStats = (
   // Calculate most common perks
   const perkCount: Record<string, number> = {};
   characters.forEach(char => {
-    char.perkIds.forEach(perkId => {
+    char.traitIds.forEach(perkId => {
       perkCount[perkId] = (perkCount[perkId] || 0) + 1;
     });
   });

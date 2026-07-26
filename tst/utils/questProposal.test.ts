@@ -17,7 +17,7 @@ const makeCharacter = (
   id,
   name: `Character ${id}`,
   archetypeId: 'Human',
-  perkIds: [],
+  traitIds: [],
   distinctionIds: [],
   factions: [],
   relationships: [],
@@ -43,7 +43,7 @@ const makeQuest = (
 describe('questProposal', () => {
   describe('scoreCharacterForQuest', () => {
     it('scores 0 when the quest has no preferences', () => {
-      const character = makeCharacter('a', { perkIds: ['agility_1'] });
+      const character = makeCharacter('a', { traitIds: ['agility_1'] });
       const quest = makeQuest('q1');
 
       expect(scoreCharacterForQuest(character, quest)).toBe(0);
@@ -51,10 +51,10 @@ describe('questProposal', () => {
 
     it('rewards a desirable tag proportional to the tag score', () => {
       const character = makeCharacter('a', {
-        perkIds: ['agility_1', 'agility_2'],
+        traitIds: ['agility_1', 'agility_2'],
       });
       const quest = makeQuest('q1', {
-        desirable: { tags: [PerkTag.Agility] },
+        desirable: { traitCategoryIds: [PerkTag.Agility] },
       });
 
       // 2 agility perks => tagScores.get(Agility) === 2, weight 1 each.
@@ -62,9 +62,9 @@ describe('questProposal', () => {
     });
 
     it('penalizes an undesirable tag proportional to the tag score', () => {
-      const character = makeCharacter('a', { perkIds: ['agility_1'] });
+      const character = makeCharacter('a', { traitIds: ['agility_1'] });
       const quest = makeQuest('q1', {
-        undesirable: { tags: [PerkTag.Agility] },
+        undesirable: { traitCategoryIds: [PerkTag.Agility] },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBe(-1);
@@ -89,18 +89,18 @@ describe('questProposal', () => {
     });
 
     it('rewards a desirable perk match', () => {
-      const character = makeCharacter('a', { perkIds: ['agility_1'] });
+      const character = makeCharacter('a', { traitIds: ['agility_1'] });
       const quest = makeQuest('q1', {
-        desirable: { perkIds: ['agility_1'] },
+        desirable: { traitIds: ['agility_1'] },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeGreaterThan(0);
     });
 
     it('penalizes an undesirable perk match', () => {
-      const character = makeCharacter('a', { perkIds: ['agility_1'] });
+      const character = makeCharacter('a', { traitIds: ['agility_1'] });
       const quest = makeQuest('q1', {
-        undesirable: { perkIds: ['agility_1'] },
+        undesirable: { traitIds: ['agility_1'] },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeLessThan(0);
@@ -206,12 +206,12 @@ describe('questProposal', () => {
     it('prefers higher-scoring characters for a quest', () => {
       const quest = makeQuest('a', {
         teamSize: 1,
-        desirable: { tags: [PerkTag.Agility] },
+        desirable: { traitCategoryIds: [PerkTag.Agility] },
       });
       const strongMatch = makeCharacter('strong', {
-        perkIds: ['agility_1', 'agility_2', 'agility_3'],
+        traitIds: ['agility_1', 'agility_2', 'agility_3'],
       });
-      const weakMatch = makeCharacter('weak', { perkIds: [] });
+      const weakMatch = makeCharacter('weak', { traitIds: [] });
 
       const [proposal] = generateQuestProposals(
         [quest],

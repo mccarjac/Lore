@@ -1,12 +1,6 @@
-import {
-  AVAILABLE_PERKS,
-  AVAILABLE_DISTINCTIONS,
-  type PerkTag,
-  type StatModifiers,
-} from './gameData';
+import { AVAILABLE_DISTINCTIONS, type StatModifiers } from './gameData';
 import type { Species } from './speciesTypes';
 
-export type PerkId = (typeof AVAILABLE_PERKS)[number]['id'];
 export type DistinctionId = (typeof AVAILABLE_DISTINCTIONS)[number]['id'];
 
 export interface GameLocation {
@@ -87,7 +81,8 @@ export interface GameCharacter {
    * `species` union before #3; migrateRulesetFields() rewrites stored data.
    */
   archetypeId: string;
-  perkIds: PerkId[];
+  /** Ruleset trait ids (RulesetDefinition.traits[].id). Was `traitIds`. */
+  traitIds: string[];
   distinctionIds: DistinctionId[];
   factions: Faction[];
   relationships: Relationship[];
@@ -155,10 +150,10 @@ export interface QuestMaterial {
 }
 
 export interface QuestAttributePreferences {
-  tags?: PerkTag[];
+  traitCategoryIds?: string[];
   archetypeIds?: string[];
   distinctionIds?: DistinctionId[];
-  perkIds?: PerkId[];
+  traitIds?: string[];
 }
 
 export interface GameQuest {

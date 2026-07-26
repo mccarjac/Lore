@@ -1,9 +1,5 @@
 import { GameCharacter, RelationshipStanding } from '../models/types';
-import {
-  AVAILABLE_PERKS,
-  AVAILABLE_DISTINCTIONS,
-  PerkTag,
-} from '../models/gameData';
+import { AVAILABLE_PERKS, AVAILABLE_DISTINCTIONS } from '../models/gameData';
 import { FactionRelationship } from './characterStorage';
 import {
   getLabel,
@@ -16,9 +12,10 @@ export interface FactionStats {
   totalMembers: number;
   presentMembers: number;
 
-  // Perk tag analysis
-  perkTagCounts: Record<PerkTag, number>;
-  topPerkTags: { tag: PerkTag; count: number; percentage: number }[];
+  // Trait category analysis. Keyed by ruleset trait-category id, not a
+  // closed enum — a ruleset may declare any number of categories.
+  perkTagCounts: Record<string, number>;
+  topPerkTags: { tag: string; count: number; percentage: number }[];
 
   // Common perks and distinctions
   commonPerks: { name: string; count: number; percentage: number }[];
@@ -34,7 +31,7 @@ export interface FactionStats {
 
   // Combined strength (with allies)
   combinedMemberCount?: number;
-  combinedPerkTags?: Record<PerkTag, number>;
+  combinedPerkTags?: Record<string, number>;
 }
 
 export interface CombinedFactionAnalysis {
@@ -42,7 +39,7 @@ export interface CombinedFactionAnalysis {
   directMembers: number;
   alliedFactions: string[];
   combinedMembers: number;
-  combinedPerkTags: Record<PerkTag, number>;
+  combinedPerkTags: Record<string, number>;
   strengthMultiplier: number; // Combined vs direct member ratio
 }
 
@@ -73,7 +70,7 @@ export const calculateFactionStats = (
       factionName,
       totalMembers: 0,
       presentMembers: 0,
-      perkTagCounts: {} as Record<PerkTag, number>,
+      perkTagCounts: {},
       topPerkTags: [],
       commonPerks: [],
       commonDistinctions: [],
@@ -87,13 +84,15 @@ export const calculateFactionStats = (
   const totalMembers = members.length;
   const presentMembers = members.filter(m => m.present === true).length;
 
-  // Calculate perk tag counts - initialize all tags to 0
-  const perkTagCounts: Record<PerkTag, number> = Object.fromEntries(
-    Object.values(PerkTag).map(tag => [tag, 0])
-  ) as Record<PerkTag, number>;
+  // Initialize every category the *ruleset* declares to 0, rather than the
+  // twelve members of a hardcoded enum. This is what lets a ruleset with a
+  // different number of categories render at all.
+  const perkTagCounts: Record<string, number> = Object.fromEntries(
+    ruleset.traitCategories.map(category => [category.id, 0])
+  );
 
   members.forEach(member => {
-    member.perkIds.forEach(perkId => {
+    member.traitIds.forEach(perkId => {
       const perk = AVAILABLE_PERKS.find(p => p.id === perkId);
       if (perk && perk.tag) {
         perkTagCounts[perk.tag] = (perkTagCounts[perk.tag] || 0) + 1;
@@ -104,7 +103,7 @@ export const calculateFactionStats = (
   // Get top perk tags
   const topPerkTags = Object.entries(perkTagCounts)
     .map(([tag, count]) => ({
-      tag: tag as PerkTag,
+      tag,
       count,
       percentage: (count / totalMembers) * 100,
     }))
@@ -115,7 +114,7 @@ export const calculateFactionStats = (
   // Calculate most common perks
   const perkCount: Record<string, number> = {};
   members.forEach(member => {
-    member.perkIds.forEach(perkId => {
+    member.traitIds.forEach(perkId => {
       perkCount[perkId] = (perkCount[perkId] || 0) + 1;
     });
   });
@@ -216,7 +215,7 @@ export const calculateCombinedFactionStats = (
 
   // Calculate combined member count and perk tags including allies
   let combinedMembers = baseStats.totalMembers;
-  const combinedPerkTags: Record<PerkTag, number> = {
+  const combinedPerkTags: Record<string, number> = {
     ...baseStats.perkTagCounts,
   };
 
@@ -232,8 +231,7 @@ export const calculateCombinedFactionStats = (
 
     // Add ally perk tags to combined totals
     Object.entries(allyStats.perkTagCounts).forEach(([tag, count]) => {
-      combinedPerkTags[tag as PerkTag] =
-        (combinedPerkTags[tag as PerkTag] || 0) + count;
+      combinedPerkTags[tag] = (combinedPerkTags[tag] || 0) + count;
     });
   });
 

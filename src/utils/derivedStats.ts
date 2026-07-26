@@ -29,7 +29,7 @@ export const calculateDerivedStats = (
 
   // Get all perks the character has
   const characterPerks = AVAILABLE_PERKS.filter(perk =>
-    character.perkIds.includes(perk.id)
+    character.traitIds.includes(perk.id)
   );
 
   // Calculate tag scores

@@ -432,12 +432,12 @@ const mergeCharacterProperties = (
     merged.updatedAt = imported.updatedAt;
   }
 
-  // Merge arrays (like perkIds, distinctionIds, factions)
-  if (imported.perkIds && imported.perkIds.length > 0) {
-    const existingPerkIds = new Set(existing.perkIds || []);
-    const newPerks = imported.perkIds.filter(id => !existingPerkIds.has(id));
+  // Merge arrays (like traitIds, distinctionIds, factions)
+  if (imported.traitIds && imported.traitIds.length > 0) {
+    const existingPerkIds = new Set(existing.traitIds || []);
+    const newPerks = imported.traitIds.filter(id => !existingPerkIds.has(id));
     if (newPerks.length > 0) {
-      merged.perkIds = [...(existing.perkIds || []), ...newPerks];
+      merged.traitIds = [...(existing.traitIds || []), ...newPerks];
     }
   }
 

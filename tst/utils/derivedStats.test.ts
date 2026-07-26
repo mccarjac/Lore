@@ -9,7 +9,7 @@ describe('derivedStats', () => {
         id: '1',
         name: 'Test Human',
         archetypeId: 'Human',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -30,7 +30,7 @@ describe('derivedStats', () => {
         id: '2',
         name: 'Test Mutant',
         archetypeId: 'Mutant',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -50,7 +50,7 @@ describe('derivedStats', () => {
         id: '3',
         name: 'Test Rad-Titan',
         archetypeId: 'Rad-Titan',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -70,7 +70,7 @@ describe('derivedStats', () => {
         id: '4',
         name: 'Test Unturned',
         archetypeId: 'Unturned',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -90,7 +90,7 @@ describe('derivedStats', () => {
         id: '5',
         name: 'Test Human',
         archetypeId: 'Human',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -118,7 +118,7 @@ describe('derivedStats', () => {
         id: '6',
         name: 'Test Human',
         archetypeId: 'Human',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -146,7 +146,7 @@ describe('derivedStats', () => {
         id: '7',
         name: 'Test Cyborg',
         archetypeId: 'Cyborg',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -174,7 +174,7 @@ describe('derivedStats', () => {
         id: '8',
         name: 'Test Cyborg',
         archetypeId: 'Cyborg',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -202,7 +202,7 @@ describe('derivedStats', () => {
         id: '9',
         name: 'Test Cyborg',
         archetypeId: 'Cyborg',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -238,7 +238,7 @@ describe('derivedStats', () => {
         id: '10',
         name: 'Test Human',
         archetypeId: 'Human',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -268,7 +268,7 @@ describe('derivedStats', () => {
         id: '11',
         name: 'Test Character',
         archetypeId: 'Human',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -298,7 +298,7 @@ describe('derivedStats', () => {
         id: '12',
         name: 'Test Character',
         archetypeId: 'Human',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -318,7 +318,7 @@ describe('derivedStats', () => {
         id: '13',
         name: 'Test Character',
         archetypeId: 'Human',
-        perkIds: [],
+        traitIds: [],
         distinctionIds: [],
         factions: [],
         relationships: [],
@@ -339,7 +339,7 @@ describe('derivedStats', () => {
           id: '14',
           name: 'Test Character',
           archetypeId: 'Human',
-          perkIds: ['agility_1', 'agility_2', 'defense_1'],
+          traitIds: ['agility_1', 'agility_2', 'defense_1'],
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -359,7 +359,7 @@ describe('derivedStats', () => {
           id: '15',
           name: 'Test Android',
           archetypeId: 'Android',
-          perkIds: ['defense_23'], // Rugged Construction: +1 health
+          traitIds: ['defense_23'], // Rugged Construction: +1 health
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -378,7 +378,7 @@ describe('derivedStats', () => {
           id: '16',
           name: 'Test Android',
           archetypeId: 'Android',
-          perkIds: ['smarts_14'], // Adds +1 limit
+          traitIds: ['smarts_14'], // Adds +1 limit
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -397,7 +397,7 @@ describe('derivedStats', () => {
           id: '17',
           name: 'Test Mutant',
           archetypeId: 'Mutant',
-          perkIds: ['smarts_20'], // Big Brain: -1 health, +1 limit
+          traitIds: ['smarts_20'], // Big Brain: -1 health, +1 limit
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -417,7 +417,7 @@ describe('derivedStats', () => {
           id: '18',
           name: 'Test Perfect Mutant',
           archetypeId: 'Perfect Mutant',
-          perkIds: ['agility_15', 'smarts_21'], // Both restricted to MUTANT_SPECIES
+          traitIds: ['agility_15', 'smarts_21'], // Both restricted to MUTANT_SPECIES
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -438,7 +438,7 @@ describe('derivedStats', () => {
           id: '19',
           name: 'Test Perfect Mutant',
           archetypeId: 'Perfect Mutant',
-          perkIds: ['agility_1', 'defense_1'], // Not species restricted
+          traitIds: ['agility_1', 'defense_1'], // Not species restricted
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -459,7 +459,7 @@ describe('derivedStats', () => {
           id: '20',
           name: 'Test Perfect Mutant',
           archetypeId: 'Perfect Mutant',
-          perkIds: ['agility_16'], // Tunnel Rat, restricted to Nomad only
+          traitIds: ['agility_16'], // Tunnel Rat, restricted to Nomad only
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -480,7 +480,7 @@ describe('derivedStats', () => {
           id: '21',
           name: 'Test Perfect Mutant',
           archetypeId: 'Perfect Mutant',
-          perkIds: ['smarts_20'], // Big Brain: MUTANT_SPECIES restricted with stat modifiers
+          traitIds: ['smarts_20'], // Big Brain: MUTANT_SPECIES restricted with stat modifiers
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -503,7 +503,7 @@ describe('derivedStats', () => {
           id: '22',
           name: 'Test Character',
           archetypeId: 'Human',
-          perkIds: ['agility_1', 'agility_2', 'agility_3', 'agility_4'],
+          traitIds: ['agility_1', 'agility_2', 'agility_3', 'agility_4'],
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -522,7 +522,7 @@ describe('derivedStats', () => {
           id: '23',
           name: 'Test Character',
           archetypeId: 'Human',
-          perkIds: ['agility_1'], // Has no stat modifiers
+          traitIds: ['agility_1'], // Has no stat modifiers
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -544,7 +544,7 @@ describe('derivedStats', () => {
           id: '24',
           name: 'Test Android',
           archetypeId: 'Android',
-          perkIds: ['defense_1', 'defense_23'], // defense_1 no modifiers, defense_23 has +1 health
+          traitIds: ['defense_1', 'defense_23'], // defense_1 no modifiers, defense_23 has +1 health
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -565,7 +565,7 @@ describe('derivedStats', () => {
           id: '25',
           name: 'Test Regular Mutant',
           archetypeId: 'Mutant',
-          perkIds: ['agility_15', 'smarts_21'], // Both restricted to MUTANT_SPECIES
+          traitIds: ['agility_15', 'smarts_21'], // Both restricted to MUTANT_SPECIES
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -586,7 +586,7 @@ describe('derivedStats', () => {
           id: '26',
           name: 'Test Tech-Mutant',
           archetypeId: 'Tech-Mutant',
-          perkIds: ['agility_15', 'defense_25'], // agility_15 is MUTANT_SPECIES restricted
+          traitIds: ['agility_15', 'defense_25'], // agility_15 is MUTANT_SPECIES restricted
           distinctionIds: [],
           factions: [],
           relationships: [],

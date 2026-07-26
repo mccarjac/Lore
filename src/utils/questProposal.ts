@@ -1,4 +1,5 @@
 import { GameCharacter, GameQuest, QuestStatus } from '@models/types';
+import { PerkTag } from '@models/gameData';
 import { calculateDerivedStats } from './derivedStats';
 
 export interface QuestProposal {
@@ -32,11 +33,11 @@ export const scoreCharacterForQuest = (
   const undesirable = quest.undesirable;
   let score = 0;
 
-  desirable?.tags?.forEach(tag => {
-    score += (tagScores?.get(tag) ?? 0) * TAG_SCORE_WEIGHT;
+  desirable?.traitCategoryIds?.forEach(categoryId => {
+    score += (tagScores?.get(categoryId as PerkTag) ?? 0) * TAG_SCORE_WEIGHT;
   });
-  undesirable?.tags?.forEach(tag => {
-    score -= (tagScores?.get(tag) ?? 0) * TAG_SCORE_WEIGHT;
+  undesirable?.traitCategoryIds?.forEach(categoryId => {
+    score -= (tagScores?.get(categoryId as PerkTag) ?? 0) * TAG_SCORE_WEIGHT;
   });
 
   if (desirable?.archetypeIds?.includes(character.archetypeId)) {
@@ -46,11 +47,11 @@ export const scoreCharacterForQuest = (
     score -= SPECIES_WEIGHT;
   }
 
-  desirable?.perkIds?.forEach(perkId => {
-    if (character.perkIds.includes(perkId)) score += PERK_WEIGHT;
+  desirable?.traitIds?.forEach(perkId => {
+    if (character.traitIds.includes(perkId)) score += PERK_WEIGHT;
   });
-  undesirable?.perkIds?.forEach(perkId => {
-    if (character.perkIds.includes(perkId)) score -= PERK_WEIGHT;
+  undesirable?.traitIds?.forEach(perkId => {
+    if (character.traitIds.includes(perkId)) score -= PERK_WEIGHT;
   });
 
   desirable?.distinctionIds?.forEach(distinctionId => {

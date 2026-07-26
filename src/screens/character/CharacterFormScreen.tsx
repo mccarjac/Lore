@@ -71,7 +71,7 @@ export const CharacterFormScreen: React.FC = () => {
       ? {
           name: editingCharacter.name,
           archetypeId: editingCharacter.archetypeId,
-          perkIds: [...editingCharacter.perkIds],
+          traitIds: [...editingCharacter.traitIds],
           distinctionIds: [...editingCharacter.distinctionIds],
           factions: [...editingCharacter.factions],
           relationships: [...(editingCharacter.relationships || [])],
@@ -85,7 +85,7 @@ export const CharacterFormScreen: React.FC = () => {
       : {
           name: '',
           archetypeId: 'Human',
-          perkIds: [],
+          traitIds: [],
           distinctionIds: [],
           factions: [],
           relationships: [],
@@ -410,14 +410,14 @@ export const CharacterFormScreen: React.FC = () => {
                 key={perk.id}
                 style={[
                   styles.selectionItem,
-                  form.perkIds.includes(perk.id) && styles.selectedItem,
+                  form.traitIds.includes(perk.id) && styles.selectedItem,
                   perk.allowedSpecies && styles.speciesSpecificItem,
                 ]}
                 onPress={() => {
-                  const newPerkIds = form.perkIds.includes(perk.id)
-                    ? form.perkIds.filter(id => id !== perk.id)
-                    : [...form.perkIds, perk.id];
-                  handleChange('perkIds', newPerkIds);
+                  const newPerkIds = form.traitIds.includes(perk.id)
+                    ? form.traitIds.filter(id => id !== perk.id)
+                    : [...form.traitIds, perk.id];
+                  handleChange('traitIds', newPerkIds);
                 }}
               >
                 <View style={styles.perkContainer}>

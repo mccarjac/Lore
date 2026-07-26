@@ -73,9 +73,9 @@ const sortCharacterNestedArrays = (character: GameCharacter): GameCharacter => {
     );
   }
 
-  // Sort perkIds alphabetically
-  if (sorted.perkIds && sorted.perkIds.length > 0) {
-    sorted.perkIds = [...sorted.perkIds].sort((a, b) => a.localeCompare(b));
+  // Sort traitIds alphabetically
+  if (sorted.traitIds && sorted.traitIds.length > 0) {
+    sorted.traitIds = [...sorted.traitIds].sort((a, b) => a.localeCompare(b));
   }
 
   // Sort distinctionIds alphabetically

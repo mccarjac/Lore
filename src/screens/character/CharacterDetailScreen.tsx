@@ -206,14 +206,14 @@ export const CharacterDetailScreen: React.FC = () => {
   };
 
   const renderPerks = () => {
-    if (!character.perkIds || character.perkIds.length === 0) {
+    if (!character.traitIds || character.traitIds.length === 0) {
       return null;
     }
 
     return (
       <CollapsibleSection title={label('trait.plural')} defaultCollapsed={true}>
         {AVAILABLE_PERKS.filter(perk =>
-          character.perkIds.includes(perk.id)
+          character.traitIds.includes(perk.id)
         ).map(perk => (
           <View key={perk.id} style={styles.itemContainer}>
             <Text style={styles.titleText}>{perk.name}</Text>

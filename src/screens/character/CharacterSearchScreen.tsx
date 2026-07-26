@@ -19,7 +19,6 @@ import {
 } from '@/models/gameData';
 import {
   GameCharacter,
-  PerkId,
   DistinctionId,
   RelationshipStanding,
 } from '@/models/types';
@@ -38,7 +37,7 @@ const getAllTags = (): PerkTag[] => {
 import { loadCharacters } from '@/utils/characterStorage';
 
 interface SearchCriteria {
-  perkId?: PerkId;
+  perkId?: string;
   distinctionId?: DistinctionId;
   tag?: PerkTag;
   minTagScore?: number;
@@ -62,7 +61,7 @@ export const CharacterSearchScreen: React.FC = () => {
     tag: PerkTag
   ): number => {
     return AVAILABLE_PERKS.filter(
-      perk => character.perkIds.includes(perk.id) && perk.tag === tag
+      perk => character.traitIds.includes(perk.id) && perk.tag === tag
     ).length;
   };
 
@@ -72,7 +71,7 @@ export const CharacterSearchScreen: React.FC = () => {
       // Check perk
       if (
         searchCriteria.perkId &&
-        !character.perkIds.includes(searchCriteria.perkId)
+        !character.traitIds.includes(searchCriteria.perkId)
       ) {
         return false;
       }
@@ -88,7 +87,7 @@ export const CharacterSearchScreen: React.FC = () => {
       // Check recipes
       if (searchCriteria.recipeId) {
         const characterPerks = AVAILABLE_PERKS.filter(
-          perk => character.perkIds.includes(perk.id) && perk.recipeIds
+          perk => character.traitIds.includes(perk.id) && perk.recipeIds
         );
 
         const hasMatchingRecipe = characterPerks.some(perk =>

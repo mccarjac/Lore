@@ -17,21 +17,50 @@
  */
 import type { GameCharacter, GameQuest } from '@models/types';
 
-/** The pre-#3 character shape, as it may still exist on disk. */
-type LegacyCharacter = Omit<GameCharacter, 'archetypeId'> &
-  Partial<Pick<GameCharacter, 'archetypeId'>> & {
-    species?: string;
-  };
-
-/** The pre-#3 quest preference shape. */
-type LegacyPreferences = {
-  species?: string[];
-  archetypeIds?: string[];
-  [key: string]: unknown;
-};
+/** A loosely-typed record, which is all a legacy-shape object can be. */
+type LooseRecord = Record<string, unknown>;
 
 /** Fallback archetype for a character stored without one. */
 export const UNKNOWN_ARCHETYPE_ID = 'Unknown';
+
+/** old field name -> current field name, applied to a stored character. */
+const CHARACTER_RENAMES: Record<string, string> = {
+  species: 'archetypeId', // #3
+  perkIds: 'traitIds', // #4
+};
+
+/** old field name -> current field name, applied to quest preferences. */
+const PREFERENCE_RENAMES: Record<string, string> = {
+  species: 'archetypeIds', // #3
+  tags: 'traitCategoryIds', // #4
+  perkIds: 'traitIds', // #4
+};
+
+/**
+ * Applies a rename table to a plain object.
+ *
+ * The current name always wins when both are present, so re-running can
+ * never regress an already-migrated record, and the old key is always
+ * dropped. Returns `null` when nothing needed changing, letting callers
+ * preserve the original reference.
+ */
+const applyRenames = (
+  source: LooseRecord,
+  renames: Record<string, string>
+): LooseRecord | null => {
+  const applicable = Object.keys(renames).filter(
+    oldKey => source[oldKey] !== undefined
+  );
+  if (applicable.length === 0) return null;
+
+  const result: LooseRecord = { ...source };
+  applicable.forEach(oldKey => {
+    const newKey = renames[oldKey];
+    if (result[newKey] === undefined) result[newKey] = source[oldKey];
+    delete result[oldKey];
+  });
+  return result;
+};
 
 /**
  * Returns the normalized character, or the original reference when it was
@@ -41,36 +70,30 @@ export const UNKNOWN_ARCHETYPE_ID = 'Unknown';
 export const normalizeCharacterRulesetFields = (
   character: GameCharacter
 ): GameCharacter => {
-  const legacy = character as LegacyCharacter;
+  const source = character as unknown as LooseRecord;
+  const renamed = applyRenames(source, CHARACTER_RENAMES);
 
-  // An already-migrated record keeps its archetypeId even if a stale
-  // `species` is still hanging around, so re-running can never regress it.
-  const needsArchetype = legacy.archetypeId === undefined;
-  if (!needsArchetype && legacy.species === undefined) return character;
+  // A record with neither the old nor the new archetype key still needs one,
+  // since `archetypeId` is required.
+  const needsArchetypeFallback = (renamed ?? source).archetypeId === undefined;
+  if (!renamed && !needsArchetypeFallback) return character;
 
-  const { species, ...rest } = legacy;
-  return {
-    ...rest,
-    archetypeId: legacy.archetypeId ?? species ?? UNKNOWN_ARCHETYPE_ID,
-  } as GameCharacter;
+  const result = renamed ?? { ...source };
+  if (result.archetypeId === undefined) {
+    result.archetypeId = UNKNOWN_ARCHETYPE_ID;
+  }
+  return result as unknown as GameCharacter;
 };
 
 const normalizePreferences = (
-  preferences: LegacyPreferences | undefined
-): { value: LegacyPreferences | undefined; changed: boolean } => {
+  preferences: LooseRecord | undefined
+): { value: LooseRecord | undefined; changed: boolean } => {
   if (!preferences) return { value: preferences, changed: false };
 
-  const hasLegacy = preferences.species !== undefined;
-  if (!hasLegacy) return { value: preferences, changed: false };
-
-  const { species, ...rest } = preferences;
-  return {
-    value: {
-      ...rest,
-      archetypeIds: preferences.archetypeIds ?? species,
-    },
-    changed: true,
-  };
+  const renamed = applyRenames(preferences, PREFERENCE_RENAMES);
+  return renamed
+    ? { value: renamed, changed: true }
+    : { value: preferences, changed: false };
 };
 
 /**
@@ -79,10 +102,10 @@ const normalizePreferences = (
  */
 export const normalizeQuestRulesetFields = (quest: GameQuest): GameQuest => {
   const desirable = normalizePreferences(
-    quest.desirable as LegacyPreferences | undefined
+    quest.desirable as LooseRecord | undefined
   );
   const undesirable = normalizePreferences(
-    quest.undesirable as LegacyPreferences | undefined
+    quest.undesirable as LooseRecord | undefined
   );
 
   if (!desirable.changed && !undesirable.changed) return quest;
