@@ -1,4 +1,4 @@
-import { calculateDerivedStats } from '@/utils/derivedStats';
+import { calculateDerivedStats } from '@/ruleset/derived';
 import { GameCharacter } from '@/models/types';
 import { PerkTag } from '@/models/gameData';
 
@@ -20,9 +20,9 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Human base: health 2, limit 2
-      expect(stats.maxHealth).toBe(2);
-      expect(stats.maxLimit).toBe(2);
-      expect(stats.tagScores).toBeDefined();
+      expect(stats.values.health).toBe(2);
+      expect(stats.values.limit).toBe(2);
+      expect(stats.categoryScores).toBeDefined();
     });
 
     it('should calculate base stats for mutant with no perks', () => {
@@ -41,8 +41,8 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Mutant base: health 2, limit 1
-      expect(stats.maxHealth).toBe(2);
-      expect(stats.maxLimit).toBe(1);
+      expect(stats.values.health).toBe(2);
+      expect(stats.values.limit).toBe(1);
     });
 
     it('should calculate stats for Rad-Titan', () => {
@@ -61,8 +61,8 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Rad-Titan base: health 3, limit 0
-      expect(stats.maxHealth).toBe(3);
-      expect(stats.maxLimit).toBe(0);
+      expect(stats.values.health).toBe(3);
+      expect(stats.values.limit).toBe(0);
     });
 
     it('should calculate stats for Unturned', () => {
@@ -81,8 +81,8 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Unturned base: health 0, limit 3
-      expect(stats.maxHealth).toBe(0);
-      expect(stats.maxLimit).toBe(3);
+      expect(stats.values.health).toBe(0);
+      expect(stats.values.limit).toBe(3);
     });
 
     it('should respect species health caps', () => {
@@ -112,7 +112,7 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Human health cap is 5
-      expect(stats.maxHealth).toBeLessThanOrEqual(5);
+      expect(stats.values.health).toBeLessThanOrEqual(5);
     });
 
     it('should respect species limit caps', () => {
@@ -142,7 +142,7 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Human limit cap is 5
-      expect(stats.maxLimit).toBeLessThanOrEqual(5);
+      expect(stats.values.limit).toBeLessThanOrEqual(5);
     });
 
     it('should apply modifications health modifiers', () => {
@@ -172,7 +172,7 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Cyborg base health 2 + 1 from modifications = 3
-      expect(stats.maxHealth).toBe(3);
+      expect(stats.values.health).toBe(3);
     });
 
     it('should apply modifications limit modifiers', () => {
@@ -202,7 +202,7 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Cyborg base limit 1 + 2 from modifications = 3
-      expect(stats.maxLimit).toBe(3);
+      expect(stats.values.limit).toBe(3);
     });
 
     it('should apply multiple modifications modifiers', () => {
@@ -241,8 +241,8 @@ describe('derivedStats', () => {
       const stats = calculateDerivedStats(character);
 
       // Cyborg base: health 2 + 1, limit 1 + 1
-      expect(stats.maxHealth).toBe(3);
-      expect(stats.maxLimit).toBe(2);
+      expect(stats.values.health).toBe(3);
+      expect(stats.values.limit).toBe(2);
     });
 
     it('should apply modifications health cap modifiers', () => {
@@ -276,7 +276,7 @@ describe('derivedStats', () => {
 
       // Human base health cap is 5, + 10 = 15
       // Health should be 2 + 10 = 12, capped at 15
-      expect(stats.maxHealth).toBe(12);
+      expect(stats.values.health).toBe(12);
     });
 
     it('should apply modifications tag modifiers to tag scores', () => {
@@ -305,8 +305,8 @@ describe('derivedStats', () => {
 
       const stats = calculateDerivedStats(character);
 
-      expect(stats.tagScores).toBeDefined();
-      expect(stats.tagScores?.get(PerkTag.Agility)).toBe(2);
+      expect(stats.categoryScores).toBeDefined();
+      expect(stats.categoryScores.get(PerkTag.Agility)).toBe(2);
     });
 
     it('should handle character with no modifications', () => {
@@ -325,8 +325,8 @@ describe('derivedStats', () => {
 
       const stats = calculateDerivedStats(character);
 
-      expect(stats.maxHealth).toBe(2);
-      expect(stats.maxLimit).toBe(2);
+      expect(stats.values.health).toBe(2);
+      expect(stats.values.limit).toBe(2);
     });
 
     it('should handle character with empty modifications array', () => {
@@ -345,8 +345,8 @@ describe('derivedStats', () => {
 
       const stats = calculateDerivedStats(character);
 
-      expect(stats.maxHealth).toBe(2);
-      expect(stats.maxLimit).toBe(2);
+      expect(stats.values.health).toBe(2);
+      expect(stats.values.limit).toBe(2);
     });
 
     describe('Perk Tag Scores and Stat Modifiers', () => {
@@ -365,9 +365,9 @@ describe('derivedStats', () => {
 
         const stats = calculateDerivedStats(character);
 
-        expect(stats.tagScores).toBeDefined();
-        expect(stats.tagScores?.get(PerkTag.Agility)).toBe(2);
-        expect(stats.tagScores?.get(PerkTag.Defense)).toBe(1);
+        expect(stats.categoryScores).toBeDefined();
+        expect(stats.categoryScores.get(PerkTag.Agility)).toBe(2);
+        expect(stats.categoryScores.get(PerkTag.Defense)).toBe(1);
       });
 
       it('should apply perk health modifiers', () => {
@@ -386,7 +386,7 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Android base health 2 + 1 from perk = 3
-        expect(stats.maxHealth).toBe(3);
+        expect(stats.values.health).toBe(3);
       });
 
       it('should apply perk limit modifiers', () => {
@@ -405,7 +405,7 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Android base limit 1 + 1 from perk = 2
-        expect(stats.maxLimit).toBe(2);
+        expect(stats.values.limit).toBe(2);
       });
 
       it('should apply both health and limit modifiers from perks', () => {
@@ -424,8 +424,8 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Mutant base: health 2 - 1 = 1, limit 1 + 1 = 2
-        expect(stats.maxHealth).toBe(1);
-        expect(stats.maxLimit).toBe(2);
+        expect(stats.values.health).toBe(1);
+        expect(stats.values.limit).toBe(2);
       });
 
       it('should exclude tag scores for Perfect Mutants with MUTANT_SPECIES restricted perks', () => {
@@ -444,9 +444,9 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Perfect Mutants shouldn't get tag score bonuses from MUTANT_SPECIES restricted perks
-        expect(stats.tagScores).toBeDefined();
-        expect(stats.tagScores?.get(PerkTag.Agility)).toBeUndefined();
-        expect(stats.tagScores?.get(PerkTag.Smarts)).toBeUndefined();
+        expect(stats.categoryScores).toBeDefined();
+        expect(stats.categoryScores.get(PerkTag.Agility)).toBeUndefined();
+        expect(stats.categoryScores.get(PerkTag.Smarts)).toBeUndefined();
       });
 
       it('should include tag scores for Perfect Mutants with non-MUTANT_SPECIES restricted perks', () => {
@@ -465,9 +465,9 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Perfect Mutants should get tag scores from unrestricted perks
-        expect(stats.tagScores).toBeDefined();
-        expect(stats.tagScores?.get(PerkTag.Agility)).toBe(1);
-        expect(stats.tagScores?.get(PerkTag.Defense)).toBe(1);
+        expect(stats.categoryScores).toBeDefined();
+        expect(stats.categoryScores.get(PerkTag.Agility)).toBe(1);
+        expect(stats.categoryScores.get(PerkTag.Defense)).toBe(1);
       });
 
       it('should include tag scores for Perfect Mutants with species-specific non-MUTANT perks', () => {
@@ -487,8 +487,8 @@ describe('derivedStats', () => {
 
         // Perfect Mutants should get tag scores from non-MUTANT_SPECIES restricted perks
         // even if they're restricted to other species
-        expect(stats.tagScores).toBeDefined();
-        expect(stats.tagScores?.get(PerkTag.Agility)).toBe(1);
+        expect(stats.categoryScores).toBeDefined();
+        expect(stats.categoryScores.get(PerkTag.Agility)).toBe(1);
       });
 
       it('should apply stat modifiers from MUTANT_SPECIES restricted perks even for Perfect Mutants', () => {
@@ -508,10 +508,10 @@ describe('derivedStats', () => {
 
         // Perfect Mutant base: health 2, limit 1
         // Big Brain applies: -1 health, +1 limit (stat modifiers still apply)
-        expect(stats.maxHealth).toBe(1);
-        expect(stats.maxLimit).toBe(2);
+        expect(stats.values.health).toBe(1);
+        expect(stats.values.limit).toBe(2);
         // But tag score should not be counted
-        expect(stats.tagScores?.get(PerkTag.Smarts)).toBeUndefined();
+        expect(stats.categoryScores.get(PerkTag.Smarts)).toBeUndefined();
       });
 
       it('should handle multiple perks of same tag', () => {
@@ -529,8 +529,8 @@ describe('derivedStats', () => {
 
         const stats = calculateDerivedStats(character);
 
-        expect(stats.tagScores).toBeDefined();
-        expect(stats.tagScores?.get(PerkTag.Agility)).toBe(4);
+        expect(stats.categoryScores).toBeDefined();
+        expect(stats.categoryScores.get(PerkTag.Agility)).toBe(4);
       });
 
       it('should handle perks with no stat modifiers', () => {
@@ -549,10 +549,10 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Base stats should be unchanged
-        expect(stats.maxHealth).toBe(2);
-        expect(stats.maxLimit).toBe(2);
+        expect(stats.values.health).toBe(2);
+        expect(stats.values.limit).toBe(2);
         // But tag score should increment
-        expect(stats.tagScores?.get(PerkTag.Agility)).toBe(1);
+        expect(stats.categoryScores.get(PerkTag.Agility)).toBe(1);
       });
 
       it('should handle mixed perks with and without stat modifiers', () => {
@@ -571,9 +571,9 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Android base health 2 + 1 from defense_23 = 3
-        expect(stats.maxHealth).toBe(3);
+        expect(stats.values.health).toBe(3);
         // Both perks count toward tag score
-        expect(stats.tagScores?.get(PerkTag.Defense)).toBe(2);
+        expect(stats.categoryScores.get(PerkTag.Defense)).toBe(2);
       });
 
       it('should handle regular mutants with MUTANT_SPECIES restricted perks normally', () => {
@@ -592,9 +592,9 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Regular Mutants should get tag scores from MUTANT_SPECIES perks
-        expect(stats.tagScores).toBeDefined();
-        expect(stats.tagScores?.get(PerkTag.Agility)).toBe(1);
-        expect(stats.tagScores?.get(PerkTag.Smarts)).toBe(1);
+        expect(stats.categoryScores).toBeDefined();
+        expect(stats.categoryScores.get(PerkTag.Agility)).toBe(1);
+        expect(stats.categoryScores.get(PerkTag.Smarts)).toBe(1);
       });
 
       it('should handle Tech-Mutants with MUTANT_SPECIES restricted perks normally', () => {
@@ -613,9 +613,9 @@ describe('derivedStats', () => {
         const stats = calculateDerivedStats(character);
 
         // Tech-Mutants should get tag scores from MUTANT_SPECIES perks
-        expect(stats.tagScores).toBeDefined();
-        expect(stats.tagScores?.get(PerkTag.Agility)).toBe(1);
-        expect(stats.tagScores?.get(PerkTag.Defense)).toBe(1);
+        expect(stats.categoryScores).toBeDefined();
+        expect(stats.categoryScores.get(PerkTag.Agility)).toBe(1);
+        expect(stats.categoryScores.get(PerkTag.Defense)).toBe(1);
       });
     });
   });

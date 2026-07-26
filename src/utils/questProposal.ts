@@ -1,6 +1,5 @@
 import { GameCharacter, GameQuest, QuestStatus } from '@models/types';
-import { PerkTag } from '@models/gameData';
-import { calculateDerivedStats } from './derivedStats';
+import { calculateDerivedStats } from '@/ruleset/derived';
 
 export interface QuestProposal {
   questId: string;
@@ -28,16 +27,16 @@ export const scoreCharacterForQuest = (
   character: GameCharacter,
   quest: GameQuest
 ): number => {
-  const { tagScores } = calculateDerivedStats(character);
+  const { categoryScores } = calculateDerivedStats(character);
   const desirable = quest.desirable;
   const undesirable = quest.undesirable;
   let score = 0;
 
   desirable?.traitCategoryIds?.forEach(categoryId => {
-    score += (tagScores?.get(categoryId as PerkTag) ?? 0) * TAG_SCORE_WEIGHT;
+    score += (categoryScores.get(categoryId) ?? 0) * TAG_SCORE_WEIGHT;
   });
   undesirable?.traitCategoryIds?.forEach(categoryId => {
-    score -= (tagScores?.get(categoryId as PerkTag) ?? 0) * TAG_SCORE_WEIGHT;
+    score -= (categoryScores.get(categoryId) ?? 0) * TAG_SCORE_WEIGHT;
   });
 
   if (desirable?.archetypeIds?.includes(character.archetypeId)) {

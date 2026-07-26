@@ -21,8 +21,8 @@ import {
   AVAILABLE_DISTINCTIONS,
   AVAILABLE_RECIPES,
 } from '@models/gameData';
-import { calculateDerivedStats } from '@/utils/derivedStats';
-import { useLabels } from '@/ruleset';
+import { calculateDerivedStats, type DerivedStats } from '@/ruleset/derived';
+import { useLabels, useRuleset } from '@/ruleset';
 import { GameCharacter, GameLocation, DiscordMessage } from '@/models/types';
 import {
   loadCharacters,
@@ -47,6 +47,7 @@ export const CharacterDetailScreen: React.FC = () => {
   const route = useRoute<CharacterDetailRouteProp>();
   const navigation = useNavigation<CharacterDetailNavigationProp>();
   const label = useLabels();
+  const { ruleset } = useRuleset();
   const { character } = route.params || {};
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
   const [locations, setLocations] = useState<GameLocation[]>([]);
@@ -171,7 +172,7 @@ export const CharacterDetailScreen: React.FC = () => {
   console.log(`[CharacterDetail] Rendering character: ${character.name}`);
 
   // Calculate derived stats with error handling
-  let derivedStats;
+  let derivedStats: DerivedStats;
   try {
     derivedStats = calculateDerivedStats(character);
     // eslint-disable-next-line no-console
@@ -181,14 +182,13 @@ export const CharacterDetailScreen: React.FC = () => {
     console.error('[CharacterDetail] Error calculating derived stats:', error);
     // Return a safe minimal render instead of crashing
     derivedStats = {
-      maxHealth: 0,
-      maxLimit: 0,
-      tagScores: new Map(),
+      values: {},
+      categoryScores: new Map(),
     };
   }
 
   const renderTagScores = () => {
-    const tagScores = derivedStats.tagScores;
+    const tagScores = derivedStats.categoryScores;
     if (!tagScores || tagScores.size === 0) return null;
 
     return (
@@ -520,14 +520,14 @@ export const CharacterDetailScreen: React.FC = () => {
             </View>
           )}
           <View style={styles.statsContainer}>
-            <Text style={styles.statItem}>
-              Max Health:{' '}
-              <Text style={styles.statValue}>{derivedStats.maxHealth}</Text>
-            </Text>
-            <Text style={styles.statItem}>
-              Max Limit:{' '}
-              <Text style={styles.statValue}>{derivedStats.maxLimit}</Text>
-            </Text>
+            {ruleset.resources.map(resource => (
+              <Text key={resource.id} style={styles.statItem}>
+                Max {resource.label}:{' '}
+                <Text style={styles.statValue}>
+                  {derivedStats.values[resource.id] ?? 0}
+                </Text>
+              </Text>
+            ))}
           </View>
         </View>
       </View>

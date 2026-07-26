@@ -8,29 +8,11 @@
  */
 import { AVAILABLE_PERKS, PerkTag } from '@/models/gameData';
 import { SPECIES_BASE_STATS, type Species } from '@/models/speciesTypes';
-import { calculateDerivedStats } from '@/utils/derivedStats';
+import { calculateDerivedStats } from '@/ruleset/derived';
 import type { Modification, GameCharacter } from '@/models/types';
 import { DERIVED_STATS_BASELINE } from '../fixtures/derivedStatsBaseline';
 
 const TS = '2026-01-01T00:00:00.000Z';
-
-/**
- * Pristine copy of the base stats, taken at import time before anything has
- * had a chance to mutate them. The pre-#6 implementation applies modifications
- * cap modifiers straight onto the shared SPECIES_BASE_STATS entries, so
- * without restoring between cases the evaluation order of this file would
- * leak caps from one character into the next. Becomes a no-op once #6 stops
- * mutating shared state.
- */
-const PRISTINE_BASE_STATS: Record<string, Record<string, unknown>> = JSON.parse(
-  JSON.stringify(SPECIES_BASE_STATS)
-);
-
-const restoreBaseStats = (): void => {
-  Object.entries(PRISTINE_BASE_STATS).forEach(([species, stats]) => {
-    Object.assign(SPECIES_BASE_STATS[species as Species], stats);
-  });
-};
 
 const make = (
   archetypeId: Species,
@@ -127,16 +109,15 @@ describe('derived stats — Afterworlds parity', () => {
     );
   });
 
-  beforeEach(restoreBaseStats);
-
   Object.entries(cases).forEach(([label, character]) => {
     it(`matches the baseline for ${label}`, () => {
       const stats = calculateDerivedStats(character);
       const expected = DERIVED_STATS_BASELINE[label];
 
-      expect(stats.maxHealth).toBe(expected.maxHealth);
-      expect(stats.maxLimit).toBe(expected.maxLimit);
-      expect(Object.fromEntries(stats.tagScores ?? new Map())).toEqual(
+      // The old shape's maxHealth/maxLimit are now resource ids.
+      expect(stats.values.health).toBe(expected.maxHealth);
+      expect(stats.values.limit).toBe(expected.maxLimit);
+      expect(Object.fromEntries(stats.categoryScores)).toEqual(
         expected.tagScores
       );
     });
@@ -144,8 +125,6 @@ describe('derived stats — Afterworlds parity', () => {
 });
 
 describe('derived stats — shared base-stat mutation (issue #6)', () => {
-  beforeEach(restoreBaseStats);
-
   /**
    * Regression guard for derivedStats.ts:79-83. Cap modifiers were applied
    * to `SPECIES_BASE_STATS[species]` directly, which is a shared reference,
@@ -155,23 +134,18 @@ describe('derived stats — shared base-stat mutation (issue #6)', () => {
    * Deliberately does NOT restore base stats between the two calls inside
    * the test — that leak is exactly what is being asserted against.
    *
-   * Marked `it.failing` until #6 lands: it documents the bug and Jest will
-   * error the moment the leak is fixed, forcing this to flip to a plain
-   * `it` rather than being quietly forgotten.
+   * #6 fixed it by copying base values and caps before applying modifiers.
    */
-  it.failing(
-    'does not leak a cap bonus onto other characters of the same archetype',
-    () => {
-      // A Human whose raw health (6) exceeds Human's real healthCap of 5.
-      const plain = make('Human', openPerksByTag(PerkTag.Endurance, 10));
-      const before = calculateDerivedStats(plain).maxHealth;
+  it('does not leak a cap bonus onto other characters of the same archetype', () => {
+    // A Human whose raw health (6) exceeds Human's real healthCap of 5.
+    const plain = make('Human', openPerksByTag(PerkTag.Endurance, 10));
+    const before = calculateDerivedStats(plain).values.health;
 
-      calculateDerivedStats(make('Human', [], CAP_CYBERWARE));
+    calculateDerivedStats(make('Human', [], CAP_CYBERWARE));
 
-      const after = calculateDerivedStats(plain).maxHealth;
+    const after = calculateDerivedStats(plain).values.health;
 
-      expect(before).toBe(5);
-      expect(after).toBe(before);
-    }
-  );
+    expect(before).toBe(5);
+    expect(after).toBe(before);
+  });
 });
