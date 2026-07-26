@@ -1,5 +1,9 @@
 import { GameCharacter } from '@/models/types';
-import { SPECIES_BASE_STATS, MUTANT_SPECIES } from '@/models/speciesTypes';
+import {
+  SPECIES_BASE_STATS,
+  MUTANT_SPECIES,
+  type Species,
+} from '@/models/speciesTypes';
 import { AVAILABLE_PERKS, PerkTag, TAG_SCORE_BONUSES } from '@/models/gameData';
 
 export interface CharacterDerivedStats {
@@ -11,8 +15,13 @@ export interface CharacterDerivedStats {
 export const calculateDerivedStats = (
   character: GameCharacter
 ): CharacterDerivedStats => {
-  // Get base stats from species
-  const baseStats = SPECIES_BASE_STATS[character.species];
+  // Archetype ids are free-form strings since #3, so a record written by an
+  // older build or a hand-edited import can name one this ruleset does not
+  // define. Fall back rather than dereferencing undefined — the closed
+  // `Species` union used to make that unrepresentable.
+  const baseStats =
+    SPECIES_BASE_STATS[character.archetypeId as Species] ??
+    SPECIES_BASE_STATS.Unknown;
 
   // Initialize with base values
   let maxHealth = baseStats.baseHealth;
@@ -28,7 +37,7 @@ export const calculateDerivedStats = (
   characterPerks.forEach(perk => {
     // Perfect Mutants don't get tag score bonuses from MUTANT_SPECIES restricted perks
     if (
-      character.species !== 'Perfect Mutant' ||
+      character.archetypeId !== 'Perfect Mutant' ||
       !perk.allowedSpecies ||
       !(
         perk.allowedSpecies.length === MUTANT_SPECIES.length &&

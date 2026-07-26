@@ -39,10 +39,10 @@ export const scoreCharacterForQuest = (
     score -= (tagScores?.get(tag) ?? 0) * TAG_SCORE_WEIGHT;
   });
 
-  if (desirable?.species?.includes(character.species)) {
+  if (desirable?.archetypeIds?.includes(character.archetypeId)) {
     score += SPECIES_WEIGHT;
   }
-  if (undesirable?.species?.includes(character.species)) {
+  if (undesirable?.archetypeIds?.includes(character.archetypeId)) {
     score -= SPECIES_WEIGHT;
   }
 

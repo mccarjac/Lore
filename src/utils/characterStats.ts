@@ -32,7 +32,7 @@ export const calculateCharacterStats = (
   // Calculate species distribution
   const speciesDistribution = characters.reduce(
     (acc, char) => {
-      acc[char.species] = (acc[char.species] || 0) + 1;
+      acc[char.archetypeId] = (acc[char.archetypeId] || 0) + 1;
       return acc;
     },
     {} as Record<string, number>

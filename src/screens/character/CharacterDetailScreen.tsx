@@ -502,7 +502,7 @@ export const CharacterDetailScreen: React.FC = () => {
         <Text style={styles.name}>{character.name}</Text>
         <View style={styles.headerInfo}>
           <Text style={styles.subheader}>
-            Species: {character.species} / Location:{' '}
+            Species: {character.archetypeId} / Location:{' '}
             {getLocationName(character.locationId)}
           </Text>
           {character.occupation && (

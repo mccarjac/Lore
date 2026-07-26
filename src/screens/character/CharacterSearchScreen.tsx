@@ -306,7 +306,9 @@ export const CharacterSearchScreen: React.FC = () => {
             <View style={styles.resultHeader}>
               <Text style={styles.characterName}>{character.name}</Text>
               <View style={styles.characterInfo}>
-                <Text style={styles.characterSpecies}>{character.species}</Text>
+                <Text style={styles.characterSpecies}>
+                  {character.archetypeId}
+                </Text>
                 {character.retired && (
                   <View
                     style={[

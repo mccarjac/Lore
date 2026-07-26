@@ -49,7 +49,7 @@ describe('characterStorage concurrency', () => {
   const makeCharacter = (id: string): GameCharacter => ({
     id,
     name: `Character ${id}`,
-    species: 'Human',
+    archetypeId: 'Human',
     perkIds: [],
     distinctionIds: [],
     factions: [],

@@ -34,7 +34,7 @@ const makeCharacter = (
 ): GameCharacter => ({
   id: 'character-1',
   name: 'Test Character',
-  species: 'Human',
+  archetypeId: 'Human',
   perkIds: [],
   distinctionIds: [],
   factions: [],

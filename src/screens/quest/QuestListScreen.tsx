@@ -1,7 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { GameQuest, QuestStatus } from '@models/types';
-import { loadQuests, reconcileQuestEventLinks } from '@utils/characterStorage';
+import {
+  loadQuests,
+  migrateRulesetFields,
+  reconcileQuestEventLinks,
+} from '@utils/characterStorage';
 import {
   useNavigation,
   useFocusEffect,
@@ -56,6 +60,8 @@ export const QuestListScreen: React.FC = () => {
   const loadData = useCallback(async () => {
     // Backfill/prune quest<->event back-references (idempotent operation)
     await reconcileQuestEventLinks();
+    // Rename pre-Phase-1 ruleset fields in place (idempotent)
+    await migrateRulesetFields();
 
     const questsData = await loadQuests();
     setQuests([...questsData].sort((a, b) => a.name.localeCompare(b.name)));

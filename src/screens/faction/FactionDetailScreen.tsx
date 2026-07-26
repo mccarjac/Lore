@@ -626,7 +626,7 @@ export const FactionDetailsScreen: React.FC = () => {
                 {nonMembers.map(character => (
                   <Picker.Item
                     key={character.id}
-                    label={`${character.name} (${character.species})`}
+                    label={`${character.name} (${character.archetypeId})`}
                     value={character.id}
                   />
                 ))}

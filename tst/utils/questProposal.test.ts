@@ -16,7 +16,7 @@ const makeCharacter = (
 ): GameCharacter => ({
   id,
   name: `Character ${id}`,
-  species: 'Human',
+  archetypeId: 'Human',
   perkIds: [],
   distinctionIds: [],
   factions: [],
@@ -71,18 +71,18 @@ describe('questProposal', () => {
     });
 
     it('rewards a desirable species match', () => {
-      const character = makeCharacter('a', { species: 'Android' });
+      const character = makeCharacter('a', { archetypeId: 'Android' });
       const quest = makeQuest('q1', {
-        desirable: { species: ['Android'] },
+        desirable: { archetypeIds: ['Android'] },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeGreaterThan(0);
     });
 
     it('penalizes an undesirable species match', () => {
-      const character = makeCharacter('a', { species: 'Android' });
+      const character = makeCharacter('a', { archetypeId: 'Android' });
       const quest = makeQuest('q1', {
-        undesirable: { species: ['Android'] },
+        undesirable: { archetypeIds: ['Android'] },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeLessThan(0);

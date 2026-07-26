@@ -55,7 +55,7 @@ describe('exportImport JSON round trip', () => {
           {
             id: 'char-1',
             name: 'Imported Hero',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: [],
             factions: [],
@@ -99,7 +99,7 @@ describe('exportImport JSON round trip', () => {
             id: 'char-1',
             name: 'Hero',
             imageUri: 'data:image/png;base64,abc',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: [],
             factions: [],
@@ -161,7 +161,7 @@ describe('exportImport JSON round trip', () => {
           {
             id: 'char-new',
             name: 'New Character',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: [],
             factions: [],
@@ -207,7 +207,7 @@ describe('exportImport JSON round trip', () => {
       const existingCharacter = {
         id: 'char-1',
         name: 'Existing Name',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [],

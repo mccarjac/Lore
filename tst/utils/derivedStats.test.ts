@@ -8,7 +8,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '1',
         name: 'Test Human',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -29,7 +29,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '2',
         name: 'Test Mutant',
-        species: 'Mutant',
+        archetypeId: 'Mutant',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -49,7 +49,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '3',
         name: 'Test Rad-Titan',
-        species: 'Rad-Titan',
+        archetypeId: 'Rad-Titan',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -69,7 +69,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '4',
         name: 'Test Unturned',
-        species: 'Unturned',
+        archetypeId: 'Unturned',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -89,7 +89,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '5',
         name: 'Test Human',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -117,7 +117,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '6',
         name: 'Test Human',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -145,7 +145,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '7',
         name: 'Test Cyborg',
-        species: 'Cyborg',
+        archetypeId: 'Cyborg',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -173,7 +173,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '8',
         name: 'Test Cyborg',
-        species: 'Cyborg',
+        archetypeId: 'Cyborg',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -201,7 +201,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '9',
         name: 'Test Cyborg',
-        species: 'Cyborg',
+        archetypeId: 'Cyborg',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -237,7 +237,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '10',
         name: 'Test Human',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -267,7 +267,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '11',
         name: 'Test Character',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -297,7 +297,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '12',
         name: 'Test Character',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -317,7 +317,7 @@ describe('derivedStats', () => {
       const character: GameCharacter = {
         id: '13',
         name: 'Test Character',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [],
@@ -338,7 +338,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '14',
           name: 'Test Character',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: ['agility_1', 'agility_2', 'defense_1'],
           distinctionIds: [],
           factions: [],
@@ -358,7 +358,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '15',
           name: 'Test Android',
-          species: 'Android',
+          archetypeId: 'Android',
           perkIds: ['defense_23'], // Rugged Construction: +1 health
           distinctionIds: [],
           factions: [],
@@ -377,7 +377,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '16',
           name: 'Test Android',
-          species: 'Android',
+          archetypeId: 'Android',
           perkIds: ['smarts_14'], // Adds +1 limit
           distinctionIds: [],
           factions: [],
@@ -396,7 +396,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '17',
           name: 'Test Mutant',
-          species: 'Mutant',
+          archetypeId: 'Mutant',
           perkIds: ['smarts_20'], // Big Brain: -1 health, +1 limit
           distinctionIds: [],
           factions: [],
@@ -416,7 +416,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '18',
           name: 'Test Perfect Mutant',
-          species: 'Perfect Mutant',
+          archetypeId: 'Perfect Mutant',
           perkIds: ['agility_15', 'smarts_21'], // Both restricted to MUTANT_SPECIES
           distinctionIds: [],
           factions: [],
@@ -437,7 +437,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '19',
           name: 'Test Perfect Mutant',
-          species: 'Perfect Mutant',
+          archetypeId: 'Perfect Mutant',
           perkIds: ['agility_1', 'defense_1'], // Not species restricted
           distinctionIds: [],
           factions: [],
@@ -458,7 +458,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '20',
           name: 'Test Perfect Mutant',
-          species: 'Perfect Mutant',
+          archetypeId: 'Perfect Mutant',
           perkIds: ['agility_16'], // Tunnel Rat, restricted to Nomad only
           distinctionIds: [],
           factions: [],
@@ -479,7 +479,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '21',
           name: 'Test Perfect Mutant',
-          species: 'Perfect Mutant',
+          archetypeId: 'Perfect Mutant',
           perkIds: ['smarts_20'], // Big Brain: MUTANT_SPECIES restricted with stat modifiers
           distinctionIds: [],
           factions: [],
@@ -502,7 +502,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '22',
           name: 'Test Character',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: ['agility_1', 'agility_2', 'agility_3', 'agility_4'],
           distinctionIds: [],
           factions: [],
@@ -521,7 +521,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '23',
           name: 'Test Character',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: ['agility_1'], // Has no stat modifiers
           distinctionIds: [],
           factions: [],
@@ -543,7 +543,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '24',
           name: 'Test Android',
-          species: 'Android',
+          archetypeId: 'Android',
           perkIds: ['defense_1', 'defense_23'], // defense_1 no modifiers, defense_23 has +1 health
           distinctionIds: [],
           factions: [],
@@ -564,7 +564,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '25',
           name: 'Test Regular Mutant',
-          species: 'Mutant',
+          archetypeId: 'Mutant',
           perkIds: ['agility_15', 'smarts_21'], // Both restricted to MUTANT_SPECIES
           distinctionIds: [],
           factions: [],
@@ -585,7 +585,7 @@ describe('derivedStats', () => {
         const character: GameCharacter = {
           id: '26',
           name: 'Test Tech-Mutant',
-          species: 'Tech-Mutant',
+          archetypeId: 'Tech-Mutant',
           perkIds: ['agility_15', 'defense_25'], // agility_15 is MUTANT_SPECIES restricted
           distinctionIds: [],
           factions: [],

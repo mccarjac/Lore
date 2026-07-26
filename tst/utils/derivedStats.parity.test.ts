@@ -33,14 +33,14 @@ const restoreBaseStats = (): void => {
 };
 
 const make = (
-  species: Species,
+  archetypeId: Species,
   perkIds: string[],
   cyberware?: Cyberware[]
 ): GameCharacter =>
   ({
     id: 'c',
     name: 'c',
-    species,
+    archetypeId,
     perkIds,
     distinctionIds: [],
     factions: [],

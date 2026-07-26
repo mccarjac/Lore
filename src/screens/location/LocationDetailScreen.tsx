@@ -99,7 +99,7 @@ export const LocationDetailsScreen: React.FC = () => {
     >
       <View style={styles.characterInfo}>
         <Text style={styles.characterName}>{character.name}</Text>
-        <Text style={styles.characterSpecies}>{character.species}</Text>
+        <Text style={styles.characterSpecies}>{character.archetypeId}</Text>
       </View>
       <View
         style={[

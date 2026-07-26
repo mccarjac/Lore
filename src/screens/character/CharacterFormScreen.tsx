@@ -25,7 +25,7 @@ import {
   Relationship,
   RelationshipStanding,
 } from '@models/types';
-import { Species, SPECIES_BASE_STATS } from '@models/speciesTypes';
+import { SPECIES_BASE_STATS } from '@models/speciesTypes';
 import {
   addCharacter,
   updateCharacter,
@@ -70,7 +70,7 @@ export const CharacterFormScreen: React.FC = () => {
     editingCharacter
       ? {
           name: editingCharacter.name,
-          species: editingCharacter.species,
+          archetypeId: editingCharacter.archetypeId,
           perkIds: [...editingCharacter.perkIds],
           distinctionIds: [...editingCharacter.distinctionIds],
           factions: [...editingCharacter.factions],
@@ -84,7 +84,7 @@ export const CharacterFormScreen: React.FC = () => {
         }
       : {
           name: '',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [],
@@ -336,12 +336,16 @@ export const CharacterFormScreen: React.FC = () => {
       <View style={styles.formSection}>
         <Text style={styles.label}>{label('archetype.singular')}</Text>
         <Picker
-          selectedValue={form.species}
+          selectedValue={form.archetypeId}
           style={[styles.picker, { flex: 1 }]}
-          onValueChange={(value: Species) => handleChange('species', value)}
+          onValueChange={(value: string) => handleChange('archetypeId', value)}
         >
-          {Object.keys(SPECIES_BASE_STATS).map(species => (
-            <Picker.Item key={species} label={species} value={species} />
+          {Object.keys(SPECIES_BASE_STATS).map(archetypeId => (
+            <Picker.Item
+              key={archetypeId}
+              label={archetypeId}
+              value={archetypeId}
+            />
           ))}
         </Picker>
       </View>
@@ -400,7 +404,7 @@ export const CharacterFormScreen: React.FC = () => {
               perk =>
                 (!selectedPerkTag || perk.tag === selectedPerkTag) &&
                 (!perk.allowedSpecies ||
-                  perk.allowedSpecies.includes(form.species))
+                  (perk.allowedSpecies as string[]).includes(form.archetypeId))
             ).map(perk => (
               <TouchableOpacity
                 key={perk.id}

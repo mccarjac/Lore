@@ -154,7 +154,7 @@ export const calculateFactionStats = (
   // Calculate species distribution
   const speciesDistribution = members.reduce(
     (acc, member) => {
-      acc[member.species] = (acc[member.species] || 0) + 1;
+      acc[member.archetypeId] = (acc[member.archetypeId] || 0) + 1;
       return acc;
     },
     {} as Record<string, number>

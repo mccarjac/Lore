@@ -135,10 +135,10 @@ const searchCharacters = (
   for (const character of characters) {
     const match = matchFields(
       character.name,
-      character.occupation ?? character.species,
+      character.occupation ?? character.archetypeId,
       [
         character.occupation,
-        character.species,
+        character.archetypeId,
         character.notes,
         ...(character.factions ?? []).map(faction => faction.name),
       ],

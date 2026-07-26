@@ -93,7 +93,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Member A',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: ['agility_1'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
@@ -102,7 +102,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '2',
           name: 'Member B',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: ['agility_1', 'agility_2'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Friend },
@@ -111,7 +111,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '3',
           name: 'Member C',
-          species: 'Mutant',
+          archetypeId: 'Mutant',
           perkIds: [],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },

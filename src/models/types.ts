@@ -82,7 +82,11 @@ export interface Cyberware {
 export interface GameCharacter {
   id: string;
   name: string;
-  species: Species;
+  /**
+   * Ruleset archetype id (RulesetDefinition.archetypes[].id). Was the closed
+   * `species` union before #3; migrateRulesetFields() rewrites stored data.
+   */
+  archetypeId: string;
   perkIds: PerkId[];
   distinctionIds: DistinctionId[];
   factions: Faction[];
@@ -152,7 +156,7 @@ export interface QuestMaterial {
 
 export interface QuestAttributePreferences {
   tags?: PerkTag[];
-  species?: Species[];
+  archetypeIds?: string[];
   distinctionIds?: DistinctionId[];
   perkIds?: PerkId[];
 }

@@ -146,12 +146,12 @@ export const QuestDetailScreen: React.FC = () => {
   const hasPreferences =
     (quest.desirable &&
       ((quest.desirable.tags?.length ?? 0) > 0 ||
-        (quest.desirable.species?.length ?? 0) > 0 ||
+        (quest.desirable.archetypeIds?.length ?? 0) > 0 ||
         (quest.desirable.perkIds?.length ?? 0) > 0 ||
         (quest.desirable.distinctionIds?.length ?? 0) > 0)) ||
     (quest.undesirable &&
       ((quest.undesirable.tags?.length ?? 0) > 0 ||
-        (quest.undesirable.species?.length ?? 0) > 0 ||
+        (quest.undesirable.archetypeIds?.length ?? 0) > 0 ||
         (quest.undesirable.perkIds?.length ?? 0) > 0 ||
         (quest.undesirable.distinctionIds?.length ?? 0) > 0));
 
@@ -267,9 +267,12 @@ export const QuestDetailScreen: React.FC = () => {
                     <Text style={styles.chipText}>{tag}</Text>
                   </View>
                 ))}
-                {quest.desirable.species?.map(species => (
-                  <View key={`species-${species}`} style={styles.chipPositive}>
-                    <Text style={styles.chipText}>{species}</Text>
+                {quest.desirable.archetypeIds?.map(archetypeId => (
+                  <View
+                    key={`archetype-${archetypeId}`}
+                    style={styles.chipPositive}
+                  >
+                    <Text style={styles.chipText}>{archetypeId}</Text>
                   </View>
                 ))}
                 {quest.desirable.perkIds?.map(perkId => (
@@ -297,9 +300,12 @@ export const QuestDetailScreen: React.FC = () => {
                     <Text style={styles.chipText}>{tag}</Text>
                   </View>
                 ))}
-                {quest.undesirable.species?.map(species => (
-                  <View key={`species-${species}`} style={styles.chipNegative}>
-                    <Text style={styles.chipText}>{species}</Text>
+                {quest.undesirable.archetypeIds?.map(archetypeId => (
+                  <View
+                    key={`archetype-${archetypeId}`}
+                    style={styles.chipNegative}
+                  >
+                    <Text style={styles.chipText}>{archetypeId}</Text>
                   </View>
                 ))}
                 {quest.undesirable.perkIds?.map(perkId => (

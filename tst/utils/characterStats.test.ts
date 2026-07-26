@@ -7,7 +7,7 @@ describe('characterStats', () => {
       {
         id: '1',
         name: 'Alice',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [
@@ -20,7 +20,7 @@ describe('characterStats', () => {
       {
         id: '2',
         name: 'Bob',
-        species: 'Mutant',
+        archetypeId: 'Mutant',
         perkIds: [],
         distinctionIds: [],
         factions: [
@@ -34,7 +34,7 @@ describe('characterStats', () => {
       {
         id: '3',
         name: 'Charlie',
-        species: 'Human',
+        archetypeId: 'Human',
         perkIds: [],
         distinctionIds: [],
         factions: [{ name: 'Raiders', standing: RelationshipStanding.Ally }],
@@ -94,7 +94,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Loner',
-          species: 'Nomad',
+          archetypeId: 'Nomad',
           perkIds: [],
           distinctionIds: [],
           factions: [],
@@ -116,7 +116,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Solo',
-          species: 'Android',
+          archetypeId: 'Android',
           perkIds: [],
           distinctionIds: [],
           factions: [
@@ -140,7 +140,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Multi-faction',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [
@@ -168,7 +168,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Char1',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [],
@@ -179,7 +179,7 @@ describe('characterStats', () => {
         {
           id: '2',
           name: 'Char2',
-          species: 'Mutant',
+          archetypeId: 'Mutant',
           perkIds: [],
           distinctionIds: [],
           factions: [],
@@ -190,7 +190,7 @@ describe('characterStats', () => {
         {
           id: '3',
           name: 'Char3',
-          species: 'Android',
+          archetypeId: 'Android',
           perkIds: [],
           distinctionIds: [],
           factions: [],
@@ -201,7 +201,7 @@ describe('characterStats', () => {
         {
           id: '4',
           name: 'Char4',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [],
@@ -225,7 +225,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Char1',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [
@@ -238,7 +238,7 @@ describe('characterStats', () => {
         {
           id: '2',
           name: 'Char2',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [
@@ -251,7 +251,7 @@ describe('characterStats', () => {
         {
           id: '3',
           name: 'Char3',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [
@@ -264,7 +264,7 @@ describe('characterStats', () => {
         {
           id: '4',
           name: 'Char4',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [
@@ -277,7 +277,7 @@ describe('characterStats', () => {
         {
           id: '5',
           name: 'Char5',
-          species: 'Human',
+          archetypeId: 'Human',
           perkIds: [],
           distinctionIds: [],
           factions: [
@@ -306,7 +306,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: ['agility_1', 'defense_1', 'strength_1'],
             distinctionIds: [],
             factions: [],
@@ -317,7 +317,7 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: ['agility_1', 'defense_1'],
             distinctionIds: [],
             factions: [],
@@ -328,7 +328,7 @@ describe('characterStats', () => {
           {
             id: '3',
             name: 'Char3',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: ['agility_1'],
             distinctionIds: [],
             factions: [],
@@ -354,7 +354,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: ['unknown_perk_id', 'agility_1'],
             distinctionIds: [],
             factions: [],
@@ -379,7 +379,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [
               'agility_1',
               'agility_2',
@@ -407,7 +407,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: [],
             factions: [],
@@ -427,7 +427,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: ['agility_1', 'defense_1', 'defense_1'],
             distinctionIds: [],
             factions: [],
@@ -438,7 +438,7 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: ['defense_1', 'strength_1'],
             distinctionIds: [],
             factions: [],
@@ -468,7 +468,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: ['d1', 'd2', 'd3'],
             factions: [],
@@ -479,7 +479,7 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: ['d1', 'd2'],
             factions: [],
@@ -490,7 +490,7 @@ describe('characterStats', () => {
           {
             id: '3',
             name: 'Char3',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: ['d1'],
             factions: [],
@@ -516,7 +516,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: ['unknown_distinction_id', 'd1'],
             factions: [],
@@ -541,7 +541,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7'],
             factions: [],
@@ -561,7 +561,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: [],
             factions: [],
@@ -581,7 +581,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: ['d1', 'd2', 'd2'],
             factions: [],
@@ -592,7 +592,7 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            species: 'Human',
+            archetypeId: 'Human',
             perkIds: [],
             distinctionIds: ['d2', 'd3'],
             factions: [],

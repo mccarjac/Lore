@@ -57,14 +57,14 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
 
 interface PreferenceLists {
   tags: PerkTag[];
-  species: Species[];
+  archetypeIds: string[];
   distinctionIds: DistinctionId[];
   perkIds: PerkId[];
 }
 
 const emptyPreferenceLists = (): PreferenceLists => ({
   tags: [],
-  species: [],
+  archetypeIds: [],
   distinctionIds: [],
   perkIds: [],
 });
@@ -251,13 +251,13 @@ export const QuestFormScreen: React.FC = () => {
         assignedCharacterIds: quest.assignedCharacterIds || [],
         desirable: {
           tags: quest.desirable?.tags || [],
-          species: quest.desirable?.species || [],
+          archetypeIds: quest.desirable?.archetypeIds || [],
           distinctionIds: quest.desirable?.distinctionIds || [],
           perkIds: quest.desirable?.perkIds || [],
         },
         undesirable: {
           tags: quest.undesirable?.tags || [],
-          species: quest.undesirable?.species || [],
+          archetypeIds: quest.undesirable?.archetypeIds || [],
           distinctionIds: quest.undesirable?.distinctionIds || [],
           perkIds: quest.undesirable?.perkIds || [],
         },
@@ -571,9 +571,11 @@ export const QuestFormScreen: React.FC = () => {
             'lower'
           )} to add...`}
           options={SPECIES_OPTIONS}
-          selected={formData.desirable.species}
-          onAdd={value => addPreference('desirable', 'species', value)}
-          onRemove={value => removePreference('desirable', 'species', value)}
+          selected={formData.desirable.archetypeIds}
+          onAdd={value => addPreference('desirable', 'archetypeIds', value)}
+          onRemove={value =>
+            removePreference('desirable', 'archetypeIds', value)
+          }
         />
         <MultiSelectField
           label={label('trait.plural')}
@@ -613,9 +615,11 @@ export const QuestFormScreen: React.FC = () => {
             'lower'
           )} to add...`}
           options={SPECIES_OPTIONS}
-          selected={formData.undesirable.species}
-          onAdd={value => addPreference('undesirable', 'species', value)}
-          onRemove={value => removePreference('undesirable', 'species', value)}
+          selected={formData.undesirable.archetypeIds}
+          onAdd={value => addPreference('undesirable', 'archetypeIds', value)}
+          onRemove={value =>
+            removePreference('undesirable', 'archetypeIds', value)
+          }
         />
         <MultiSelectField
           label={label('trait.plural')}
