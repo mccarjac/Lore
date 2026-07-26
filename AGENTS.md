@@ -38,8 +38,10 @@ src/
   components/common/    reusable UI (Card, Section, Header*Button, ...)
   components/screens/   Base{List,Form,Detail}Screen — generic screen scaffolds
   screens/<feature>/    character/ faction/ location/ events/ discord/
-  models/               types.ts (all domain types), gameData.ts, speciesTypes.ts
-  ruleset/               pluggable ruleset schema, provider, validator, terminology
+  models/               types.ts (all domain types); gameData.ts +
+                        speciesTypes.ts are Afterworlds *content* (see #13)
+  ruleset/              pluggable ruleset schema, provider, validator,
+                        terminology, derived stats
   navigation/types.ts   navigator + param-list types
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
   utils/                storage, export/import, discord, git, stats
@@ -69,6 +71,20 @@ Path aliases (tsconfig + babel-plugin-module-resolver): `@/*` → `src/*`, plus
   separately — never nest `runExclusive` calls for the _same_ key (it
   deadlocks). `characterStorage.applyMergedDataset` is the multi-key example:
   it sequences `runExclusive` across all five keys, one at a time.
+- **Ruleset field migration:** `src/utils/rulesetFieldMigration.ts` holds
+  pure, I/O-free normalizers that accept both the pre- and post-Phase-1
+  field names (`species`→`archetypeId`, `perkIds`→`traitIds`,
+  `distinctionIds`→`qualityIds`, `cyberware`→`modifications`,
+  `junktownOffice`→`sponsor`, plus a value reshape from flat `StatModifiers`
+  to nested `ResourceModifiers`). One implementation serves the storage
+  migration, file import, and GitHub sync, so they cannot disagree. Each
+  normalizer returns the **same object reference** when nothing needed
+  rewriting — callers use that to skip a write. `migrateRulesetFields()` in
+  `characterStorage.ts` applies them to local storage, idempotently, locking
+  the character and quest keys sequentially (never nested).
+  **Sync normalizes all three sides** (base, local, remote) before
+  `computeSyncPlan` diffs them; normalizing only the written side would
+  report every character as conflicting on the first sync after upgrade.
 - **GitHub sync conflict handling:** `src/utils/gitIntegration.ts` persists a
   three-way merge base (the dataset as it stood at the end of the last
   successful merge sync, plus the remote's commit SHA) alongside the existing
@@ -82,11 +98,26 @@ Path aliases (tsconfig + babel-plugin-module-resolver): `@/*` → `src/*`, plus
 
 ## Ruleset layer
 
-This is the seam a genre-neutral fork (`mccarjac/Lore`) plugs into. Today's
-Afterworlds data (`gameData.ts`, `speciesTypes.ts`) is unchanged and read-only
-— `src/ruleset/defaultRuleset.ts` derives a `RulesetDefinition` from it via a
-transform, not a hand-written literal, so it can never drift out of sync as
-Phase 1 issues rename fields.
+This is the seam a genre-neutral fork plugs into. The core model is now
+ruleset-neutral: a character has an `archetypeId`, `traitIds`, `qualityIds`,
+and `modifications`, and a quest has a `sponsor` — all plain strings and ids,
+none of them a closed union. A ruleset supplies the actual archetypes,
+traits, categories, qualities, and resources.
+
+Afterworlds data still lives in `gameData.ts` and `speciesTypes.ts`, and
+`src/ruleset/defaultRuleset.ts` derives a `RulesetDefinition` from it via a
+transform rather than a hand-written literal, so the two cannot drift.
+**Treat those two files as content, not code** — they are moved wholesale to
+`src/rulesets/afterworlds/` and deleted in #13. `speciesTypes.ts` could not
+be folded into the ruleset during Phase 1 because `gameData.ts` imports its
+`Species` type and group arrays, and inverting that would make
+`gameData → defaultRuleset → gameData` circular.
+
+Ruleset _terminology overrides are also content_. The Afterworlds ruleset
+maps `modification.singular` to "Cyberware", `archetype.plural` to "Species",
+and so on, which is the only reason the Junktown app still reads the way its
+users expect after the Phase 1 renames. Renaming an engine field must never
+drag those override _values_ along with it.
 
 - `src/ruleset/types.ts` — the `RulesetDefinition` schema (archetypes, traits,
   trait categories, qualities, resources, category-bonus rules, feature
@@ -106,6 +137,16 @@ Phase 1 issues rename fields.
   bare, and a throwing hook would require wrapping all of them. Use
   `tst/helpers/ruleset.tsx`'s `renderWithRuleset()` for a test that needs a
   non-default ruleset.
+- `src/ruleset/derived.ts` — `calculateDerivedStats(character, ruleset?)`
+  returns `{ values: Record<resourceId, number>, categoryScores }`, computed
+  from archetype base values → trait modifiers → category-bonus grants →
+  modification modifiers → cap clamp. Two behaviors are preserved
+  deliberately and pinned by the parity suite: **trait `caps` modifiers are
+  not applied** (Afterworlds' `smarts_20` declares one and the engine has
+  never honored it), and **modification `categoryModifiers` do not
+  retroactively unlock category-bonus thresholds**, since they land after
+  grants. Both are arguably bugs; fixing either moves real users' numbers
+  and is a rules change, not a refactor.
 - `src/ruleset/terminology.ts` — `useLabels()` (components) and `getLabel()`
   (non-component code, e.g. `App.tsx` navigator options, or pure utils like
   `factionStats.ts`/`characterStats.ts` that take a `ruleset` parameter
@@ -194,10 +235,11 @@ Phase 1 issues rename fields.
   just bare `expo`), since `expo-file-system` and `@octokit/rest` ship ESM
   and would otherwise fail to parse the moment coverage collection touches
   them.
-- Real baseline as of this writing: **~54% statements / ~51% functions**
-  (was ~26%; before that it was previously reported as ~75%, which only
-  looked healthy because most of `src/screens` and several `src/utils`
-  modules were invisible to the report — see the config details above).
+- Real baseline as of this writing: **~66% statements / ~61% functions**
+  (was ~54%/~51% before the Phase 1 migration work added coverage; before
+  that ~26%, and previously misreported as ~75% because most of
+  `src/screens` and several `src/utils` modules were invisible to the
+  report — see the config details above).
 
 ### Test coverage gaps
 
