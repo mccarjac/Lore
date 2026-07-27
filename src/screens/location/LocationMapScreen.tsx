@@ -26,13 +26,16 @@ import {
   MapInfoCard,
   MapLocationPickerModal,
 } from '@/components';
+// Coordinate handling is deliberately image-agnostic: locations store
+// normalized 0-1 `mapCoordinates`, so swapping in a different map image (or a
+// different ruleset's map entirely) needs no data migration.
 import {
   containerPointToNormalized,
   clampTranslation,
   Point,
   Size,
 } from '@/utils/mapCoordinates';
-import mapImage from '../../../assets/JunktownMap.png';
+import { useRuleset, resolveAsset } from '@/ruleset';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -40,6 +43,8 @@ type LocationMapNavigationProp = StackNavigationProp<RootStackParamList>;
 
 export const LocationMapScreen: React.FC = () => {
   const navigation = useNavigation<LocationMapNavigationProp>();
+  const { ruleset, assets } = useRuleset();
+  const mapImage = resolveAsset(assets, ruleset.map?.imageKey);
 
   const [imageSize, setImageSize] = useState<Size>({ width: 0, height: 0 });
   const [containerSize, setContainerSize] = useState<Size>({
@@ -65,8 +70,13 @@ export const LocationMapScreen: React.FC = () => {
     }, [])
   );
 
-  // Get the actual image dimensions
+  // Get the actual image dimensions. Keyed on the resolved asset, not [] —
+  // a ruleset swap otherwise keeps the previous map's dimensions forever.
   React.useEffect(() => {
+    if (!mapImage) {
+      setImageSize({ width: 0, height: 0 });
+      return;
+    }
     // For local assets, we can use Image.resolveAssetSource
     const source = Image.resolveAssetSource(mapImage);
     if (source) {
@@ -82,7 +92,7 @@ export const LocationMapScreen: React.FC = () => {
         height: height * scaleValue,
       });
     }
-  }, []);
+  }, [mapImage]);
 
   const handleContainerLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -253,6 +263,15 @@ export const LocationMapScreen: React.FC = () => {
                 />
               ))}
             </Animated.View>
+          ) : !mapImage ? (
+            // A ruleset need not declare a map. The drawer/stack entry is
+            // hidden by the `map` feature flag, but the route can still be
+            // reached directly, so say so rather than spinning forever.
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>
+                This ruleset has no map to show.
+              </Text>
+            </View>
           ) : (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading map...</Text>
