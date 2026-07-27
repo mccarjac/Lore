@@ -5,10 +5,16 @@ update it when conventions change.
 
 ## What this is
 
-**Junktown Intelligence** is a React Native / Expo mobile app (TypeScript,
-strict mode) for managing tabletop-RPG / LARP campaign data: characters,
-factions, locations, events, plus Discord message ingestion and GitHub-backed
-data sync. All data lives locally in AsyncStorage; there is no backend.
+**Lore** is a genre-neutral React Native / Expo engine (TypeScript, strict
+mode) for managing tabletop-RPG / LARP campaign data: characters, factions,
+locations, events, plus Discord message ingestion and GitHub-backed data
+sync. All data lives locally in AsyncStorage; there is no backend.
+
+The rules and vocabulary of any particular game come from a **ruleset**, not
+from the code — see "Ruleset layer" and "Engine vs fork" below. Junktown
+Intelligence (the Afterworlds setting) is one such ruleset and ships in this
+tree under `src/rulesets/afterworlds/`; the app itself boots on a generic
+example ruleset.
 
 Stack: React Native 0.81 · Expo 54 · React Navigation 7 (drawer + stack) ·
 AsyncStorage · Jest + @testing-library/react-native.
@@ -417,12 +423,14 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   `@octokit/rest`, and gifted-charts' own core package ship ESM and would
   otherwise fail to parse the moment anything imports them. Allow-listing a
   wrapper is not enough — its ESM dependency needs listing too.
-- Real baseline as of this writing: **~69% statements / ~65% functions**
-  (was ~66%/~61% before the Phase 2 UI decoupling added screen tests,
-  ~54%/~51% before the Phase 1 migration work; before that ~26%, and
-  previously misreported as ~75% because most of `src/screens` and several
-  `src/utils` modules were invisible to the report — see the config details
-  above).
+- Real baseline as of this writing: **~69.6% statements / ~65.4% functions**
+  — flat across the Phase 3 extraction, which is the point: `src/rulesets/**`
+  joined `collectCoverageFrom` in the same change that moved a well-covered
+  file into it, so the denominator moved and the ratio did not. (Was
+  ~66%/~61% before the Phase 2 UI decoupling added screen tests, ~54%/~51%
+  before the Phase 1 migration work; before that ~26%, and previously
+  misreported as ~75% because most of `src/screens` and several `src/utils`
+  modules were invisible to the report — see the config details above.)
 
 ### Test coverage gaps
 
@@ -492,5 +500,10 @@ jest.fn() }))` rather than a bare automock, or Jest tries to load the real
 
 Prefer reusing existing utilities over adding new ones. Data-storage format
 changes, navigation restructures, and new native dependencies are
-higher-risk — call them out explicitly and keep them minimal. Always leave
+higher-risk — call them out explicitly and keep them minimal.
+
+**App identity values are not yours to change.** The slug, bundle
+identifiers and EAS project id in `src/branding.ts` were relocated by #12,
+not rewritten; changing them affects EAS builds and orphans installed apps.
+Minting Lore's own set is issue #15's job. Always leave
 `npm run check-all` green.
