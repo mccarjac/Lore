@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { RulesetProvider, useRuleset } from '@/ruleset/context';
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { genericRuleset } from '../fixtures/genericRuleset';
 import { activeRuleset } from '@/activeRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
 
@@ -21,7 +21,7 @@ describe('useRuleset', () => {
 
   it('provides the ruleset passed to RulesetProvider', () => {
     const custom: RulesetDefinition = {
-      ...afterworldsRuleset,
+      ...genericRuleset,
       id: 'custom-ruleset',
     };
     render(
@@ -34,7 +34,7 @@ describe('useRuleset', () => {
 
   it('throws in dev when the provided ruleset is invalid', () => {
     const invalid: RulesetDefinition = {
-      ...afterworldsRuleset,
+      ...genericRuleset,
       id: '',
     };
     const previousDev = global.__DEV__;
@@ -56,7 +56,7 @@ describe('useRuleset', () => {
 
   it('logs and still renders when the provided ruleset is invalid outside dev', () => {
     const invalid: RulesetDefinition = {
-      ...afterworldsRuleset,
+      ...genericRuleset,
       id: '',
     };
     const previousDev = global.__DEV__;

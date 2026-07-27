@@ -2,24 +2,27 @@
  * The character-attribute layer (#22).
  *
  * The parity fixture cannot cover any of this: Afterworlds declares no
- * character attributes, so every one of its 26 cases exercises the layer as a
+ * character attributes, so every one of its cases exercises the layer as a
  * no-op. These tests are the only proof that step 1b of the pipeline behaves,
- * and that adding it did not disturb the steps around it.
+ * and that adding it did not disturb the steps around it. They run on the
+ * mechanics fixture rather than a flavor, so the layer is proved for any
+ * ruleset — `mechanicsRuleset` carries the caps, category bonuses and
+ * archetype rules the pipeline needs.
  */
 import { calculateDerivedStats } from '@/ruleset/derived';
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { validateCharacterAttributes } from '@/ruleset/validate';
 import { flag, num, text, type AttributeBag } from '@/ruleset/attributes';
 import type { RulesetDefinition } from '@/ruleset/types';
 import type { GameCharacter } from '@/models/types';
+import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
 
 const TS = '2026-01-01T00:00:00.000Z';
 
-/** Afterworlds plus a few GM-defined per-character attributes. */
+/** The mechanics fixture plus a few GM-defined per-character attributes. */
 const rulesetWithCharacterAttributes = (): RulesetDefinition => ({
-  ...afterworldsRuleset,
+  ...mechanicsRuleset,
   attributes: [
-    ...afterworldsRuleset.attributes,
+    ...mechanicsRuleset.attributes,
     { id: 'homeworld', label: 'Homeworld', type: 'text' },
     { id: 'corruption', label: 'Corruption', type: 'number', min: 0, max: 10 },
     { id: 'sworn', label: 'Sworn', type: 'flag' },
@@ -30,7 +33,7 @@ const character = (attributes?: AttributeBag): GameCharacter =>
   ({
     id: 'c1',
     name: 'Test',
-    archetypeId: 'Human',
+    archetypeId: 'tinker',
     traitIds: [],
     qualityIds: [],
     factions: [],
@@ -47,28 +50,28 @@ describe('character attributes in derived stats', () => {
     const withNone = calculateDerivedStats(character(), ruleset);
     const withEmpty = calculateDerivedStats(character({}), ruleset);
 
-    // Human: base health 2, base limit 2.
-    expect(withNone.values.health).toBe(2);
+    // Tinker: base grit 2, base spark 2.
+    expect(withNone.values.grit).toBe(2);
     expect(withEmpty.values).toEqual(withNone.values);
   });
 
   it('overrides an archetype base value absolutely, not as a delta', () => {
-    const stats = calculateDerivedStats(character({ health: num(4) }), ruleset);
+    const stats = calculateDerivedStats(character({ grit: num(4) }), ruleset);
 
     // 4, not 2 + 4 — character attributes are assignments. Deltas are what
     // traits and modifications are for.
-    expect(stats.values.health).toBe(4);
+    expect(stats.values.grit).toBe(4);
   });
 
   it('surfaces freeform attributes without touching numeric values', () => {
     const stats = calculateDerivedStats(
-      character({ homeworld: text('Junktown'), sworn: flag(true) }),
+      character({ homeworld: text('Ashvale'), sworn: flag(true) }),
       ruleset
     );
 
-    expect(stats.attributes.homeworld).toEqual(text('Junktown'));
+    expect(stats.attributes.homeworld).toEqual(text('Ashvale'));
     expect(stats.attributes.sworn).toEqual(flag(true));
-    expect(stats.values.health).toBe(2);
+    expect(stats.values.grit).toBe(2);
     expect(stats.values.homeworld).toBeUndefined();
   });
 
@@ -83,40 +86,37 @@ describe('character attributes in derived stats', () => {
   });
 
   it('resolves archetype base underneath the character override', () => {
-    const stats = calculateDerivedStats(character({ health: num(4) }), ruleset);
+    const stats = calculateDerivedStats(character({ grit: num(4) }), ruleset);
 
     // Untouched archetype attributes still come through.
-    expect(stats.attributes.limit).toEqual(num(2));
-    expect(stats.attributes.cyberware).toEqual(flag(true));
+    expect(stats.attributes.spark).toEqual(num(2));
+    expect(stats.attributes.attuned).toEqual(flag(false));
   });
 
   it('still clamps an overridden resource to its cap', () => {
-    // Human healthCap is 5; an override above it must not escape the clamp.
-    const stats = calculateDerivedStats(
-      character({ health: num(99) }),
-      ruleset
-    );
+    // Tinker's gritCap is 6; an override above it must not escape the clamp.
+    const stats = calculateDerivedStats(character({ grit: num(99) }), ruleset);
 
-    expect(stats.values.health).toBe(5);
+    expect(stats.values.grit).toBe(6);
   });
 
   it('lets a character raise its own cap', () => {
     const stats = calculateDerivedStats(
-      character({ health: num(99), healthCap: num(8) }),
+      character({ grit: num(99), gritCap: num(8) }),
       ruleset
     );
 
-    expect(stats.values.health).toBe(8);
+    expect(stats.values.grit).toBe(8);
   });
 
   it('applies trait deltas on top of a character override', () => {
-    // Overridden base 3, plus a +1 health trait, still under the cap of 5.
+    // Overridden base 3, plus a +1 grit trait, still under the cap of 6.
     const withTrait = {
-      ...character({ health: num(3) }),
-      traitIds: ['defense_23'],
+      ...character({ grit: num(3) }),
+      traitIds: ['hammer_hand'],
     } as GameCharacter;
 
-    expect(calculateDerivedStats(withTrait, ruleset).values.health).toBe(4);
+    expect(calculateDerivedStats(withTrait, ruleset).values.grit).toBe(4);
   });
 
   it('leaves an unknown archetype rendering rather than throwing', () => {
@@ -128,7 +128,7 @@ describe('character attributes in derived stats', () => {
     const stats = calculateDerivedStats(orphan, ruleset);
 
     expect(stats.values.corruption).toBe(1);
-    expect(stats.values.health).toBe(0);
+    expect(stats.values.grit).toBe(0);
   });
 });
 
@@ -137,7 +137,7 @@ describe('validateCharacterAttributes', () => {
 
   it('accepts declared attributes of the right type', () => {
     const result = validateCharacterAttributes(
-      { homeworld: text('Junktown'), corruption: num(2) },
+      { homeworld: text('Ashvale'), corruption: num(2) },
       ruleset
     );
     expect(result).toEqual({ valid: true, issues: [] });
@@ -191,11 +191,8 @@ describe('derived stats — modifier edge cases', () => {
     }) as GameCharacter;
 
   it('ignores a zero delta', () => {
-    const stats = calculateDerivedStats(
-      withModification({ health: 0 }),
-      ruleset
-    );
-    expect(stats.values.health).toBe(2);
+    const stats = calculateDerivedStats(withModification({ grit: 0 }), ruleset);
+    expect(stats.values.grit).toBe(2);
   });
 
   it('ignores a delta naming an attribute the ruleset does not declare', () => {
@@ -204,7 +201,7 @@ describe('derived stats — modifier edge cases', () => {
       ruleset
     );
     expect(stats.values.nonexistent).toBeUndefined();
-    expect(stats.values.health).toBe(2);
+    expect(stats.values.grit).toBe(2);
   });
 
   it('leaves a resource unclamped when its cap attribute has no value', () => {
@@ -213,29 +210,27 @@ describe('derived stats — modifier edge cases', () => {
     const uncapped: RulesetDefinition = {
       ...ruleset,
       archetypes: ruleset.archetypes.map(a =>
-        a.id === 'Human'
+        a.id === 'tinker'
           ? {
               ...a,
               attributes: Object.fromEntries(
-                Object.entries(a.attributes).filter(
-                  ([id]) => id !== 'healthCap'
-                )
+                Object.entries(a.attributes).filter(([id]) => id !== 'gritCap')
               ),
             }
           : a
       ),
-      attributes: ruleset.attributes.filter(a => a.id !== 'healthCap'),
+      attributes: ruleset.attributes.filter(a => a.id !== 'gritCap'),
     };
 
     const stats = calculateDerivedStats(
       {
         ...character(),
-        modifications: withModification({ health: 50 }).modifications,
+        modifications: withModification({ grit: 50 }).modifications,
       } as GameCharacter,
       uncapped
     );
 
-    expect(stats.values.health).toBe(52);
+    expect(stats.values.grit).toBe(52);
   });
 
   it('applies no archetype rules when the ruleset declares none', () => {
@@ -243,15 +238,19 @@ describe('derived stats — modifier edge cases', () => {
       ...ruleset,
       archetypeRules: undefined,
     };
-    const pm = {
+    const revenant = {
       ...character(),
-      archetypeId: 'Perfect Mutant',
-      traitIds: ['agility_15'],
+      archetypeId: 'revenant',
+      traitIds: ['kin_secret'],
     } as GameCharacter;
 
-    // With the carve-out gone, the mutant-restricted trait now scores.
+    // With the carve-out gone, the group-restricted trait now scores. Under
+    // the rule it is skipped outright, so the category has no entry at all.
     expect(
-      calculateDerivedStats(pm, without).categoryScores.get('Agility')
+      calculateDerivedStats(revenant, ruleset).categoryScores.get('forge')
+    ).toBeUndefined();
+    expect(
+      calculateDerivedStats(revenant, without).categoryScores.get('forge')
     ).toBe(1);
   });
 });

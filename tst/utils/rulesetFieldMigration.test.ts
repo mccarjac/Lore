@@ -12,29 +12,56 @@ import {
   normalizeQuestRulesetFields,
   normalizeQuestsRulesetFields,
 } from '@utils/rulesetFieldMigration';
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
 import { QuestStatus, type GameCharacter, type GameQuest } from '@models/types';
 
 /**
- * Every record in this file is legacy *Afterworlds* data — `species: 'Mutant'`
- * and `statModifiers: { healthCap: 1 }` are literally what shipped, and are
- * what the normalizers exist to read. So the ruleset is pinned here rather
- * than inherited from the build: these assertions are about migrating real
- * stored data, not about whichever flavor happens to be active.
+ * Every record in this file is legacy data of the vintage that actually
+ * shipped — `species: 'Mutant'`, `statModifiers: { healthCap: 1 }` — because
+ * that is what the normalizers exist to read. The *records* are historic; the
+ * ruleset they are read against need not be, and pinning a flavor here would
+ * make this suite one of the files that has to move when a flavor is
+ * extracted. All the normalizers ask of a ruleset is `attributes`, for the
+ * resource -> cap lookup, so a local fixture declaring the ids those legacy
+ * records mention is the whole requirement.
  *
- * That the cap reshape is *not* Afterworlds-specific is proved separately,
- * against `mechanicsRuleset`, at the bottom of this file.
+ * That the cap reshape is a ruleset rule rather than a property of these
+ * particular ids is proved separately, against `mechanicsRuleset`, at the
+ * bottom of this file.
  */
+const legacyShapedRuleset: RulesetDefinition = {
+  ...mechanicsRuleset,
+  id: 'legacy-shaped',
+  attributes: [
+    {
+      id: 'health',
+      label: 'Health',
+      type: 'number',
+      role: 'resource',
+      capAttributeId: 'healthCap',
+    },
+    {
+      id: 'limit',
+      label: 'Limit',
+      type: 'number',
+      role: 'resource',
+      capAttributeId: 'limitCap',
+    },
+    { id: 'healthCap', label: 'Health Cap', type: 'number', role: 'cap' },
+    { id: 'limitCap', label: 'Limit Cap', type: 'number', role: 'cap' },
+  ],
+  archetypes: [],
+};
+
 const normalizeCharacterRulesetFields = (
   character: GameCharacter,
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = legacyShapedRuleset
 ): GameCharacter => normalizeCharacterWith(character, ruleset);
 
 const normalizeCharactersRulesetFields = (
   characters: GameCharacter[],
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = legacyShapedRuleset
 ): GameCharacter[] => normalizeCharactersWith(characters, ruleset);
 
 const TS = '2026-01-01T00:00:00.000Z';
@@ -338,8 +365,8 @@ describe('modification modifier reshape (#5 then #22)', () => {
     // Losing the delta silently would be worse than emitting one the
     // validator can flag.
     const rulesetWithoutCaps = {
-      ...afterworldsRuleset,
-      attributes: afterworldsRuleset.attributes.map(a =>
+      ...legacyShapedRuleset,
+      attributes: legacyShapedRuleset.attributes.map(a =>
         a.id === 'health' ? { ...a, capAttributeId: undefined } : a
       ),
     };
@@ -431,7 +458,7 @@ describe('modification modifier reshape (#5 then #22)', () => {
   });
 });
 
-describe('the cap reshape is a ruleset rule, not an Afterworlds one', () => {
+describe('the cap reshape follows the ruleset, not the legacy ids', () => {
   it("maps a legacy cap key onto the resource's own cap attribute", () => {
     // `mechanicsRuleset` declares grit -> gritCap, with no `health` anywhere.
     const legacy = {

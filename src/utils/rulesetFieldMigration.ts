@@ -21,10 +21,10 @@ import { roleOf } from '@/ruleset/attributes';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 /**
- * resourceId -> its cap attribute id, read off the ruleset. Defaults to the
- * Afterworlds ruleset, matching the convention in `derived.ts` and
- * `factionStats.ts`: pure utils take the ruleset as a parameter rather than
- * reaching for a provider.
+ * resourceId -> its cap attribute id, read off the ruleset. The ruleset is a
+ * parameter, defaulting to the active one, matching the convention in
+ * `derived.ts` and `factionStats.ts`: pure utils take the ruleset rather than
+ * reaching for a provider they cannot see.
  */
 const capLookupFor =
   (ruleset: RulesetDefinition): CapLookup =>

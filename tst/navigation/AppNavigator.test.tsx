@@ -1,7 +1,8 @@
 import React from 'react';
 import { renderWithRuleset } from '../helpers/ruleset';
 import { genericRuleset } from '../fixtures/genericRuleset';
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
+import type { RulesetDefinition } from '@/ruleset/types';
 
 /**
  * The navigator factories are replaced with pass-throughs that surface each
@@ -67,17 +68,37 @@ jest.mock('@react-navigation/stack', () => {
 // Imported after the mocks so the navigators are built from them.
 import { AppNavigator, MainDrawer } from '@/navigation/AppNavigator';
 
-const renderNav = (ruleset = afterworldsRuleset) =>
+/**
+ * Every feature on, so the "registers everything" cases below are about the
+ * navigator rather than about any flavor's flag choices. A ruleset with a
+ * `map` feature needs no `map` block to register the route — only the flag
+ * gates registration.
+ */
+const allFeaturesRuleset: RulesetDefinition = {
+  ...mechanicsRuleset,
+  features: {
+    quests: true,
+    recipes: true,
+    discord: true,
+    map: true,
+    gitSync: true,
+    modifications: true,
+    influenceReport: true,
+    relationshipGraph: true,
+  },
+};
+
+const renderNav = (ruleset = allFeaturesRuleset) =>
   renderWithRuleset(<AppNavigator />, { ruleset });
 
 /**
  * The drawer is registered as `component={MainDrawer}` on a stack screen, so
  * the stack render never reaches it — it gets its own render.
  */
-const renderDrawer = (ruleset = afterworldsRuleset) =>
+const renderDrawer = (ruleset = allFeaturesRuleset) =>
   renderWithRuleset(<MainDrawer />, { ruleset });
 
-describe('AppNavigator — the Afterworlds ruleset (behavior preservation)', () => {
+describe('AppNavigator — a ruleset with every feature enabled', () => {
   it('registers every drawer screen', () => {
     const { getByText } = renderDrawer();
 

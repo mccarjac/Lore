@@ -11,7 +11,7 @@ import {
   makeEvent,
   makeQuest,
 } from '../helpers/factories';
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
 import { genericRuleset } from '../fixtures/genericRuleset';
 
 const makeData = (
@@ -265,7 +265,7 @@ describe('searchAllDomains — feature gating', () => {
   });
 
   it('searches every domain when the ruleset enables quests', () => {
-    const results = searchAllDomains(gatingData(), 'quest', afterworldsRuleset);
+    const results = searchAllDomains(gatingData(), 'quest', mechanicsRuleset);
     expect(results.some(result => result.domain === 'quest')).toBe(true);
   });
 

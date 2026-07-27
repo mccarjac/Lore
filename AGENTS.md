@@ -32,10 +32,12 @@ npm run android        # run on device/emulator (web/ios also available)
 ```
 
 **The gate is `npm run check-all`, and it must be green before you commit.**
-CI (`.github/workflows/build-apk.yml`, on push to `master`) runs `type-check`,
-`lint`, and `test` before building the APK, so a red gate fails the build — do
-not rely on the pre-commit hook alone (it only checks staged files and is
-bypassable).
+`.github/workflows/pr-checks.yml` runs `type-check`, `lint` and `test` on every
+PR into `main`, and `coverage.yml` posts an informational coverage comment
+alongside it. `build-apk.yml` is `workflow_dispatch` only — EAS's free tier is a
+monthly quota, so builds are triggered by hand (see `docs/github-actions.md`).
+Do not rely on the pre-commit hook alone: it only checks staged files and is
+bypassable.
 
 ## Layout
 
@@ -53,8 +55,10 @@ src/
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
   utils/                storage, export/import, discord, git, stats
   activeRuleset.ts      which ruleset this build runs on (fork-owned)
-  branding.ts           app identity (fork-owned; see "Branding")
+  branding.ts           app identity, resolved from env (see "Branding")
 tst/                    Jest tests, mirroring src/
+docs/                   user- and operator-facing documentation
+.env.example            every environment variable, with its default
 ```
 
 Note the singular/plural distinction, which is easy to misread: **`ruleset/`
@@ -75,7 +79,7 @@ Lore is the engine; Junktown Intelligence is a flavor of it (#19). The
 fork-owned surface is exactly:
 
 ```
-src/branding.ts             app identity
+.env                        app identity, and the sync data repo (untracked)
 src/activeRuleset.ts        which ruleset this build runs on
 src/rulesets/<flavor>/**    the ruleset itself: content, terminology,
                             categories, and its bundled images
@@ -84,6 +88,13 @@ assets/{icon,adaptive-icon,splash-icon,favicon}.png
 
 Everything else is engine-owned and merges cleanly from upstream. When you
 add something Afterworlds-specific, it belongs in that list or it is a bug.
+`src/branding.ts` used to be on that list; since identity reads from the
+environment, a fork overrides it without touching tracked source — one fewer
+file to resolve on every merge.
+
+The user-facing version of this, plus the schema walkthrough and the exact
+procedure for extracting a flavor into its own repo, is
+`docs/ruleset-authoring.md`. Keep the two in agreement.
 
 `src/rulesets/afterworlds/` is laid out as `index.ts` (the
 `RulesetDefinition`), `terminology.ts`, `categories.ts`, `assets.ts` +
@@ -99,9 +110,11 @@ behavior. Data-entry work (JunktownIntelligence#116) happens against
 
 ## Branding
 
-`src/branding.ts` is the only place app identity lives — name, slug, bundle
-identifier, EAS project id, Expo owner, and the paths of the four branding
-PNGs in `assets/`. A fork changes that file and those images, nothing else.
+`src/branding.ts` is the only place app identity lives — name, slug, version,
+bundle identifier, EAS project id, Expo owner, splash color, and the paths of
+the four branding PNGs in `assets/`. Every value **reads `process.env` and falls
+back to Lore's own**, so a fork sets `.env` (see `.env.example`) and replaces
+the images, and changes no tracked source at all.
 
 - **`app.config.ts` is engine-owned** and holds no identity literals; it is the
   config _shape_ and reads every value from `src/branding.ts`. There is no
@@ -118,9 +131,23 @@ PNGs in `assets/`. A fork changes that file and those images, nothing else.
   is active and correctly per-ruleset; `src/branding.ts` is _build_ identity,
   resolved before a ruleset is chosen. `APP_NAME` is the single source —
   rulesets import it, never the reverse.
-- Changing the slug or bundle identifiers affects EAS builds and would orphan
-  installed apps. Relocating those values (this section) is safe; changing
-  them is issue #15's job.
+- **Read `process.env` with static member access only.** Expo's babel transform
+  inlines `process.env.EXPO_PUBLIC_*` by literal text substitution, so a lookup
+  helper (`env('EXPO_PUBLIC_APP_NAME')`) resolves to `undefined` in a release
+  bundle while working fine under Node and Jest — the worst possible failure
+  mode. Write the accesses out.
+- **`EXPO_PUBLIC_` only for values the app bundle reads.** `APP_NAME` is one
+  (rulesets import it). Slug, bundle identifier, EAS project id and Expo owner
+  are consumed solely by `app.config.ts` under Node, so they stay unprefixed
+  and never ship. The same rule governs the `EXPO_PUBLIC_DATA_REPO_*` variables
+  in `gitIntegration.ts`, which the app does read at runtime.
+- **`EAS_PROJECT_ID` is empty by default** and `app.config.ts` omits
+  `extra.eas` entirely while it is — EAS reads a blank id as a malformed
+  project reference but an absent one as "not initialized yet", which is what a
+  fresh clone is. Run `eas init` and put the id in `.env`.
+- Changing the slug or bundle identifier affects EAS builds and orphans
+  installed apps — an install does not upgrade across a package rename. The
+  defaults here are Lore's minted identity (#15); do not change them.
 
 ## Data & storage architecture
 
@@ -162,6 +189,12 @@ PNGs in `assets/`. A fork changes that file and those images, nothing else.
   **Sync normalizes all three sides** (base, local, remote) before
   `computeSyncPlan` diffs them; normalizing only the written side would
   report every character as conflicting on the first sync after upgrade.
+- **Which repository sync talks to is env-driven**, not hardcoded:
+  `DATA_REPO_OWNER` / `DATA_REPO_NAME` / `DATA_REPO_BRANCH` in
+  `gitIntegration.ts` read `EXPO_PUBLIC_DATA_REPO_*` and default to the data
+  library this code shipped against, so existing installs keep syncing where
+  they always did. `DATA_REPO_SLUG` is the display form — screens must use it
+  rather than naming a repository in a string.
 - **GitHub sync conflict handling:** `src/utils/gitIntegration.ts` persists a
   three-way merge base (the dataset as it stood at the end of the last
   successful merge sync, plus the remote's commit SHA) alongside the existing
@@ -384,13 +417,20 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
     trait's `allowedArchetypeIds`, a trait declaring a cap delta the engine
     must ignore, and a resource with no cap.
   - **`@/rulesets/afterworlds` — the fork regression guard.** Asserted in
-    exactly two files: `tst/rulesets/afterworlds.test.ts` (the ruleset itself)
-    and `tst/utils/derivedStats.parity.test.ts` (the 27 pre-generalization
-    numbers). Keep it out of the rest.
+    exactly two files: `tst/rulesets/afterworlds.test.ts` (the ruleset itself,
+    including the terminology overrides that keep the app reading
+    "Species"/"Perks"/"Junktown Office") and
+    `tst/utils/derivedStats.parity.test.ts` (the 27 pre-generalization
+    numbers). Keep it out of the rest — the suite had drifted to thirteen
+    files before Phase 4 pulled it back, and every one of those was a file
+    that would have had to move when the flavor does.
 
-  All three are proved pairwise id-disjoint in
-  `tst/fixtures/genericRuleset.test.ts` — a shared id is exactly how a test
-  passes while asserting on a value that came from somewhere else.
+  All four — the three above plus `src/ruleset/exampleRuleset.ts` — are proved
+  pairwise id-disjoint in `tst/fixtures/genericRuleset.test.ts`; a shared id is
+  exactly how a test passes while asserting on a value that came from somewhere
+  else. That file's Afterworlds row is the only other place the flavor is
+  named, and dropping it is a one-line edit — see `docs/ruleset-authoring.md` →
+  "Extracting a flavor" for the full list of what moves.
 
 - `Picker.Item` children collapse into an `items` prop on the host
   `RNCPicker` and render **no queryable text** — read option labels off
@@ -502,8 +542,16 @@ Prefer reusing existing utilities over adding new ones. Data-storage format
 changes, navigation restructures, and new native dependencies are
 higher-risk — call them out explicitly and keep them minimal.
 
-**App identity values are not yours to change.** The slug, bundle
-identifiers and EAS project id in `src/branding.ts` were relocated by #12,
-not rewritten; changing them affects EAS builds and orphans installed apps.
-Minting Lore's own set is issue #15's job. Always leave
-`npm run check-all` green.
+**App identity values are not yours to change.** Lore's slug and bundle
+identifier were minted by #15 and are now the defaults in `src/branding.ts`;
+changing them affects EAS builds and orphans installed apps, since an install
+does not upgrade across a package rename. A different identity is a `.env`
+value, never an edit here.
+
+**Documentation lives in two places, deliberately.** This file is for whoever
+is changing the code; `docs/` is for whoever is using or deploying it. A fact
+that belongs in both (the fork-owned surface, the derived-stat pipeline order)
+should be stated once and referenced from the other — `docs/ruleset-authoring.md`
+is the user-facing counterpart to "Engine vs fork" and "Ruleset layer".
+
+Always leave `npm run check-all` green.

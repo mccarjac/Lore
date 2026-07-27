@@ -1,5 +1,4 @@
 import { validateRuleset } from '@/ruleset/validate';
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const baseRuleset = (): RulesetDefinition => ({
@@ -104,12 +103,6 @@ describe('validateRuleset', () => {
   it('accepts a well-formed fixture ruleset', () => {
     const result = validateRuleset(baseRuleset());
     expect(result).toEqual({ valid: true, issues: [] });
-  });
-
-  it('accepts the real afterworlds ruleset', () => {
-    const result = validateRuleset(afterworldsRuleset);
-    expect(result.issues).toEqual([]);
-    expect(result.valid).toBe(true);
   });
 
   it('requires non-empty id/name/version', () => {
