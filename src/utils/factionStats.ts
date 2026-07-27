@@ -1,10 +1,7 @@
 import { GameCharacter, RelationshipStanding } from '../models/types';
 import { FactionRelationship } from './characterStorage';
-import {
-  getLabel,
-  afterworldsRuleset,
-  type RulesetDefinition,
-} from '../ruleset';
+import { getLabel, type RulesetDefinition } from '../ruleset';
+import { activeRuleset } from '@/activeRuleset';
 
 export interface FactionStats {
   factionName: string;
@@ -44,14 +41,14 @@ export interface CombinedFactionAnalysis {
 
 /**
  * Calculate statistics for a single faction based on its members.
- * `ruleset` defaults to afterworldsRuleset so existing callers are
+ * `ruleset` defaults to the active ruleset so existing callers are
  * unaffected; pass the active ruleset explicitly from a screen that has one.
  */
 export const calculateFactionStats = (
   factionName: string,
   allCharacters: GameCharacter[],
   factionRelationships: FactionRelationship[] = [],
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = activeRuleset
 ): FactionStats => {
   // Get faction members (only positive relationships count as members)
   const members = allCharacters.filter(char => {
@@ -198,7 +195,7 @@ export const calculateCombinedFactionStats = (
   factionName: string,
   allCharacters: GameCharacter[],
   allFactionRelationships: Map<string, FactionRelationship[]>,
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = activeRuleset
 ): CombinedFactionAnalysis => {
   // Get base stats for the main faction
   const mainFactionRelationships =
@@ -260,7 +257,7 @@ export const calculateCombinedFactionStats = (
 export const getAllFactionStats = (
   allCharacters: GameCharacter[],
   allFactionRelationships: Map<string, FactionRelationship[]>,
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = activeRuleset
 ): FactionStats[] => {
   const factionNames = Array.from(allFactionRelationships.keys());
 

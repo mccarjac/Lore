@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { afterworldsRuleset } from './defaultRuleset';
-import { afterworldsAssets, type RulesetAssets } from './assets';
+import { activeRuleset, activeAssets } from '@/activeRuleset';
+import { type RulesetAssets } from './assets';
 import { validateRuleset } from './validate';
 import type { RulesetDefinition } from './types';
 
@@ -10,8 +10,8 @@ export interface RulesetContextValue {
 }
 
 const DEFAULT_CONTEXT_VALUE: RulesetContextValue = {
-  ruleset: afterworldsRuleset,
-  assets: afterworldsAssets,
+  ruleset: activeRuleset,
+  assets: activeAssets,
 };
 
 /**
@@ -29,8 +29,8 @@ export interface RulesetProviderProps {
 }
 
 export const RulesetProvider: React.FC<RulesetProviderProps> = ({
-  ruleset = afterworldsRuleset,
-  assets = afterworldsAssets,
+  ruleset = activeRuleset,
+  assets = activeAssets,
   children,
 }) => {
   const value = useMemo(() => {

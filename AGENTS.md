@@ -160,6 +160,20 @@ and so on, which is the only reason the Junktown app still reads the way its
 users expect after the Phase 1 renames. Renaming an engine field must never
 drag those override _values_ along with it.
 
+- `src/activeRuleset.ts` — **the one file that says which ruleset this build
+  runs on.** Fork-owned; `RulesetProvider`'s defaults and every
+  `ruleset: RulesetDefinition = …` default parameter resolve through it.
+  **It is deliberately a module and not a provider prop.** Non-component code
+  needs the active ruleset too — `characterStorage.migrateRulesetFields()`
+  calls `normalizeCharactersRulesetFields(characters)` with no ruleset
+  argument, and that default is what maps a legacy `caps.health` onto
+  `attributeDeltas.healthCap`. A storage module can never read a React
+  context, so folding this back into `RulesetProvider` would silently degrade
+  that migration for every ruleset but the built-in one.
+  **Cycle rule:** this file, and anything under `src/rulesets/`, imports
+  `@/ruleset/types` / `@/ruleset/attributes` / etc. **directly, never the
+  `@/ruleset` barrel** — the barrel re-exports `context.tsx`, which imports
+  the seam.
 - `src/ruleset/attributes.ts` — the `AttributeValue` primitive (#22). A
   tagged union (`{ type, value }`) covering number/text/flag/ref/list/map,
   plus `AttributeDefinition`, typed accessors, and a generic bag validator.
