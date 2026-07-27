@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Junktown Intelligence (the Afterworlds flavor)
+    url: https://github.com/mccarjac/JunktownIntelligence/issues
+    about: Campaign content, setting-specific rules, or anything about the Afterworlds data itself belongs on the fork rather than the engine.
+  - name: How to build your own flavor
+    url: https://github.com/mccarjac/lore/blob/main/docs/ruleset-authoring.md
+    about: Archetypes, traits, qualities, terminology and feature flags are ruleset data — this guide covers the schema.

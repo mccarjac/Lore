@@ -1,423 +1,204 @@
-![Logo](https://github.com/mccarjac/JunktownIntelligence/blob/master/assets/adaptive-icon.png)
-
 <div align="center">
 
-**A comprehensive React Native mobile application for managing tabletop RPGs, LARPs, worldbuilding, and storytelling**
+# Lore
+
+**A genre-neutral React Native engine for tabletop RPG, LARP and worldbuilding
+campaign data**
 
 [![React Native](https://img.shields.io/badge/React%20Native-0.81.5-blue.svg)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-54.0.23-000020.svg)](https://expo.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue.svg)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-**Support the Project:**
-
-[![Support on Patreon](https://img.shields.io/badge/Support-Patreon-orange.svg)](https://www.patreon.com/cw/MugatuCreations)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-mugatucreations-FFDD00.svg?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/mugatucreations)
-[![PayPal](https://img.shields.io/badge/PayPal-@mccarjac-00457C.svg?logo=paypal)](https://paypal.me/mccarjac)
-[![Venmo](https://img.shields.io/badge/Venmo-@mccarjac-3D95CE.svg?logo=venmo)](https://venmo.com/mccarjac)
-[![Cash App](https://img.shields.io/badge/Cash%20App-$mccarjac-00C244.svg?logo=cash-app)](https://cash.app/$mccarjac)
-
-_Developed by Jacob McCarthy ([mccarjac](https://github.com/mccarjac))_
-
 </div>
 
 ---
 
-## 📖 Table of Contents
+Lore tracks the things a campaign accumulates — characters, factions,
+locations, events, quests — with the relationships between them, statistics
+over them, Discord ingestion, and GitHub-backed sharing. Everything lives
+locally on the device; there is no backend and no account.
 
-- [About the Project](#-about-the-project)
-- [Use Case](#-use-case)
-- [Key Features](#-key-features)
-- [Technology Stack](#-technology-stack)
-- [Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Running the App](#running-the-app)
-- [Available Scripts](#-available-scripts)
-- [Building for Android](#-building-for-android)
-- [Project Structure](#-project-structure)
-- [Documentation](#-documentation)
-- [Development Workflow](#-development-workflow)
-- [Contributing](#-contributing)
-- [Contributors](#-contributors)
-- [Acknowledgments](#-acknowledgments)
+**The rules and vocabulary come from a ruleset, not from the code.** Archetypes,
+traits, qualities, attributes, what they are all called, and which subsystems
+exist at all are data. Point the app at a different ruleset and it is a
+different game — no forking the screens.
 
----
+[Junktown Intelligence](https://github.com/mccarjac/JunktownIntelligence) is one
+such flavor: post-apocalyptic Afterworlds, where an archetype is a "Species", a
+trait is a "Perk" and a quality is a "Distinction". Lore itself boots on a small
+generic example ruleset.
 
-## 🎯 About the Project
+## Contents
 
-**Junktown Intelligence** is a powerful mobile application designed to help game masters, players, storytellers, and worldbuilders organize, track, and manage their creative projects. Built with React Native and Expo, this cross-platform solution provides a comprehensive suite of tools for managing complex game worlds, character relationships, faction dynamics, and timelines across multiple formats including tabletop RPGs, live action role-playing (LARPs), worldbuilding projects, and collaborative storytelling.
+- [What it does](#what-it-does)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [Make it yours](#make-it-yours)
+- [Scripts](#scripts)
+- [Project structure](#project-structure)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
 
-Whether you're running a sprawling post-apocalyptic campaign, organizing a LARP event, building an intricate fantasy world, or crafting an epic narrative, Junktown Intelligence helps you keep track of every detail that matters.
+## What it does
 
----
+Nouns below are the engine's defaults; a ruleset renames them.
 
-## 🎲 Use Case
+**Characters** — archetype, traits, qualities, modifications, per-character
+attributes a GM defines, derived stats computed from all of it, images,
+relationships, faction standings, occupations, search across everything.
 
-### Target Audience
+**Factions** — membership synced from characters, bidirectional relationships
+(ally through enemy), per-faction statistics, combined-force analysis across
+allies, and an influence report.
 
-- **Tabletop RPG Game Masters**: Organize NPCs, factions, locations, and campaign events
-- **LARP Organizers**: Manage characters, plots, and event logistics for live action events
-- **Players**: Track character progression, relationships, and important story beats
-- **Worldbuilders**: Document and organize fictional worlds, cultures, and histories
-- **Storytellers & Writers**: Plan narratives, character arcs, and plot threads
-- **Creative Groups**: Share and synchronize project data across multiple collaborators
+**Locations** — a library of places, optional coordinates, character
+assignments, and an interactive map when the active ruleset supplies one.
 
-### Ideal For
+**Events and quests** — a dated timeline with participants, and quests with
+sponsors, objectives and bidirectional links to the events that resolved them.
 
-- **Tabletop RPG Campaigns**: Managing dozens of NPCs, factions, and interconnected storylines
-- **LARP Events**: Organizing character sheets, faction politics, and event timelines
-- **Long-Running Games**: Tracking character evolution and campaign history over time
-- **Worldbuilding Projects**: Creating detailed, interconnected fictional worlds with rich faction dynamics
-- **Collaborative Storytelling**: Sharing narrative elements and character data with co-creators
-- **Creative Writing**: Planning complex narratives with multiple characters and plot threads
+**Discord** — pull messages from any number of servers and channels, link them
+to characters, and read them in context. See [docs/discord.md](docs/discord.md).
 
----
+**GitHub sync** — share a campaign through a repository. Exports open a pull
+request; imports do a real three-way merge with conflict resolution rather than
+an overwrite. See [docs/github-sync.md](docs/github-sync.md).
 
-## ✨ Key Features
+**Analytics** — character and faction statistics, charts, and a relationship
+graph.
 
-### 📝 Character Management
+## Getting started
 
-- **Comprehensive Profiles**: Track detailed character information including stats, skills, perks, and distinctions
-- **Relationships**: Manage character relationships and faction affiliations with detailed standing levels
-- **Species System**: Support for base species (Human, Android, Mutant, etc.) and prestige classes
-- **Search & Filter**: Quickly find characters using advanced search capabilities
-- **Occupation Tracking**: Record character roles and occupations within your game world
-
-### 🏛️ Faction System
-
-- **Faction Management**: Create and manage factions with descriptions, member lists, and influence tracking
-- **Relationship Standings**: Track character-faction relationships (Enemy, Neutral, Ally, etc.)
-- **Member Tracking**: Automatic syncing of faction membership with character data
-- **Influence Reports**: Visualize faction influence and power dynamics
-
-### 📍 Location Management
-
-- **Location Library**: Create and manage locations across your game world
-- **Coordinate System**: Optional coordinate mapping for spatial tracking
-- **Character Assignments**: Link characters to their frequent locations
-- **Interactive Maps**: View locations on a map interface (Junktown map included)
-
-### 📅 Event Timeline
-
-- **Campaign History**: Track important events with dates and participant lists
-- **Chronological View**: View events in timeline format
-- **Participant Tracking**: Link events to specific characters and locations
-- **Notes & Details**: Add detailed descriptions and outcomes for each event
-
-### 💾 Data Management
-
-- **Import/Export**: Share data via JSON, ZIP, or CSV formats
-- **Merge Functionality**: Merge imported data with existing campaign data
-- **CSV Bulk Import**: Import multiple characters at once from CSV files
-- **Data Backup**: Export complete campaign data for backup purposes
-
-### 🔄 GitHub Integration
-
-- **Collaborative Sync**: Share campaign data through GitHub repositories
-- **Pull Request Workflow**: Export creates PRs for review before merging
-- **Import from Repository**: Pull latest campaign data from shared repositories
-- **Version Control**: Leverage Git for campaign data versioning
-
-### 📊 Analytics & Reports
-
-- **Character Statistics**: View aggregate stats across your character roster
-- **Influence Reports**: Analyze faction power dynamics and relationships
-- **Visualization**: Charts and graphs for data analysis
-
----
-
-## 🛠️ Technology Stack
-
-### Core Framework
-
-- **React Native** (v0.81.5) - Cross-platform mobile framework
-- **Expo** (v54) - Development platform and build tools
-- **TypeScript** (v5.9.2) - Type-safe development
-
-### UI & Navigation
-
-- **React Navigation** (v7) - Navigation system (Drawer + Stack)
-- **React Native Gesture Handler** - Touch gesture management
-- **React Native Reanimated** - Smooth animations
-- **React Native Gifted Charts** - Data visualization
-
-### State & Storage
-
-- **AsyncStorage** - Local data persistence
-- **Expo File System** - File management and storage
-
-### Additional Features
-
-- **Expo Image Picker** - Character image uploads
-- **Expo Document Picker** - Import file selection
-- **React Native Zip Archive** - ZIP file handling
-- **Octokit** - GitHub API integration
-
-### Development Tools
-
-- **ESLint** - Code linting
-- **Prettier** - Code formatting
-- **Husky** - Git hooks for code quality
-- **TypeScript Strict Mode** - Enhanced type safety
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js** (v16 or higher) and **npm**
-- **Expo CLI**: Install globally with `npm install -g expo-cli`
-- **Android Studio** (for Android development) or **Xcode** (for iOS development)
-- **Linux-based terminal** (Linux, macOS, or WSL on Windows)
-- **Git** and **GitHub CLI** (optional, for repository cloning)
-
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/mccarjac/JunktownIntelligence.git
-   cd JunktownIntelligence
-   ```
-
-   Or using GitHub CLI:
-
-   ```bash
-   gh repo clone mccarjac/JunktownIntelligence
-   cd JunktownIntelligence
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-3. **Set up git hooks** (optional, for development)
-   ```bash
-   npm run prepare
-   ```
-
-### Running the App
-
-#### Android (Recommended)
-
-1. **Connect your Android device** via USB and enable USB debugging ([see official docs](https://developer.android.com/studio/run/device))
-
-   Or start an Android emulator from Android Studio
-
-2. **Run the app**
-
-   ```bash
-   npm run android
-   ```
-
-3. **Development tips**:
-   - Press `a` in the terminal to reload the app
-   - Shake your device to open the developer menu
-   - Press `r` to reload the JavaScript bundle
-
-#### Web (Limited Features)
+Prerequisites: Node 20+, npm, and either an Android device/emulator or a
+browser. Xcode for iOS.
 
 ```bash
-npm run web
+git clone https://github.com/mccarjac/lore.git
+cd lore
+npm install
+npm run check-all     # type-check + lint + format + tests
+npm run web           # or: npm run android / npm run ios
 ```
 
-Then open your browser to `http://localhost:8081`
+`npm run web` is the fastest way to see it; some native features are limited
+there. For device builds see [docs/android-build.md](docs/android-build.md).
 
-**Note**: Some features may not work as expected on web due to native module dependencies.
+## Configuration
 
-#### iOS
+App identity is read from the environment, with Lore's own values as defaults —
+copy `.env.example` to `.env` and edit. Nothing is required to run:
+
+| Variable                                            | Default                  | Used for                                               |
+| --------------------------------------------------- | ------------------------ | ------------------------------------------------------ |
+| `EXPO_PUBLIC_APP_NAME`                              | `Lore`                   | Display name                                           |
+| `EXPO_PUBLIC_APP_SLUG`                              | `lore`                   | Expo slug                                              |
+| `EXPO_PUBLIC_APP_VERSION`                           | `1.0.0`                  | Version                                                |
+| `EXPO_PUBLIC_BUNDLE_IDENTIFIER`                     | `com.mccarjac.lore`      | iOS bundle id and Android package                      |
+| `EXPO_PUBLIC_SPLASH_BACKGROUND_COLOR`               | `#ffffff`                | Splash background                                      |
+| `EAS_PROJECT_ID`                                    | _(empty)_                | EAS builds — run `eas init` and paste the id it prints |
+| `EXPO_OWNER`                                        | `mccarjac`               | Expo account that owns the project                     |
+| `EXPO_PUBLIC_DATA_REPO_OWNER` / `_NAME` / `_BRANCH` | the shipped data library | Where GitHub sync reads and writes                     |
+
+`src/branding.ts` resolves them and is the single source; `app.config.ts` holds
+no identity literals of its own. Check what Expo resolved with
+`npx expo config --type public`.
+
+## Make it yours
+
+Writing a ruleset is the point of the whole engine:
+**[docs/ruleset-authoring.md](docs/ruleset-authoring.md)** walks through the
+schema, the attribute/role model, how derived stats are computed, the rules
+that bite, and how to track upstream once you have a flavor of your own.
+
+The short version — a flavor owns exactly four things:
+
+```
+.env                        app identity
+src/activeRuleset.ts        which ruleset this build runs on
+src/rulesets/<flavor>/**    the ruleset itself, and its images
+assets/*.png                icon, adaptive icon, splash, favicon
+```
+
+Everything else is engine-owned and merges cleanly from upstream.
+
+## Scripts
 
 ```bash
-npm run ios
+npm start              # Expo dev server
+npm run android        # device or emulator
+npm run ios            # simulator (macOS)
+npm run web            # browser
+
+npm test               # Jest
+npm run test:watch
+npm run test:coverage
+
+npm run lint           # eslint (0 errors required)
+npm run lint:fix
+npm run format         # prettier --write
+npm run type-check     # tsc --noEmit
+npm run check-all      # all of the above — the gate before every commit
 ```
 
-**Note**: Requires macOS and Xcode. iOS simulator will launch automatically.
-
----
-
-## 📜 Available Scripts
-
-### Development
-
-- `npm start` - Start Expo development server
-- `npm run android` - Run on Android device/emulator
-- `npm run ios` - Run on iOS simulator
-- `npm run web` - Run in web browser
-
-### Code Quality
-
-- `npm run lint` - Run ESLint on all files
-- `npm run lint:fix` - Auto-fix ESLint issues
-- `npm run lint:errors` - Show only critical errors
-- `npm run format` - Format all files with Prettier
-- `npm run format:check` - Check formatting without changes
-- `npm run type-check` - Run TypeScript type checking
-- `npm run check-all` - Run all checks (type-check, lint, format-check)
-
-### Setup
-
-- `npm run prepare` - Set up Husky git hooks
-
----
-
-## 📦 Building for Android
-
-### Automated Builds (GitHub Actions)
-
-APK builds are automatically created when code is pushed to the `master` branch via GitHub Actions. The built APK can be downloaded from your [Expo builds page](https://expo.dev).
-
-**Setup Required**: Add an `EXPO_TOKEN` secret to your GitHub repository. See [.github/GITHUB_ACTIONS_SETUP.md](./.github/GITHUB_ACTIONS_SETUP.md) for complete setup instructions.
-
-### Manual Builds (Local)
-
-To build a standalone Android APK or AAB manually:
-
-1. **Install EAS CLI**
-
-   ```bash
-   npm install -g eas-cli
-   ```
-
-2. **Configure EAS**
-
-   ```bash
-   eas login
-   eas build:configure
-   ```
-
-3. **Build APK** (for testing/distribution outside Play Store)
-
-   ```bash
-   eas build --platform android --profile preview
-   ```
-
-4. **Build AAB** (for Google Play Store)
-   ```bash
-   eas build --platform android --profile production
-   ```
-
-For detailed build instructions, see [ANDROID_BUILD.md](./ANDROID_BUILD.md)
-
----
-
-## 📁 Project Structure
+## Project structure
 
 ```
-JunktownIntelligence/
-├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── common/         # Shared components (Button, Card, etc.)
-│   │   └── screens/        # Base/abstract screen components
-│   ├── models/             # Data models and type definitions
-│   ├── navigation/         # Navigation types and configuration
-│   ├── screens/            # Screen components by feature
-│   │   ├── character/      # Character management screens
-│   │   ├── faction/        # Faction management screens
-│   │   ├── location/       # Location management screens
-│   │   └── events/         # Event timeline screens
-│   ├── styles/             # Shared styles and theming
-│   ├── types/              # TypeScript type definitions
-│   └── utils/              # Utility functions
-│       ├── characterStorage.ts  # Data persistence
-│       ├── exportImport.ts      # Import/export functionality
-│       ├── gitIntegration.ts    # GitHub sync
-│       └── statsUtils.ts        # Statistics calculations
-├── assets/                 # Images, icons, and static assets
-├── .github/               # GitHub configuration
-├── App.tsx                # Main application component
-├── package.json           # Dependencies and scripts
-└── [config files]         # ESLint, Prettier, TypeScript configs
+src/
+  components/common/    reusable UI
+  components/screens/   Base{List,Form,Detail}Screen — generic scaffolds
+  screens/<feature>/    character/ faction/ location/ events/ quest/ discord/
+  models/               types.ts — the domain types
+  ruleset/              THE ENGINE: attribute primitive, schema, provider,
+                        validator, terminology, features, derived stats
+  rulesets/<flavor>/    a ruleset's content — fork-owned
+  navigation/           navigator types and the whole navigation tree
+  styles/               theme and shared styles
+  utils/                storage, export/import, discord, git sync, stats
+  activeRuleset.ts      which ruleset this build runs on (fork-owned)
+  branding.ts           app identity (env-driven)
+tst/                    Jest tests, mirroring src/
+docs/                   the documentation below
 ```
 
----
+Note the singular/plural distinction: **`ruleset/` is the engine, `rulesets/` is
+content.** Engine code never imports from `rulesets/`.
 
-## 📚 Documentation
+## Documentation
 
-- **[LINTING.md](./LINTING.md)** - ESLint configuration and coding standards
-- **[ANDROID_BUILD.md](./ANDROID_BUILD.md)** - Detailed Android build instructions
-- **[.github/GITHUB_ACTIONS_SETUP.md](./.github/GITHUB_ACTIONS_SETUP.md)** - Automated APK build setup
-- **[GITHUB_INTEGRATION.md](./GITHUB_INTEGRATION.md)** - GitHub sync setup and usage
-- **[CSV_Import_Format.md](./CSV_Import_Format.md)** - CSV import format specification
-- **[DATA_REPOSITORY_TEMPLATE.md](./DATA_REPOSITORY_TEMPLATE.md)** - Data repository setup guide
+- **[AGENTS.md](AGENTS.md)** — architecture, conventions, and the rules that
+  matter when changing the code. Start here.
+- **[docs/ruleset-authoring.md](docs/ruleset-authoring.md)** — build your own
+  flavor; forking and tracking upstream
+- **[docs/testing.md](docs/testing.md)** — test layout, fixtures, coverage
+- **[docs/android-build.md](docs/android-build.md)** — EAS and local builds
+- **[docs/github-actions.md](docs/github-actions.md)** — CI workflows and APK builds
+- **[docs/github-sync.md](docs/github-sync.md)** — GitHub-backed data sync
+- **[docs/discord.md](docs/discord.md)** — Discord integration
+- **[docs/faction-statistics.md](docs/faction-statistics.md)** — faction stats and relationships
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — how to propose a change
 
----
+## Contributing
 
-## 🔧 Development Workflow
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). In short:
+branch, make the change, keep `npm run check-all` green, open a PR. Anything
+specific to one game's setting belongs in a ruleset (or a fork), not in the
+engine.
 
-### Code Style
+## Acknowledgments
 
-- **TypeScript Strict Mode** enabled - all strict checks enforced
-- **Single quotes** for strings
-- **Semicolons required**
-- **2-space indentation**
-- **80 character line width**
-- Use path aliases: `@/*`, `@components/*`, `@screens/*`, `@models/*`, `@utils/*`
+Built with [React Native](https://reactnative.dev/) and
+[Expo](https://expo.dev/), navigation by
+[React Navigation](https://reactnavigation.org/), charts by
+[React Native Gifted Charts](https://github.com/Abhinandan-Kushwaha/react-native-gifted-charts).
 
-### Git Workflow
-
-- **Pre-commit hooks** automatically run linting and formatting
-- **Husky** enforces code quality at commit time
-- Always run `npm run check-all` before committing
-
-### Best Practices
-
-- Use explicit types for function parameters
-- Avoid `any` type - use proper types or `unknown`
-- Prefix unused variables with underscore: `_unusedVar`
-- Use `StyleSheet.create()` for all styles
-- Follow React Hooks rules
-
----
-
-## 🤝 Contributing
-
-This is currently a private project, but contributions are welcome through the standard GitHub workflow:
-
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Make your changes** following the code style guidelines
-4. **Run code quality checks** (`npm run check-all`)
-5. **Commit your changes** (`git commit -m 'Add amazing feature'`)
-6. **Push to the branch** (`git push origin feature/amazing-feature`)
-7. **Open a Pull Request**
-
-### Development Guidelines
-
-- Ensure all TypeScript type checks pass
-- Follow the existing code style and conventions
-- Add comments for complex logic
-- Test on Android device/emulator before submitting
-- Update documentation for significant changes
-
----
-
-## 👥 Contributors
-
-Special thanks to those who have contributed to making Junktown Intelligence better:
-
-- **[Jim Scanlan (calmninjas)](https://github.com/calmninjas)** - Testing, bug reports, and feature ideas
-
----
-
-## 🙏 Acknowledgments
-
-- Built with [React Native](https://reactnative.dev/) and [Expo](https://expo.dev/)
-- Navigation powered by [React Navigation](https://reactnavigation.org/)
-- Charts and visualizations by [React Native Gifted Charts](https://github.com/Abhinandan-Kushwaha/react-native-gifted-charts)
-- Designed for tabletop RPGs, LARPs, worldbuilding, and storytelling across all genres
-
----
+Thanks to [Jim Scanlan (calmninjas)](https://github.com/calmninjas) for testing,
+bug reports and feature ideas on the app Lore was generalized out of.
 
 <div align="center">
 
-**Developed with ❤️ by Jacob McCarthy**
-
-[GitHub](https://github.com/mccarjac) • [Report Bug](https://github.com/mccarjac/JunktownIntelligence/issues) • [Request Feature](https://github.com/mccarjac/JunktownIntelligence/issues)
-
-**Support the Project:** [Patreon](https://www.patreon.com/cw/MugatuCreations) • [Buy Me a Coffee](https://buymeacoffee.com/mugatucreations) • [PayPal](https://paypal.me/mccarjac) • [Venmo](https://venmo.com/mccarjac) • [Cash App](https://cash.app/$mccarjac)
+_Developed by Jacob McCarthy ([mccarjac](https://github.com/mccarjac))_ ·
+[Report a bug](https://github.com/mccarjac/lore/issues) ·
+[Request a feature](https://github.com/mccarjac/lore/issues)
 
 </div>

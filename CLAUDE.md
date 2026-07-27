@@ -14,5 +14,9 @@ Quick reference:
 - **Dates:** use `src/utils/dateUtils.ts`; never `new Date('YYYY-MM-DD')`.
 - **No `console.log`; no `any`.** Use path aliases (`@/`, `@components`,
   `@screens`, `@models`, `@utils`).
+- **Domain nouns** come from `useLabels()` / `getLabel()`, never hardcoded —
+  `src/ruleset/` is the engine, `src/rulesets/` is content, and engine code
+  never imports the latter.
 
-See AGENTS.md for the full details.
+See AGENTS.md for the full details, `docs/` for the user-facing documentation,
+and `docs/ruleset-authoring.md` for how a flavor plugs in.
