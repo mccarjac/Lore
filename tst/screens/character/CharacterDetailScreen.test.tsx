@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor, fireEvent } from '@testing-library/react-native';
+import { waitFor, fireEvent } from '@testing-library/react-native';
 import { CharacterDetailScreen } from '@screens/character/CharacterDetailScreen';
 import { describeDetailScreenContract } from '../../helpers/screenContracts';
 import { getStorageMock } from '../../helpers/storage';
@@ -13,11 +13,16 @@ jest.mock('@utils/characterStorage');
 jest.mock('@/utils/discordStorage');
 
 const storage = getStorageMock();
-const character = makeCharacter({ id: 'char-1', name: 'Alice' });
+const character = makeCharacter({
+  id: 'char-1',
+  name: 'Alice',
+  archetypeId: 'wanderer',
+});
 
 describeDetailScreenContract({
   name: 'CharacterDetailScreen',
-  renderScreen: () => render(<CharacterDetailScreen />),
+  renderScreen: () =>
+    renderWithRuleset(<CharacterDetailScreen />, { ruleset: genericRuleset }),
   routeParams: { character },
   prime: () => {
     storage.loadCharacters.mockResolvedValue([character]);
@@ -25,7 +30,7 @@ describeDetailScreenContract({
       .mocked(discordStorage.getDiscordMessagesForCharacter)
       .mockResolvedValue([]);
   },
-  expectedContent: ['Alice', /Species: Human/],
+  expectedContent: ['Alice', /Lineage: Wanderer/],
   edit: {
     expectedScreen: 'CharacterForm',
     expectedParams: { character },

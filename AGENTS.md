@@ -349,14 +349,31 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   code, see `tst/utils/storageQueue.test.ts` and
   `tst/utils/characterStorage.concurrency.test.ts` for the stateful-store
   pattern that proves serialization.
-- **`tst/fixtures/genericRuleset.ts` is how a screen proves it reads the
-  provider.** It shares no ids with Afterworlds — different archetypes,
-  three resources instead of two, three trait categories one of which has no
-  color, and several `features` off — so a screen still reaching for
-  `AVAILABLE_PERKS` or `SPECIES_BASE_STATS` fails visibly instead of passing
-  by coincidence. Render through `renderWithRuleset()`
-  (`tst/helpers/ruleset.tsx`). Asserting only against Afterworlds proves the
-  app works for exactly one ruleset.
+- **The rule: a test may not depend on which ruleset is the default. Pass one
+  explicitly.** Asserting against whatever the build happens to ship proves
+  the app works for exactly one ruleset. There are three to choose from, with
+  different jobs:
+  - **`tst/fixtures/genericRuleset.ts` — proves a _screen reads the
+    provider_.** Different archetypes, three resources instead of two, three
+    trait categories one of which has no color, and several `features` off,
+    so a screen reaching past the provider fails visibly rather than passing
+    by coincidence. This is `renderWithRuleset()`'s default
+    (`tst/helpers/ruleset.tsx`), so "no argument" means "any ruleset".
+  - **`tst/fixtures/mechanicsRuleset.ts` — proves the _engine computes_.**
+    Carries what `derived.ts`'s pipeline needs and the generic fixture
+    deliberately lacks: category bonuses at two thresholds, an
+    `archetypeRules` carve-out whose group membership exactly matches a
+    trait's `allowedArchetypeIds`, a trait declaring a cap delta the engine
+    must ignore, and a resource with no cap.
+  - **`@/rulesets/afterworlds` — the fork regression guard.** Asserted in
+    exactly two files: `tst/rulesets/afterworlds.test.ts` (the ruleset itself)
+    and `tst/utils/derivedStats.parity.test.ts` (the 27 pre-generalization
+    numbers). Keep it out of the rest.
+
+  All three are proved pairwise id-disjoint in
+  `tst/fixtures/genericRuleset.test.ts` — a shared id is exactly how a test
+  passes while asserting on a value that came from somewhere else.
+
 - `Picker.Item` children collapse into an `items` prop on the host
   `RNCPicker` and render **no queryable text** — read option labels off
   `UNSAFE_getAllByType('RNCPicker')[…].props.items` rather than reaching for
