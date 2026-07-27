@@ -25,6 +25,7 @@ import {
   verifyGitHubToken,
   saveGitHubConfig,
   getGitHubConfig,
+  DATA_REPO_SLUG,
 } from '@utils/gitIntegration';
 import type { ConflictResolution, SyncPlan } from '@utils/syncMerge';
 import { clearDiscordData } from '@/utils/discordStorage';
@@ -464,9 +465,8 @@ export const DataManagementScreen: React.FC = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>GitHub Repository Sync</Text>
             <Text style={styles.sectionDescription}>
-              Share data with other users through the
-              AWInvestigationsDataLibrary GitHub repository. Exports create pull
-              requests for review.
+              Share data with other users through the {DATA_REPO_SLUG} GitHub
+              repository. Exports create pull requests for review.
             </Text>
             {gitHubConfigured && (
               <Text style={styles.syncStatusText}>

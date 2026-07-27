@@ -17,11 +17,26 @@ import {
 } from './syncMerge';
 
 /**
- * Configuration for the data library repository
+ * The shared data-library repository this build syncs with.
+ *
+ * Env-driven for the same reason `src/branding.ts` is: which repository holds
+ * a campaign's data is a property of the deployment, not of the engine, and a
+ * fork should not have to patch engine source to point somewhere else. The
+ * defaults are the values this code shipped with, so an existing install keeps
+ * syncing where it always did.
+ *
+ * Static `process.env` access — Expo inlines `EXPO_PUBLIC_*` by text
+ * substitution and would not see a computed lookup. See `src/branding.ts`.
  */
-const DATA_REPO_OWNER = 'mccarjac';
-const DATA_REPO_NAME = 'AWInvestigationsDataLibrary';
-const DATA_REPO_BRANCH = 'main';
+export const DATA_REPO_OWNER =
+  process.env.EXPO_PUBLIC_DATA_REPO_OWNER ?? 'mccarjac';
+export const DATA_REPO_NAME =
+  process.env.EXPO_PUBLIC_DATA_REPO_NAME ?? 'AWInvestigationsDataLibrary';
+export const DATA_REPO_BRANCH =
+  process.env.EXPO_PUBLIC_DATA_REPO_BRANCH ?? 'main';
+
+/** `owner/name`, for display. */
+export const DATA_REPO_SLUG = `${DATA_REPO_OWNER}/${DATA_REPO_NAME}`;
 
 /**
  * Extract image data from a data URI
