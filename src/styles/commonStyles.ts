@@ -1,5 +1,5 @@
 /**
- * Common reusable styles for Junktown Intelligence
+ * Common reusable styles
  * These styles use the centralized theme and provide consistent UI patterns
  */
 

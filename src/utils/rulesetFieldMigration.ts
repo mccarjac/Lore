@@ -16,7 +16,7 @@
  * rewriting, which is what lets callers skip a pointless write).
  */
 import type { GameCharacter, GameQuest } from '@models/types';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { activeRuleset } from '@/activeRuleset';
 import { roleOf } from '@/ruleset/attributes';
 import type { RulesetDefinition } from '@/ruleset/types';
 
@@ -196,7 +196,7 @@ const applyRenames = (
  */
 export const normalizeCharacterRulesetFields = (
   character: GameCharacter,
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = activeRuleset
 ): GameCharacter => {
   const source = character as unknown as LooseRecord;
   const renamed = applyRenames(source, CHARACTER_RENAMES);
@@ -260,7 +260,7 @@ export const normalizeQuestRulesetFields = (quest: GameQuest): GameQuest => {
 /** Array form; returns the original array when every entry was current. */
 export const normalizeCharactersRulesetFields = (
   characters: GameCharacter[],
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = activeRuleset
 ): GameCharacter[] => {
   let changed = false;
   const normalized = characters.map(character => {
@@ -304,7 +304,7 @@ export const normalizeDatasetRulesetFields = <
   T extends RulesetFieldBearingDataset,
 >(
   dataset: T,
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = activeRuleset
 ): T => {
   const characters = dataset.characters
     ? normalizeCharactersRulesetFields(dataset.characters, ruleset)

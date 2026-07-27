@@ -9,6 +9,8 @@ import {
   resetNavigationMocks,
   getLastHeaderRight,
 } from '../../helpers/navigation';
+import { renderWithRuleset } from '../../helpers/ruleset';
+import { genericRuleset } from '../../fixtures/genericRuleset';
 
 jest.mock('@utils/characterStorage');
 
@@ -40,7 +42,14 @@ describe('LocationListScreen — header actions', () => {
 
   it('navigates to the map and the create form from the header buttons', async () => {
     const nav = installNavigationMock();
-    render(<LocationListScreen />);
+    // The 🗺️ button is gated on `useFeature('map')`, so the ruleset has to
+    // be one that enables it rather than whatever the build defaults to.
+    renderWithRuleset(<LocationListScreen />, {
+      ruleset: {
+        ...genericRuleset,
+        features: { ...genericRuleset.features, map: true },
+      },
+    });
 
     await waitFor(() => {
       expect(nav.setOptions).toHaveBeenCalled();

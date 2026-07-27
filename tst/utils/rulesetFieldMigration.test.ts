@@ -7,13 +7,35 @@
  */
 import {
   UNKNOWN_ARCHETYPE_ID,
-  normalizeCharacterRulesetFields,
-  normalizeCharactersRulesetFields,
+  normalizeCharacterRulesetFields as normalizeCharacterWith,
+  normalizeCharactersRulesetFields as normalizeCharactersWith,
   normalizeQuestRulesetFields,
   normalizeQuestsRulesetFields,
 } from '@utils/rulesetFieldMigration';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
+import type { RulesetDefinition } from '@/ruleset/types';
 import { QuestStatus, type GameCharacter, type GameQuest } from '@models/types';
+
+/**
+ * Every record in this file is legacy *Afterworlds* data — `species: 'Mutant'`
+ * and `statModifiers: { healthCap: 1 }` are literally what shipped, and are
+ * what the normalizers exist to read. So the ruleset is pinned here rather
+ * than inherited from the build: these assertions are about migrating real
+ * stored data, not about whichever flavor happens to be active.
+ *
+ * That the cap reshape is *not* Afterworlds-specific is proved separately,
+ * against `mechanicsRuleset`, at the bottom of this file.
+ */
+const normalizeCharacterRulesetFields = (
+  character: GameCharacter,
+  ruleset: RulesetDefinition = afterworldsRuleset
+): GameCharacter => normalizeCharacterWith(character, ruleset);
+
+const normalizeCharactersRulesetFields = (
+  characters: GameCharacter[],
+  ruleset: RulesetDefinition = afterworldsRuleset
+): GameCharacter[] => normalizeCharactersWith(characters, ruleset);
 
 const TS = '2026-01-01T00:00:00.000Z';
 
@@ -406,5 +428,35 @@ describe('modification modifier reshape (#5 then #22)', () => {
     expect('resourceModifiers' in (result.modifications?.[0] ?? {})).toBe(
       false
     );
+  });
+});
+
+describe('the cap reshape is a ruleset rule, not an Afterworlds one', () => {
+  it("maps a legacy cap key onto the resource's own cap attribute", () => {
+    // `mechanicsRuleset` declares grit -> gritCap, with no `health` anywhere.
+    const legacy = {
+      id: 'c1',
+      name: 'Legacy',
+      archetypeId: 'tinker',
+      traitIds: [],
+      qualityIds: [],
+      factions: [],
+      relationships: [],
+      modifications: [
+        {
+          name: 'Brace',
+          description: '',
+          resourceModifiers: { caps: { grit: 2 } },
+        },
+      ],
+      createdAt: TS,
+      updatedAt: TS,
+    } as unknown as GameCharacter;
+
+    const result = normalizeCharacterWith(legacy, mechanicsRuleset);
+
+    expect(result.modifications?.[0].modifier).toEqual({
+      attributeDeltas: { gritCap: 2 },
+    });
   });
 });

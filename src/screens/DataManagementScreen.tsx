@@ -31,7 +31,7 @@ import { clearDiscordData } from '@/utils/discordStorage';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { SyncConflictModal } from '@components/common/SyncConflictModal';
-import { useFeature } from '@/ruleset';
+import { useFeature, useRuleset } from '@/ruleset';
 
 type ProgressOperation =
   | 'export'
@@ -54,6 +54,7 @@ interface PendingSyncPlan {
 
 export const DataManagementScreen: React.FC = () => {
   const gitSyncEnabled = useFeature('gitSync');
+  const { ruleset } = useRuleset();
   const [progress, setProgress] = useState<ProgressState>({
     visible: false,
     message: '',
@@ -293,7 +294,7 @@ export const DataManagementScreen: React.FC = () => {
   const runGitHubExport = async (force: boolean) => {
     showProgress('git-export', 'Exporting to GitHub...');
     try {
-      const result = await exportToGitHub({ force });
+      const result = await exportToGitHub({ force, ruleset });
       hideProgress();
 
       if (result.success && result.prUrl) {

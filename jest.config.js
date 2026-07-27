@@ -28,6 +28,7 @@ module.exports = {
     'src/components/**/*.{ts,tsx}',
     'src/screens/**/*.{ts,tsx}',
     'src/ruleset/**/*.{ts,tsx}',
+    'src/rulesets/**/*.{ts,tsx}',
     '!src/utils/**/*.d.ts',
     '!src/utils/**/index.{ts,tsx}',
     '!src/components/**/index.{ts,tsx}',

@@ -6,9 +6,16 @@
  * rewrite in #6 must keep these numbers identical for the Afterworlds
  * ruleset — if a case here moves, user-visible stat numbers moved with it.
  */
-import { AVAILABLE_PERKS, PerkTag } from '@/models/gameData';
-import { SPECIES_BASE_STATS, type Species } from '@/models/speciesTypes';
+import {
+  AVAILABLE_PERKS,
+  PerkTag,
+} from '@/rulesets/afterworlds/content/gameData';
+import {
+  SPECIES_BASE_STATS,
+  type Species,
+} from '@/rulesets/afterworlds/content/speciesTypes';
 import { calculateDerivedStats } from '@/ruleset/derived';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import type { Modification, GameCharacter } from '@/models/types';
 import { DERIVED_STATS_BASELINE } from '../fixtures/derivedStatsBaseline';
 
@@ -110,7 +117,7 @@ describe('derived stats — Afterworlds parity', () => {
 
   Object.entries(cases).forEach(([label, character]) => {
     it(`matches the baseline for ${label}`, () => {
-      const stats = calculateDerivedStats(character);
+      const stats = calculateDerivedStats(character, afterworldsRuleset);
       const expected = DERIVED_STATS_BASELINE[label];
 
       // The old shape's maxHealth/maxLimit are now resource ids.
@@ -138,11 +145,13 @@ describe('derived stats — shared base-stat mutation (issue #6)', () => {
   it('does not leak a cap bonus onto other characters of the same archetype', () => {
     // A Human whose raw health (6) exceeds Human's real healthCap of 5.
     const plain = make('Human', openPerksByTag(PerkTag.Endurance, 10));
-    const before = calculateDerivedStats(plain).values.health;
+    const before = calculateDerivedStats(plain, afterworldsRuleset).values
+      .health;
 
-    calculateDerivedStats(make('Human', [], CAP_CYBERWARE));
+    calculateDerivedStats(make('Human', [], CAP_CYBERWARE), afterworldsRuleset);
 
-    const after = calculateDerivedStats(plain).values.health;
+    const after = calculateDerivedStats(plain, afterworldsRuleset).values
+      .health;
 
     expect(before).toBe(5);
     expect(after).toBe(before);

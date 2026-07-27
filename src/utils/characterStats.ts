@@ -1,9 +1,6 @@
 import { GameCharacter } from '../models/types';
-import {
-  getLabel,
-  afterworldsRuleset,
-  type RulesetDefinition,
-} from '../ruleset';
+import { getLabel, type RulesetDefinition } from '../ruleset';
+import { activeRuleset } from '@/activeRuleset';
 
 export interface CharacterStats {
   totalCharacters: number;
@@ -15,12 +12,12 @@ export interface CharacterStats {
 }
 
 /**
- * `ruleset` defaults to afterworldsRuleset so existing callers are
+ * `ruleset` defaults to the active ruleset so existing callers are
  * unaffected; pass the active ruleset explicitly from a screen that has one.
  */
 export const calculateCharacterStats = (
   characters: GameCharacter[],
-  ruleset: RulesetDefinition = afterworldsRuleset
+  ruleset: RulesetDefinition = activeRuleset
 ): CharacterStats => {
   if (!characters.length) {
     throw new Error('No characters available for statistics calculation');

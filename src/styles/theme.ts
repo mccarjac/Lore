@@ -1,5 +1,5 @@
 /**
- * Centralized theme configuration for Junktown Intelligence
+ * Centralized theme configuration
  * Contains colors, typography, spacing, and other design tokens
  */
 

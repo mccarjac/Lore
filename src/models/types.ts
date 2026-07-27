@@ -1,8 +1,4 @@
-import { AVAILABLE_DISTINCTIONS } from './gameData';
 import type { AttributeBag, Modifier } from '@/ruleset/types';
-import type { Species } from './speciesTypes';
-
-export type DistinctionId = (typeof AVAILABLE_DISTINCTIONS)[number]['id'];
 
 export interface GameLocation {
   id: string;
@@ -41,20 +37,6 @@ export const NEGATIVE_RELATIONSHIP_TYPE: RelationshipStanding[] = [
   RelationshipStanding.Enemy,
 ];
 
-export interface Recipe {
-  id: string;
-  name: string;
-  description: string;
-  materials: string[];
-}
-
-export interface Distinction {
-  id: string;
-  name: string;
-  description: string;
-  allowedSpecies?: Species[];
-}
-
 export interface Faction {
   name: string;
   standing: RelationshipStanding;
@@ -90,7 +72,8 @@ export interface GameCharacter {
   archetypeId: string;
   /** Ruleset trait ids (RulesetDefinition.traits[].id). Was `perkIds`. */
   traitIds: string[];
-  qualityIds: DistinctionId[];
+  /** Ruleset quality ids (RulesetDefinition.qualities[].id). Was `distinctionIds`. */
+  qualityIds: string[];
   /**
    * Character-specific attribute values, keyed by
    * `RulesetDefinition.attributes[].id` (#22). These are *absolute* values
@@ -167,7 +150,7 @@ export interface QuestMaterial {
 export interface QuestAttributePreferences {
   traitCategoryIds?: string[];
   archetypeIds?: string[];
-  qualityIds?: DistinctionId[];
+  qualityIds?: string[];
   traitIds?: string[];
 }
 

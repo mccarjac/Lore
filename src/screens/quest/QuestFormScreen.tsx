@@ -28,16 +28,9 @@ import {
   GameEvent,
   QuestStatus,
   QuestMaterial,
-  DistinctionId,
 } from '@models/types';
-import {
-  PerkTag,
-  AVAILABLE_PERKS,
-  AVAILABLE_DISTINCTIONS,
-} from '@models/gameData';
-import { SPECIES_BASE_STATS, Species } from '@models/speciesTypes';
 import { BaseFormScreen, CollapsibleSection } from '@/components';
-import { useLabels } from '@/ruleset';
+import { useLabels, useRuleset } from '@/ruleset';
 
 type QuestsFormNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -57,7 +50,7 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
 interface PreferenceLists {
   traitCategoryIds: string[];
   archetypeIds: string[];
-  qualityIds: DistinctionId[];
+  qualityIds: string[];
   traitIds: string[];
 }
 
@@ -173,35 +166,34 @@ function MultiSelectField<T extends string>({
   );
 }
 
-const TAG_OPTIONS: Option<PerkTag>[] = Object.values(PerkTag).map(tag => ({
-  value: tag,
-  label: tag,
-}));
-
-const SPECIES_OPTIONS: Option<Species>[] = Object.keys(SPECIES_BASE_STATS).map(
-  species => ({
-    value: species as Species,
-    label: species,
-  })
-);
-
-const PERK_OPTIONS: Option<string>[] = AVAILABLE_PERKS.map(perk => ({
-  value: perk.id,
-  label: `${perk.name} (${perk.tag})`,
-}));
-
-const DISTINCTION_OPTIONS: Option<DistinctionId>[] = AVAILABLE_DISTINCTIONS.map(
-  distinction => ({
-    value: distinction.id as DistinctionId,
-    label: distinction.name,
-  })
-);
-
 export const QuestFormScreen: React.FC = () => {
   const navigation = useNavigation<QuestsFormNavigationProp>();
   const route = useRoute<QuestsFormRouteProp>();
   const label = useLabels();
+  const { ruleset } = useRuleset();
   const { quest } = route.params || {};
+
+  // Built from the active ruleset rather than the bundled tables, so a
+  // different flavor offers its own categories/archetypes/traits/qualities.
+  const categoryLabel = (id: string): string =>
+    ruleset.traitCategories.find(category => category.id === id)?.label ?? id;
+  const tagOptions: Option<string>[] = ruleset.traitCategories.map(
+    category => ({
+      value: category.id,
+      label: category.label,
+    })
+  );
+  const archetypeOptions: Option<string>[] = ruleset.archetypes.map(
+    archetype => ({ value: archetype.id, label: archetype.label })
+  );
+  const traitOptions: Option<string>[] = ruleset.traits.map(trait => ({
+    value: trait.id,
+    label: `${trait.name} (${categoryLabel(trait.categoryId)})`,
+  }));
+  const qualityOptions: Option<string>[] = ruleset.qualities.map(quality => ({
+    value: quality.id,
+    label: quality.name,
+  }));
 
   const [formData, setFormData] = useState<QuestFormData>(emptyFormData());
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -558,7 +550,7 @@ export const QuestFormScreen: React.FC = () => {
             'traitCategory.singular',
             'lower'
           )} to add...`}
-          options={TAG_OPTIONS}
+          options={tagOptions}
           selected={formData.desirable.traitCategoryIds}
           onAdd={value => addPreference('desirable', 'traitCategoryIds', value)}
           onRemove={value =>
@@ -571,7 +563,7 @@ export const QuestFormScreen: React.FC = () => {
             'archetype.singular',
             'lower'
           )} to add...`}
-          options={SPECIES_OPTIONS}
+          options={archetypeOptions}
           selected={formData.desirable.archetypeIds}
           onAdd={value => addPreference('desirable', 'archetypeIds', value)}
           onRemove={value =>
@@ -581,7 +573,7 @@ export const QuestFormScreen: React.FC = () => {
         <MultiSelectField
           label={label('trait.plural')}
           placeholder={`Select ${label('trait.singular', 'lower')} to add...`}
-          options={PERK_OPTIONS}
+          options={traitOptions}
           selected={formData.desirable.traitIds}
           onAdd={value => addPreference('desirable', 'traitIds', value)}
           onRemove={value => removePreference('desirable', 'traitIds', value)}
@@ -589,7 +581,7 @@ export const QuestFormScreen: React.FC = () => {
         <MultiSelectField
           label={label('quality.plural')}
           placeholder={`Select ${label('quality.singular', 'lower')} to add...`}
-          options={DISTINCTION_OPTIONS}
+          options={qualityOptions}
           selected={formData.desirable.qualityIds}
           onAdd={value => addPreference('desirable', 'qualityIds', value)}
           onRemove={value => removePreference('desirable', 'qualityIds', value)}
@@ -602,7 +594,7 @@ export const QuestFormScreen: React.FC = () => {
             'traitCategory.singular',
             'lower'
           )} to add...`}
-          options={TAG_OPTIONS}
+          options={tagOptions}
           selected={formData.undesirable.traitCategoryIds}
           onAdd={value =>
             addPreference('undesirable', 'traitCategoryIds', value)
@@ -617,7 +609,7 @@ export const QuestFormScreen: React.FC = () => {
             'archetype.singular',
             'lower'
           )} to add...`}
-          options={SPECIES_OPTIONS}
+          options={archetypeOptions}
           selected={formData.undesirable.archetypeIds}
           onAdd={value => addPreference('undesirable', 'archetypeIds', value)}
           onRemove={value =>
@@ -627,7 +619,7 @@ export const QuestFormScreen: React.FC = () => {
         <MultiSelectField
           label={label('trait.plural')}
           placeholder={`Select ${label('trait.singular', 'lower')} to add...`}
-          options={PERK_OPTIONS}
+          options={traitOptions}
           selected={formData.undesirable.traitIds}
           onAdd={value => addPreference('undesirable', 'traitIds', value)}
           onRemove={value => removePreference('undesirable', 'traitIds', value)}
@@ -635,7 +627,7 @@ export const QuestFormScreen: React.FC = () => {
         <MultiSelectField
           label={label('quality.plural')}
           placeholder={`Select ${label('quality.singular', 'lower')} to add...`}
-          options={DISTINCTION_OPTIONS}
+          options={qualityOptions}
           selected={formData.undesirable.qualityIds}
           onAdd={value => addPreference('undesirable', 'qualityIds', value)}
           onRemove={value =>

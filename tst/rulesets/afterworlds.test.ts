@@ -1,8 +1,11 @@
 import { getNumber } from '@/ruleset/attributes';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { validateRuleset } from '@/ruleset/validate';
-import { SPECIES_BASE_STATS } from '@models/speciesTypes';
-import { AVAILABLE_PERKS, AVAILABLE_DISTINCTIONS } from '@models/gameData';
+import { SPECIES_BASE_STATS } from '@/rulesets/afterworlds/content/speciesTypes';
+import {
+  AVAILABLE_PERKS,
+  AVAILABLE_DISTINCTIONS,
+} from '@/rulesets/afterworlds/content/gameData';
 
 describe('afterworldsRuleset', () => {
   it('is valid', () => {

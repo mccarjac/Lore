@@ -5,10 +5,16 @@ update it when conventions change.
 
 ## What this is
 
-**Junktown Intelligence** is a React Native / Expo mobile app (TypeScript,
-strict mode) for managing tabletop-RPG / LARP campaign data: characters,
-factions, locations, events, plus Discord message ingestion and GitHub-backed
-data sync. All data lives locally in AsyncStorage; there is no backend.
+**Lore** is a genre-neutral React Native / Expo engine (TypeScript, strict
+mode) for managing tabletop-RPG / LARP campaign data: characters, factions,
+locations, events, plus Discord message ingestion and GitHub-backed data
+sync. All data lives locally in AsyncStorage; there is no backend.
+
+The rules and vocabulary of any particular game come from a **ruleset**, not
+from the code — see "Ruleset layer" and "Engine vs fork" below. Junktown
+Intelligence (the Afterworlds setting) is one such ruleset and ships in this
+tree under `src/rulesets/afterworlds/`; the app itself boots on a generic
+example ruleset.
 
 Stack: React Native 0.81 · Expo 54 · React Navigation 7 (drawer + stack) ·
 AsyncStorage · Jest + @testing-library/react-native.
@@ -38,19 +44,83 @@ src/
   components/common/    reusable UI (Card, Section, Header*Button, ...)
   components/screens/   Base{List,Form,Detail}Screen — generic screen scaffolds
   screens/<feature>/    character/ faction/ location/ events/ discord/
-  models/               types.ts (all domain types); gameData.ts +
-                        speciesTypes.ts are Afterworlds *content* (see #13)
-  ruleset/              attribute primitive, pluggable ruleset schema,
+  models/               types.ts — all domain types, and nothing else
+  ruleset/              THE ENGINE: attribute primitive, ruleset schema,
                         provider, validator, terminology, derived stats
+  rulesets/<flavor>/    A ruleset's content — fork-owned. See below.
   navigation/           types.ts (navigator + param-list types) and
                         AppNavigator.tsx (the whole navigation tree)
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
   utils/                storage, export/import, discord, git, stats
+  activeRuleset.ts      which ruleset this build runs on (fork-owned)
+  branding.ts           app identity (fork-owned; see "Branding")
 tst/                    Jest tests, mirroring src/
 ```
 
+Note the singular/plural distinction, which is easy to misread: **`ruleset/`
+is the engine, `rulesets/` is content.** Nothing under `rulesets/` may be
+imported by engine code — only `src/activeRuleset.ts` names a flavor.
+
 Path aliases (tsconfig + babel-plugin-module-resolver): `@/*` → `src/*`, plus
-`@components/*`, `@screens/*`, `@models/*`, `@utils/*`. Use them.
+`@components/*`, `@screens/*`, `@models/*`, `@utils/*`. Use them. All five are
+declared in **three** places that must stay in sync — `tsconfig.json`,
+`babel.config.js`, and `jest.config.js`'s `moduleNameMapper`. `src/rulesets/`
+deliberately gets no alias of its own: `@/rulesets/…` already resolves, and a
+sixth alias would be a fourth thing to keep in sync. `@models/*` now points at
+a directory holding one file and is a candidate for retirement.
+
+## Engine vs fork
+
+Lore is the engine; Junktown Intelligence is a flavor of it (#19). The
+fork-owned surface is exactly:
+
+```
+src/branding.ts             app identity
+src/activeRuleset.ts        which ruleset this build runs on
+src/rulesets/<flavor>/**    the ruleset itself: content, terminology,
+                            categories, and its bundled images
+assets/{icon,adaptive-icon,splash-icon,favicon}.png
+```
+
+Everything else is engine-owned and merges cleanly from upstream. When you
+add something Afterworlds-specific, it belongs in that list or it is a bug.
+
+`src/rulesets/afterworlds/` is laid out as `index.ts` (the
+`RulesetDefinition`), `terminology.ts`, `categories.ts`, `assets.ts` +
+`assets/`, and `content/` — the last holding `gameData.ts`, `speciesTypes.ts`
+and their authoring types. **The content is still authored in the legacy
+Afterworlds vocabulary** (`PerkTag`, `Species`, `Perk`, `StatModifiers`) and
+transformed into ruleset shapes by `index.ts` at module load. Issue #13
+sketched a fuller split (`archetypes.ts` / `traits.ts` / `qualities.ts` /
+`recipes.ts` / `bonuses.ts`); that was deliberately not adopted, because
+regenerating ~2200 lines of literals buys reviewability problems and no
+behavior. Data-entry work (JunktownIntelligence#116) happens against
+`content/gameData.ts`.
+
+## Branding
+
+`src/branding.ts` is the only place app identity lives — name, slug, bundle
+identifier, EAS project id, Expo owner, and the paths of the four branding
+PNGs in `assets/`. A fork changes that file and those images, nothing else.
+
+- **`app.config.ts` is engine-owned** and holds no identity literals; it is the
+  config _shape_ and reads every value from `src/branding.ts`. There is no
+  `app.json` — leaving one in place would make it a base config merged under
+  the dynamic one, i.e. two sources again.
+- **`src/branding.ts` must stay dependency-free.** Expo loads `app.config.ts`
+  outside Metro, so no `react-native` imports and no path aliases. For the same
+  reason the import in `app.config.ts` is relative _and_ carries an explicit
+  `.ts` extension — Expo transpiles that entry file with sucrase but resolves
+  its requires with plain Node, which would look for `./src/branding.js`.
+  `allowImportingTsExtensions` in `tsconfig.json` exists solely for this.
+- **`APP_NAME` is not the same thing as `RulesetDefinition.branding.appName`.**
+  The ruleset field is _runtime display_ identity, owned by whichever ruleset
+  is active and correctly per-ruleset; `src/branding.ts` is _build_ identity,
+  resolved before a ruleset is chosen. `APP_NAME` is the single source —
+  rulesets import it, never the reverse.
+- Changing the slug or bundle identifiers affects EAS builds and would orphan
+  installed apps. Relocating those values (this section) is safe; changing
+  them is issue #15's job.
 
 ## Data & storage architecture
 
@@ -112,21 +182,49 @@ none of them a closed union. A ruleset supplies the actual archetypes,
 traits, categories, qualities, and attributes — and since #22 a character may
 also carry its own GM-defined attribute values.
 
-Afterworlds data still lives in `gameData.ts` and `speciesTypes.ts`, and
-`src/ruleset/defaultRuleset.ts` derives a `RulesetDefinition` from it via a
-transform rather than a hand-written literal, so the two cannot drift.
-**Treat those two files as content, not code** — they are moved wholesale to
-`src/rulesets/afterworlds/` and deleted in #13. `speciesTypes.ts` could not
-be folded into the ruleset during Phase 1 because `gameData.ts` imports its
-`Species` type and group arrays, and inverting that would make
-`gameData → defaultRuleset → gameData` circular.
+`qualityIds` was the last of those to be stated as `string`. It used to read
+`DistinctionId[]`, an alias derived from the Afterworlds distinction table —
+which is what forced `models/types.ts` to import a content _value_ and made
+`types.ts ↔ gameData.ts` circular. Note the alias already _denoted_ `string`
+(the `AVAILABLE_DISTINCTIONS: Distinction[]` annotation defeats its
+`as const`), so removing it changed no stored bytes and needed no migration.
 
-Ruleset _terminology overrides are also content_. The Afterworlds ruleset
-maps `modification.singular` to "Cyberware", `archetype.plural` to "Species",
-and so on, which is the only reason the Junktown app still reads the way its
+Afterworlds data lives entirely under `src/rulesets/afterworlds/`, whose
+`index.ts` derives a `RulesetDefinition` from the tables in `content/` via a
+transform rather than a hand-written literal, so the two cannot drift.
+**Treat everything under `content/` as content, not code.**
+
+Ruleset _terminology overrides are also content_
+(`rulesets/afterworlds/terminology.ts`). That ruleset maps
+`modification.singular` to "Cyberware", `archetype.plural` to "Species", and
+so on, which is the only reason the Junktown app still reads the way its
 users expect after the Phase 1 renames. Renaming an engine field must never
 drag those override _values_ along with it.
 
+- `src/activeRuleset.ts` — **the one file that says which ruleset this build
+  runs on.** Fork-owned; `RulesetProvider`'s defaults and every
+  `ruleset: RulesetDefinition = …` default parameter resolve through it.
+  **It is deliberately a module and not a provider prop.** Non-component code
+  needs the active ruleset too — `characterStorage.migrateRulesetFields()`
+  calls `normalizeCharactersRulesetFields(characters)` with no ruleset
+  argument, and that default is what maps a legacy `caps.health` onto
+  `attributeDeltas.healthCap`. A storage module can never read a React
+  context, so folding this back into `RulesetProvider` would silently degrade
+  that migration for every ruleset but the built-in one.
+  **Cycle rule:** this file, and anything under `src/rulesets/`, imports
+  `@/ruleset/types` / `@/ruleset/attributes` / etc. **directly, never the
+  `@/ruleset` barrel** — the barrel re-exports `context.tsx`, which imports
+  the seam.
+- `src/ruleset/exampleRuleset.ts` — what the engine ships as its default: a
+  small, complete, generic ruleset. Two things about it are deliberate.
+  It **overrides no terminology**, so every noun comes from
+  `DEFAULT_TERMINOLOGY` and "the app boots with generic labels" is literally
+  checkable — it is also the only place the `getLabel` fallback is exercised
+  in a running app. And it declares **no map, with `features.map: false`**,
+  because the map is the one feature needing a bundled binary and images
+  belong to the ruleset that uses them; a placeholder PNG in the engine would
+  be in every fork's way. Every other flag is on, so the engine's screens are
+  reachable out of the box.
 - `src/ruleset/attributes.ts` — the `AttributeValue` primitive (#22). A
   tagged union (`{ type, value }`) covering number/text/flag/ref/list/map,
   plus `AttributeDefinition`, typed accessors, and a generic bag validator.
@@ -138,9 +236,9 @@ drag those override _values_ along with it.
   from becoming untyped soup** — the union is storage, roles are meaning, and
   `derived.ts` dispatches on role rather than on hardcoded ids. Which roles a
   modifier may touch is an _application_ rule in `derived.ts`, never a
-  validity rule: the shipped Afterworlds ruleset declares a trait cap delta
-  the engine ignores, and flagging that as invalid would make
-  `RulesetProvider` throw under `__DEV__`.
+  validity rule: the Afterworlds ruleset declares a trait cap delta the
+  engine ignores, and flagging that as invalid would make `RulesetProvider`
+  throw under `__DEV__` for any build running it.
 - `src/ruleset/types.ts` — the `RulesetDefinition` schema (attributes,
   archetypes, traits, trait categories, qualities, category-bonus rules,
   feature flags, terminology). **Must stay JSON-serializable** — no functions, no
@@ -154,11 +252,13 @@ drag those override _values_ along with it.
   can surface errors in UI instead of crashing at startup. `RulesetProvider`
   throws on an invalid ruleset in `__DEV__` and logs-and-renders otherwise.
 - `src/ruleset/context.tsx` — `RulesetProvider` / `useRuleset()`.
-  **`useRuleset()` returns the default Afterworlds ruleset outside a
-  provider rather than throwing** — every screen test in `tst/` renders
-  bare, and a throwing hook would require wrapping all of them. Use
-  `tst/helpers/ruleset.tsx`'s `renderWithRuleset()` for a test that needs a
-  non-default ruleset.
+  **`useRuleset()` returns the _active_ ruleset outside a provider rather
+  than throwing** — many screen tests render bare, and a throwing hook would
+  require wrapping all of them. In this repo that is
+  `src/ruleset/exampleRuleset.ts`, via `src/activeRuleset.ts`. Do not write a
+  test that depends on which one it is: render through
+  `tst/helpers/ruleset.tsx`'s `renderWithRuleset()`, whose own default is the
+  neutral fixture.
 - `src/ruleset/derived.ts` — `calculateDerivedStats(character, ruleset?)`
   returns `{ values, categoryScores, attributes }`. Order is load-bearing:
   archetype base attributes → **character attribute overrides (absolute, not
@@ -267,14 +367,31 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   code, see `tst/utils/storageQueue.test.ts` and
   `tst/utils/characterStorage.concurrency.test.ts` for the stateful-store
   pattern that proves serialization.
-- **`tst/fixtures/genericRuleset.ts` is how a screen proves it reads the
-  provider.** It shares no ids with Afterworlds — different archetypes,
-  three resources instead of two, three trait categories one of which has no
-  color, and several `features` off — so a screen still reaching for
-  `AVAILABLE_PERKS` or `SPECIES_BASE_STATS` fails visibly instead of passing
-  by coincidence. Render through `renderWithRuleset()`
-  (`tst/helpers/ruleset.tsx`). Asserting only against Afterworlds proves the
-  app works for exactly one ruleset.
+- **The rule: a test may not depend on which ruleset is the default. Pass one
+  explicitly.** Asserting against whatever the build happens to ship proves
+  the app works for exactly one ruleset. There are three to choose from, with
+  different jobs:
+  - **`tst/fixtures/genericRuleset.ts` — proves a _screen reads the
+    provider_.** Different archetypes, three resources instead of two, three
+    trait categories one of which has no color, and several `features` off,
+    so a screen reaching past the provider fails visibly rather than passing
+    by coincidence. This is `renderWithRuleset()`'s default
+    (`tst/helpers/ruleset.tsx`), so "no argument" means "any ruleset".
+  - **`tst/fixtures/mechanicsRuleset.ts` — proves the _engine computes_.**
+    Carries what `derived.ts`'s pipeline needs and the generic fixture
+    deliberately lacks: category bonuses at two thresholds, an
+    `archetypeRules` carve-out whose group membership exactly matches a
+    trait's `allowedArchetypeIds`, a trait declaring a cap delta the engine
+    must ignore, and a resource with no cap.
+  - **`@/rulesets/afterworlds` — the fork regression guard.** Asserted in
+    exactly two files: `tst/rulesets/afterworlds.test.ts` (the ruleset itself)
+    and `tst/utils/derivedStats.parity.test.ts` (the 27 pre-generalization
+    numbers). Keep it out of the rest.
+
+  All three are proved pairwise id-disjoint in
+  `tst/fixtures/genericRuleset.test.ts` — a shared id is exactly how a test
+  passes while asserting on a value that came from somewhere else.
+
 - `Picker.Item` children collapse into an `items` prop on the host
   `RNCPicker` and render **no queryable text** — read option labels off
   `UNSAFE_getAllByType('RNCPicker')[…].props.items` rather than reaching for
@@ -306,12 +423,14 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   `@octokit/rest`, and gifted-charts' own core package ship ESM and would
   otherwise fail to parse the moment anything imports them. Allow-listing a
   wrapper is not enough — its ESM dependency needs listing too.
-- Real baseline as of this writing: **~69% statements / ~65% functions**
-  (was ~66%/~61% before the Phase 2 UI decoupling added screen tests,
-  ~54%/~51% before the Phase 1 migration work; before that ~26%, and
-  previously misreported as ~75% because most of `src/screens` and several
-  `src/utils` modules were invisible to the report — see the config details
-  above).
+- Real baseline as of this writing: **~69.6% statements / ~65.4% functions**
+  — flat across the Phase 3 extraction, which is the point: `src/rulesets/**`
+  joined `collectCoverageFrom` in the same change that moved a well-covered
+  file into it, so the denominator moved and the ratio did not. (Was
+  ~66%/~61% before the Phase 2 UI decoupling added screen tests, ~54%/~51%
+  before the Phase 1 migration work; before that ~26%, and previously
+  misreported as ~75% because most of `src/screens` and several `src/utils`
+  modules were invisible to the report — see the config details above.)
 
 ### Test coverage gaps
 
@@ -381,5 +500,10 @@ jest.fn() }))` rather than a bare automock, or Jest tries to load the real
 
 Prefer reusing existing utilities over adding new ones. Data-storage format
 changes, navigation restructures, and new native dependencies are
-higher-risk — call them out explicitly and keep them minimal. Always leave
+higher-risk — call them out explicitly and keep them minimal.
+
+**App identity values are not yours to change.** The slug, bundle
+identifiers and EAS project id in `src/branding.ts` were relocated by #12,
+not rewritten; changing them affects EAS builds and orphans installed apps.
+Minting Lore's own set is issue #15's job. Always leave
 `npm run check-all` green.

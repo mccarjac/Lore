@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image } from 'react-native';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { LocationMapScreen } from '@screens/location/LocationMapScreen';
 import { getStorageMock, primeStorageDefaults } from '../../helpers/storage';
@@ -20,6 +20,20 @@ const storage = getStorageMock();
 // LocationMapScreen never kicks in and imageSize == {300, 200} exactly.
 const IMAGE_SIZE = { width: 300, height: 200 };
 
+/**
+ * A ruleset that *has* a map, since the engine's own example ruleset ships no
+ * bundled image. These tests are about map rendering, so the map has to come
+ * from the provider rather than from whatever the build defaults to.
+ */
+const mapRuleset = { ...genericRuleset, map: { imageKey: 'realm' } };
+const mapAssets = { realm: { uri: 'test-map-uri' } };
+
+const renderMap = () =>
+  renderWithRuleset(<LocationMapScreen />, {
+    ruleset: mapRuleset,
+    assets: mapAssets,
+  });
+
 const getLatestLongPressStub = () => {
   const results = (Gesture.LongPress as jest.Mock).mock.results;
   return results[results.length - 1].value;
@@ -38,7 +52,7 @@ describe('LocationMapScreen', () => {
   it('shows a loading state before the map asset size resolves', () => {
     jest.spyOn(Image, 'resolveAssetSource').mockReturnValue(undefined as any);
 
-    const { getByText } = render(<LocationMapScreen />);
+    const { getByText } = renderMap();
 
     expect(getByText('Loading map...')).toBeTruthy();
   });
@@ -59,7 +73,7 @@ describe('LocationMapScreen', () => {
       makeLocation({ id: 'loc-unplaced', name: 'Rust Alley' }),
     ]);
 
-    const { getByLabelText, queryByLabelText } = render(<LocationMapScreen />);
+    const { getByLabelText, queryByLabelText } = renderMap();
 
     await waitFor(() => {
       expect(getByLabelText('The Docks')).toBeTruthy();
@@ -83,7 +97,7 @@ describe('LocationMapScreen', () => {
       }),
     ]);
 
-    const { getByLabelText, findByText } = render(<LocationMapScreen />);
+    const { getByLabelText, findByText } = renderMap();
 
     const marker = await waitFor(() => getByLabelText('The Docks'));
     fireEvent.press(marker);
@@ -108,7 +122,7 @@ describe('LocationMapScreen', () => {
     ]);
     const nav = installNavigationMock();
 
-    const { getByLabelText, findByText } = render(<LocationMapScreen />);
+    const { getByLabelText, findByText } = renderMap();
 
     const marker = await waitFor(() => getByLabelText('The Docks'));
     fireEvent.press(marker);
@@ -138,7 +152,7 @@ describe('LocationMapScreen', () => {
       })
     );
 
-    const { findByText } = render(<LocationMapScreen />);
+    const { findByText } = renderMap();
 
     // Let the initial `loadLocations()` from `useFocusEffect` resolve before
     // long-pressing, so the picker has the location to list.

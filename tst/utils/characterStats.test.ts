@@ -1,5 +1,15 @@
-import { calculateCharacterStats } from '@/utils/characterStats';
+import { calculateCharacterStats as calculateWith } from '@/utils/characterStats';
 import { GameCharacter, RelationshipStanding } from '@/models/types';
+import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
+
+/**
+ * Aggregation is ruleset-independent for counts and only consults the ruleset
+ * to turn trait/quality ids into names — so this runs against the neutral
+ * fixture. Asserting on Afterworlds ids here would have proved the util works
+ * for exactly one ruleset.
+ */
+const calculateCharacterStats = (characters: GameCharacter[]) =>
+  calculateWith(characters, mechanicsRuleset);
 
 describe('characterStats', () => {
   describe('calculateCharacterStats', () => {
@@ -7,7 +17,7 @@ describe('characterStats', () => {
       {
         id: '1',
         name: 'Alice',
-        archetypeId: 'Human',
+        archetypeId: 'tinker',
         traitIds: [],
         qualityIds: [],
         factions: [
@@ -20,7 +30,7 @@ describe('characterStats', () => {
       {
         id: '2',
         name: 'Bob',
-        archetypeId: 'Mutant',
+        archetypeId: 'sentinel',
         traitIds: [],
         qualityIds: [],
         factions: [
@@ -34,7 +44,7 @@ describe('characterStats', () => {
       {
         id: '3',
         name: 'Charlie',
-        archetypeId: 'Human',
+        archetypeId: 'tinker',
         traitIds: [],
         qualityIds: [],
         factions: [{ name: 'Raiders', standing: RelationshipStanding.Ally }],
@@ -60,8 +70,8 @@ describe('characterStats', () => {
       const stats = calculateCharacterStats(mockCharacters);
 
       expect(stats.archetypeDistribution).toEqual({
-        Human: 2,
-        Mutant: 1,
+        tinker: 2,
+        sentinel: 1,
       });
     });
 
@@ -94,7 +104,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Loner',
-          archetypeId: 'Nomad',
+          archetypeId: 'artisan',
           traitIds: [],
           qualityIds: [],
           factions: [],
@@ -116,7 +126,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Solo',
-          archetypeId: 'Android',
+          archetypeId: 'revenant',
           traitIds: [],
           qualityIds: [],
           factions: [
@@ -131,7 +141,7 @@ describe('characterStats', () => {
       const stats = calculateCharacterStats(characters);
 
       expect(stats.totalCharacters).toBe(1);
-      expect(stats.archetypeDistribution).toEqual({ Android: 1 });
+      expect(stats.archetypeDistribution).toEqual({ revenant: 1 });
       expect(stats.factionDistribution).toEqual({ Machines: 1 });
     });
 
@@ -140,7 +150,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Multi-faction',
-          archetypeId: 'Human',
+          archetypeId: 'tinker',
           traitIds: [],
           qualityIds: [],
           factions: [
@@ -168,7 +178,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Char1',
-          archetypeId: 'Human',
+          archetypeId: 'tinker',
           traitIds: [],
           qualityIds: [],
           factions: [],
@@ -179,7 +189,7 @@ describe('characterStats', () => {
         {
           id: '2',
           name: 'Char2',
-          archetypeId: 'Mutant',
+          archetypeId: 'sentinel',
           traitIds: [],
           qualityIds: [],
           factions: [],
@@ -190,7 +200,7 @@ describe('characterStats', () => {
         {
           id: '3',
           name: 'Char3',
-          archetypeId: 'Android',
+          archetypeId: 'revenant',
           traitIds: [],
           qualityIds: [],
           factions: [],
@@ -201,7 +211,7 @@ describe('characterStats', () => {
         {
           id: '4',
           name: 'Char4',
-          archetypeId: 'Human',
+          archetypeId: 'tinker',
           traitIds: [],
           qualityIds: [],
           factions: [],
@@ -214,9 +224,9 @@ describe('characterStats', () => {
       const stats = calculateCharacterStats(characters);
 
       expect(stats.archetypeDistribution).toEqual({
-        Human: 2,
-        Mutant: 1,
-        Android: 1,
+        tinker: 2,
+        sentinel: 1,
+        revenant: 1,
       });
     });
 
@@ -225,7 +235,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Char1',
-          archetypeId: 'Human',
+          archetypeId: 'tinker',
           traitIds: [],
           qualityIds: [],
           factions: [
@@ -238,7 +248,7 @@ describe('characterStats', () => {
         {
           id: '2',
           name: 'Char2',
-          archetypeId: 'Human',
+          archetypeId: 'tinker',
           traitIds: [],
           qualityIds: [],
           factions: [
@@ -251,7 +261,7 @@ describe('characterStats', () => {
         {
           id: '3',
           name: 'Char3',
-          archetypeId: 'Human',
+          archetypeId: 'tinker',
           traitIds: [],
           qualityIds: [],
           factions: [
@@ -264,7 +274,7 @@ describe('characterStats', () => {
         {
           id: '4',
           name: 'Char4',
-          archetypeId: 'Human',
+          archetypeId: 'tinker',
           traitIds: [],
           qualityIds: [],
           factions: [
@@ -277,7 +287,7 @@ describe('characterStats', () => {
         {
           id: '5',
           name: 'Char5',
-          archetypeId: 'Human',
+          archetypeId: 'tinker',
           traitIds: [],
           qualityIds: [],
           factions: [
@@ -306,8 +316,8 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
-            traitIds: ['agility_1', 'defense_1', 'strength_1'],
+            archetypeId: 'tinker',
+            traitIds: ['hammer_hand', 'steady_hand', 'quick_read'],
             qualityIds: [],
             factions: [],
             relationships: [],
@@ -317,8 +327,8 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            archetypeId: 'Human',
-            traitIds: ['agility_1', 'defense_1'],
+            archetypeId: 'tinker',
+            traitIds: ['hammer_hand', 'steady_hand'],
             qualityIds: [],
             factions: [],
             relationships: [],
@@ -328,8 +338,8 @@ describe('characterStats', () => {
           {
             id: '3',
             name: 'Char3',
-            archetypeId: 'Human',
-            traitIds: ['agility_1'],
+            archetypeId: 'tinker',
+            traitIds: ['hammer_hand'],
             qualityIds: [],
             factions: [],
             relationships: [],
@@ -342,7 +352,7 @@ describe('characterStats', () => {
 
         expect(stats.commonPerks).toHaveLength(3);
         expect(stats.commonPerks[0]).toEqual({
-          name: 'Agile Strikes',
+          name: 'Hammer Hand',
           count: 3,
         });
         expect(stats.commonPerks[1].count).toBe(2);
@@ -354,8 +364,8 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
-            traitIds: ['unknown_perk_id', 'agility_1'],
+            archetypeId: 'tinker',
+            traitIds: ['unknown_trait_id', 'hammer_hand'],
             qualityIds: [],
             factions: [],
             relationships: [],
@@ -368,7 +378,7 @@ describe('characterStats', () => {
 
         expect(stats.commonPerks).toHaveLength(2);
         const unknownPerk = stats.commonPerks.find(
-          p => p.name === 'Unknown Perk'
+          p => p.name === 'Unknown Knack'
         );
         expect(unknownPerk).toBeDefined();
         expect(unknownPerk?.count).toBe(1);
@@ -379,15 +389,15 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [
-              'agility_1',
-              'agility_2',
-              'agility_3',
-              'defense_1',
-              'defense_2',
-              'strength_1',
-              'strength_2',
+              'hammer_hand',
+              'quick_read',
+              'kin_secret',
+              'steady_hand',
+              'overclock',
+              'unknown_trait_a',
+              'unknown_trait_b',
             ],
             qualityIds: [],
             factions: [],
@@ -407,7 +417,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
             qualityIds: [],
             factions: [],
@@ -427,8 +437,8 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
-            traitIds: ['agility_1', 'defense_1', 'defense_1'],
+            archetypeId: 'tinker',
+            traitIds: ['hammer_hand', 'steady_hand', 'steady_hand'],
             qualityIds: [],
             factions: [],
             relationships: [],
@@ -438,8 +448,8 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            archetypeId: 'Human',
-            traitIds: ['defense_1', 'strength_1'],
+            archetypeId: 'tinker',
+            traitIds: ['steady_hand', 'quick_read'],
             qualityIds: [],
             factions: [],
             relationships: [],
@@ -468,9 +478,9 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
-            qualityIds: ['d1', 'd2', 'd3'],
+            qualityIds: ['steadfast', 'reckless', 'unknown_quality_id'],
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -479,9 +489,9 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
-            qualityIds: ['d1', 'd2'],
+            qualityIds: ['steadfast', 'reckless'],
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -490,9 +500,9 @@ describe('characterStats', () => {
           {
             id: '3',
             name: 'Char3',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
-            qualityIds: ['d1'],
+            qualityIds: ['steadfast'],
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -504,7 +514,7 @@ describe('characterStats', () => {
 
         expect(stats.commonDistinctions).toHaveLength(3);
         expect(stats.commonDistinctions[0]).toEqual({
-          name: 'Apathetic',
+          name: 'Steadfast',
           count: 3,
         });
         expect(stats.commonDistinctions[1].count).toBe(2);
@@ -516,9 +526,9 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
-            qualityIds: ['unknown_distinction_id', 'd1'],
+            qualityIds: ['unknown_quality_id', 'steadfast'],
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -530,7 +540,7 @@ describe('characterStats', () => {
 
         expect(stats.commonDistinctions).toHaveLength(2);
         const unknownDistinction = stats.commonDistinctions.find(
-          d => d.name === 'Unknown Distinction'
+          d => d.name === 'Unknown Quality'
         );
         expect(unknownDistinction).toBeDefined();
         expect(unknownDistinction?.count).toBe(1);
@@ -541,9 +551,17 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
-            qualityIds: ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7'],
+            qualityIds: [
+              'steadfast',
+              'reckless',
+              'unknown_a',
+              'unknown_b',
+              'unknown_c',
+              'unknown_d',
+              'unknown_e',
+            ],
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -561,7 +579,7 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
             qualityIds: [],
             factions: [],
@@ -581,9 +599,9 @@ describe('characterStats', () => {
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
-            qualityIds: ['d1', 'd2', 'd2'],
+            qualityIds: ['steadfast', 'reckless', 'reckless'],
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -592,9 +610,9 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            archetypeId: 'Human',
+            archetypeId: 'tinker',
             traitIds: [],
-            qualityIds: ['d2', 'd3'],
+            qualityIds: ['reckless', 'unknown_quality_id'],
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',

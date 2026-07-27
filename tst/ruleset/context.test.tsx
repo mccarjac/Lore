@@ -2,7 +2,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { RulesetProvider, useRuleset } from '@/ruleset/context';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { activeRuleset } from '@/activeRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const Probe: React.FC = () => {
@@ -11,9 +12,11 @@ const Probe: React.FC = () => {
 };
 
 describe('useRuleset', () => {
-  it('falls back to the default ruleset outside a provider', () => {
+  it('falls back to the active ruleset outside a provider', () => {
+    // Whichever ruleset the build selects — the assertion is about the
+    // fallback existing, not about which flavor this repo ships.
     render(<Probe />);
-    expect(screen.getByText('afterworlds')).toBeTruthy();
+    expect(screen.getByText(activeRuleset.id)).toBeTruthy();
   });
 
   it('provides the ruleset passed to RulesetProvider', () => {

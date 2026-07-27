@@ -11,7 +11,7 @@ import {
   makeEvent,
   makeQuest,
 } from '../helpers/factories';
-import { afterworldsRuleset } from '@/ruleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { genericRuleset } from '../fixtures/genericRuleset';
 
 const makeData = (
