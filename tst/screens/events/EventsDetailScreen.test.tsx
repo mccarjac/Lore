@@ -11,6 +11,8 @@ import {
   resetNavigationMocks,
   NavMock,
 } from '../../helpers/navigation';
+import { renderWithRuleset } from '../../helpers/ruleset';
+import { genericRuleset } from '../../fixtures/genericRuleset';
 
 jest.mock('@utils/characterStorage');
 
@@ -81,5 +83,27 @@ describe('EventsDetailScreen — narrative thread', () => {
     expect(nav.navigate).toHaveBeenCalledWith('QuestsDetail', {
       questId: quest.id,
     });
+  });
+
+  it('hides the quest section when the ruleset has quests off', async () => {
+    // QuestsDetail is unregistered under such a ruleset, so leaving the
+    // section visible would give the user a tap that throws.
+    const quest = makeQuest({ id: 'quest-1', name: 'Recover the Cargo' });
+    const linkedEvent = makeEvent({
+      id: EVENT_ID,
+      title: 'The Great Fire',
+      questIds: [quest.id],
+    });
+
+    storage.loadEvents.mockResolvedValue([linkedEvent]);
+    storage.loadQuests.mockResolvedValue([quest]);
+
+    const { getByText, queryByText } = renderWithRuleset(
+      <EventsDetailScreen />,
+      { ruleset: genericRuleset }
+    );
+
+    await waitFor(() => expect(getByText('The Great Fire')).toBeTruthy());
+    expect(queryByText('Recover the Cargo')).toBeNull();
   });
 });

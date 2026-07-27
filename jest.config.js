@@ -9,7 +9,10 @@ module.exports = {
   // `uuid` ships ESM-only and must be transformed so test files can automock
   // modules that import it (e.g. `jest.mock('@utils/characterStorage')`).
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-.*|@expo|@unimodules|@octokit|react-native-.*|uuid)/)',
+    // `gifted-charts-core` is react-native-gifted-charts' ESM dependency, so
+    // allow-listing the wrapper alone is not enough — same trap as `expo-.*`
+    // and `@octokit`.
+    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-.*|@expo|@unimodules|@octokit|react-native-.*|gifted-charts-core|uuid)/)',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {

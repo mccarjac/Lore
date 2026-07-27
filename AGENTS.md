@@ -42,7 +42,8 @@ src/
                         speciesTypes.ts are Afterworlds *content* (see #13)
   ruleset/              attribute primitive, pluggable ruleset schema,
                         provider, validator, terminology, derived stats
-  navigation/types.ts   navigator + param-list types
+  navigation/           types.ts (navigator + param-list types) and
+                        AppNavigator.tsx (the whole navigation tree)
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
   utils/                storage, export/import, discord, git, stats
 tst/                    Jest tests, mirroring src/
@@ -175,13 +176,32 @@ drag those override _values_ along with it.
   Afterworlds declares none, so it is a no-op there. `tst/ruleset/
 characterAttributes.test.ts` is the only proof that step 1b behaves.
 - `src/ruleset/terminology.ts` — `useLabels()` (components) and `getLabel()`
-  (non-component code, e.g. `App.tsx` navigator options, or pure utils like
-  `factionStats.ts`/`characterStats.ts` that take a `ruleset` parameter
-  rather than importing one) look up a term key (`'trait.plural'`) against
-  the ruleset's `terminology` overrides, falling back to a neutral default.
-  Screens must not hardcode domain nouns (Species/Perk/Tag/Distinction/
-  Cyberware/Junktown Office) — look them up so a different ruleset can say
-  something else without a code change.
+  (non-component code — pure utils like `factionStats.ts`/`characterStats.ts`
+  that take a `ruleset` parameter rather than importing one) look up a term
+  key (`'trait.plural'`) against the ruleset's `terminology` overrides,
+  falling back to a neutral default. Screens must not hardcode domain nouns
+  (Species/Perk/Tag/Distinction/Cyberware/Junktown Office) — look them up so
+  a different ruleset can say something else without a code change.
+  The map's display name is `terminology['map.label']`; `RulesetDefinition.map`
+  carries only `imageKey`, since two sources for one string only drift.
+- `src/ruleset/features.ts` — `useFeature(key)` / `isFeatureEnabled(ruleset,
+key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
+  runtime data so `validate.ts` can iterate it (a `keyof` cannot). Flags gate
+  **registration** in `src/navigation/AppNavigator.tsx`, not the param-list
+  types in `navigation/types.ts`. Two traps: the drawer's `DrawerItem` list
+  and its `Drawer.Screen` list are independent and both need gating, and a
+  `navigate()` into an unregistered route throws at _runtime_ — so every
+  caller into a gated route is gated at its call site too. Grep
+  `navigation.navigate(` when adding a flag. Disabled features retain their
+  data; turning a flag back on restores the screens intact.
+- **`App.tsx` is the provider stack only.** The navigators live in
+  `src/navigation/AppNavigator.tsx` because `App` renders `RulesetProvider`
+  and therefore sits _outside_ it — nothing in `App.tsx` can call
+  `useRuleset()`. Keep new navigator code in `AppNavigator.tsx`.
+- `src/styles/chartPalette.ts` — the categorical palette for charts and
+  legends. A ruleset may declare its own `TraitCategory.color`; this is the
+  fallback, and it cycles so a ruleset with more categories than colors
+  still gets a color for each rather than `undefined`.
 
 ## Conventions & gotchas
 
@@ -247,6 +267,28 @@ characterAttributes.test.ts` is the only proof that step 1b behaves.
   code, see `tst/utils/storageQueue.test.ts` and
   `tst/utils/characterStorage.concurrency.test.ts` for the stateful-store
   pattern that proves serialization.
+- **`tst/fixtures/genericRuleset.ts` is how a screen proves it reads the
+  provider.** It shares no ids with Afterworlds — different archetypes,
+  three resources instead of two, three trait categories one of which has no
+  color, and several `features` off — so a screen still reaching for
+  `AVAILABLE_PERKS` or `SPECIES_BASE_STATS` fails visibly instead of passing
+  by coincidence. Render through `renderWithRuleset()`
+  (`tst/helpers/ruleset.tsx`). Asserting only against Afterworlds proves the
+  app works for exactly one ruleset.
+- `Picker.Item` children collapse into an `items` prop on the host
+  `RNCPicker` and render **no queryable text** — read option labels off
+  `UNSAFE_getAllByType('RNCPicker')[…].props.items` rather than reaching for
+  `getByText`.
+- A screen that gates a spinner behind `useFocusEffect` needs
+  `installFocusEffectOnce()` (`tst/helpers/navigation.ts`); the global mock
+  re-fires every render and turns that gate into a render loop. Both stats
+  screens need it.
+- `tst/navigation/AppNavigator.test.tsx` mocks `createDrawerNavigator` /
+  `createStackNavigator` into pass-throughs that surface each route's `name`
+  as text, so route _registration_ is assertable without mounting twenty real
+  screens. `MainDrawer` gets its own render there: it is registered as
+  `component={MainDrawer}` on a stack screen, so the stack render never
+  reaches it.
 
 ### Coverage reporting
 
@@ -258,15 +300,18 @@ characterAttributes.test.ts` is the only proof that step 1b behaves.
   hidden from the report. Two config details matter for this to actually
   work: `roots` must include `<rootDir>/src` (not just `<rootDir>/tst`), or
   Jest silently omits zero-coverage rows for any file no test imports; and
-  `transformIgnorePatterns` must allow-list `expo-.*` and `@octokit` (not
-  just bare `expo`), since `expo-file-system` and `@octokit/rest` ship ESM
-  and would otherwise fail to parse the moment coverage collection touches
-  them.
-- Real baseline as of this writing: **~66% statements / ~61% functions**
-  (was ~54%/~51% before the Phase 1 migration work added coverage; before
-  that ~26%, and previously misreported as ~75% because most of
-  `src/screens` and several `src/utils` modules were invisible to the
-  report — see the config details above).
+  `transformIgnorePatterns` must allow-list `expo-.*`, `@octokit`, and
+  `gifted-charts-core` (not just bare `expo`, and not just the
+  `react-native-gifted-charts` wrapper), since `expo-file-system`,
+  `@octokit/rest`, and gifted-charts' own core package ship ESM and would
+  otherwise fail to parse the moment anything imports them. Allow-listing a
+  wrapper is not enough — its ESM dependency needs listing too.
+- Real baseline as of this writing: **~69% statements / ~65% functions**
+  (was ~66%/~61% before the Phase 2 UI decoupling added screen tests,
+  ~54%/~51% before the Phase 1 migration work; before that ~26%, and
+  previously misreported as ~75% because most of `src/screens` and several
+  `src/utils` modules were invisible to the report — see the config details
+  above).
 
 ### Test coverage gaps
 
@@ -287,6 +332,13 @@ blast-radius / lowest-effort first):
 
 Done since the list above was last written:
 
+- ~~`src/screens/FactionStatsScreen.tsx`~~, ~~`CharacterStatsScreen.tsx`~~,
+  ~~`CharacterSearchScreen.tsx`~~ and ~~navigation registration~~ — added in
+  Phase 2, all rendered against `tst/fixtures/genericRuleset.ts` so they
+  assert genre-neutrality rather than Afterworlds trivia. The stats screens
+  need `installFocusEffectOnce()`; `CharacterStatsScreen` also mocks
+  `react-native-gifted-charts` to surface slice data as text, since the real
+  PieChart renders to SVG and swallows it.
 - ~~`src/utils/gitIntegration.ts`~~ (GitHub-backed sync, was the highest
   blast-radius gap) — covered by `tst/utils/gitIntegration.test.ts`, using a
   hand-rolled Octokit test double (`tst/helpers/octokit.ts`) since the module
