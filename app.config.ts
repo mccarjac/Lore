@@ -55,11 +55,10 @@ const config: ExpoConfig & { cli?: { appVersionSource?: string } } = {
   cli: {
     appVersionSource: 'remote',
   },
-  extra: {
-    eas: {
-      projectId: EAS_PROJECT_ID,
-    },
-  },
+  // Omitted entirely until `EAS_PROJECT_ID` is set, rather than published as
+  // an empty string: EAS treats a blank id as a malformed project reference,
+  // and an absent one as "not initialized yet", which is what a fresh clone is.
+  extra: EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : undefined,
   owner: EXPO_OWNER,
 };
 
