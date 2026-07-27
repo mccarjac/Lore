@@ -7,6 +7,7 @@ import {
 } from '@/ruleset/terminology';
 import { RulesetProvider } from '@/ruleset/context';
 import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { activeRuleset } from '@/activeRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const rulesetWithoutOverrides: RulesetDefinition = {
@@ -54,8 +55,13 @@ describe('useLabels', () => {
     expect(result.current('trait.plural')).toBe('Perks');
   });
 
-  it('falls back to the default ruleset outside a provider', () => {
+  it('falls back to the active ruleset outside a provider', () => {
+    // Derived from the seam rather than hardcoded: the point is *which
+    // ruleset* answers outside a provider, not what this build happens to
+    // call its traits.
     const { result } = renderHook(() => useLabels());
-    expect(result.current('trait.plural')).toBe('Perks');
+    expect(result.current('trait.plural')).toBe(
+      getLabel(activeRuleset, 'trait.plural')
+    );
   });
 });

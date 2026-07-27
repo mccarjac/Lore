@@ -1,11 +1,46 @@
 import {
-  calculateFactionStats,
-  calculateCombinedFactionStats,
-  getAllFactionStats,
+  calculateFactionStats as calculateFactionStatsWith,
+  calculateCombinedFactionStats as calculateCombinedFactionStatsWith,
+  getAllFactionStats as getAllFactionStatsWith,
 } from '@/utils/factionStats';
 import { GameCharacter, RelationshipStanding } from '@/models/types';
 import { FactionRelationship } from '@/utils/characterStorage';
 import { makeCharacter } from '../helpers/factories';
+import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
+
+/**
+ * Faction aggregation consults the ruleset for trait categories and for
+ * turning ids into names, so it runs against the neutral fixture — the counts
+ * themselves are ruleset-independent and the labels must not be Afterworlds'.
+ */
+const calculateFactionStats = (
+  factionName: string,
+  characters: GameCharacter[],
+  relationships: FactionRelationship[] = []
+) =>
+  calculateFactionStatsWith(
+    factionName,
+    characters,
+    relationships,
+    mechanicsRuleset
+  );
+
+const calculateCombinedFactionStats = (
+  factionName: string,
+  characters: GameCharacter[],
+  relationships: Map<string, FactionRelationship[]>
+) =>
+  calculateCombinedFactionStatsWith(
+    factionName,
+    characters,
+    relationships,
+    mechanicsRuleset
+  );
+
+const getAllFactionStats = (
+  characters: GameCharacter[],
+  relationships: Map<string, FactionRelationship[]>
+) => getAllFactionStatsWith(characters, relationships, mechanicsRuleset);
 
 describe('factionStats', () => {
   describe('calculateFactionStats', () => {
@@ -93,8 +128,8 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Member A',
-          archetypeId: 'Human',
-          traitIds: ['agility_1'],
+          archetypeId: 'tinker',
+          traitIds: ['hammer_hand'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -102,8 +137,8 @@ describe('factionStats', () => {
         makeCharacter({
           id: '2',
           name: 'Member B',
-          archetypeId: 'Human',
-          traitIds: ['agility_1', 'agility_2'],
+          archetypeId: 'tinker',
+          traitIds: ['hammer_hand', 'kin_secret'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Friend },
           ],
@@ -111,7 +146,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '3',
           name: 'Member C',
-          archetypeId: 'Mutant',
+          archetypeId: 'sentinel',
           traitIds: [],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
@@ -121,22 +156,22 @@ describe('factionStats', () => {
 
       const stats = calculateFactionStats('Brotherhood', characters);
 
-      expect(stats.perkTagCounts.Agility).toBe(3);
+      expect(stats.perkTagCounts.forge).toBe(3);
       expect(stats.topPerkTags[0]).toEqual({
-        tag: 'Agility',
+        tag: 'forge',
         count: 3,
         percentage: 100,
       });
       expect(stats.commonPerks).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            name: 'Agile Strikes',
+            name: 'Hammer Hand',
             count: 2,
             percentage: (2 / 3) * 100,
           }),
         ])
       );
-      expect(stats.archetypeDistribution).toEqual({ Human: 2, Mutant: 1 });
+      expect(stats.archetypeDistribution).toEqual({ tinker: 2, sentinel: 1 });
     });
 
     it('falls back to Unknown Perk/Distinction names for unrecognized ids', () => {
@@ -154,8 +189,8 @@ describe('factionStats', () => {
 
       const stats = calculateFactionStats('Brotherhood', characters);
 
-      expect(stats.commonPerks[0].name).toBe('Unknown Perk');
-      expect(stats.commonDistinctions[0].name).toBe('Unknown Distinction');
+      expect(stats.commonPerks[0].name).toBe('Unknown Knack');
+      expect(stats.commonDistinctions[0].name).toBe('Unknown Quality');
     });
 
     it('classifies faction relationships into allied and enemy factions', () => {
@@ -206,7 +241,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Brotherhood Member',
-          traitIds: ['agility_1'],
+          traitIds: ['hammer_hand'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -214,7 +249,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '2',
           name: 'Ally Member',
-          traitIds: ['agility_1'],
+          traitIds: ['hammer_hand'],
           factions: [
             { name: 'Scavengers', standing: RelationshipStanding.Ally },
           ],
@@ -242,7 +277,7 @@ describe('factionStats', () => {
       expect(combined.directMembers).toBe(1);
       expect(combined.alliedFactions).toEqual(['Scavengers']);
       expect(combined.combinedMembers).toBe(2);
-      expect(combined.combinedPerkTags.Agility).toBe(2);
+      expect(combined.combinedPerkTags.forge).toBe(2);
       expect(combined.strengthMultiplier).toBe(2);
     });
 

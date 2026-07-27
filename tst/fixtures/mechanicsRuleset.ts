@@ -115,12 +115,21 @@ export const mechanicsRuleset: RulesetDefinition = {
       modifier: { attributeDeltas: { spark: 1 } },
     },
     {
-      // Restricted to exactly the `kin` group's membership.
+      // Restricted to exactly the `kin` group's membership. Carries a delta
+      // as well, so the carve-out can be shown to suppress the *category
+      // score* without suppressing the attribute change.
       id: 'kin_secret',
       name: 'Kin Secret',
       description: 'Passed down, never written.',
       categoryId: 'forge',
       allowedArchetypeIds: ['tinker', 'revenant'],
+      modifier: { attributeDeltas: { fate: 1 } },
+    },
+    {
+      id: 'steady_hand',
+      name: 'Steady Hand',
+      description: 'Does not shake.',
+      categoryId: 'wit',
     },
     {
       // Declares a cap delta the engine must NOT apply — traits are
