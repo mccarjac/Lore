@@ -176,3 +176,82 @@ describe('validateCharacterAttributes', () => {
     expect(result.issues[0].message).toContain('above its maximum of 10');
   });
 });
+
+describe('derived stats — modifier edge cases', () => {
+  const ruleset = rulesetWithCharacterAttributes();
+
+  const withModification = (
+    attributeDeltas: Record<string, number>
+  ): GameCharacter =>
+    ({
+      ...character(),
+      modifications: [
+        { name: 'Rig', description: '', modifier: { attributeDeltas } },
+      ],
+    }) as GameCharacter;
+
+  it('ignores a zero delta', () => {
+    const stats = calculateDerivedStats(
+      withModification({ health: 0 }),
+      ruleset
+    );
+    expect(stats.values.health).toBe(2);
+  });
+
+  it('ignores a delta naming an attribute the ruleset does not declare', () => {
+    const stats = calculateDerivedStats(
+      withModification({ nonexistent: 5 }),
+      ruleset
+    );
+    expect(stats.values.nonexistent).toBeUndefined();
+    expect(stats.values.health).toBe(2);
+  });
+
+  it('leaves a resource unclamped when its cap attribute has no value', () => {
+    // A resource may declare a capAttributeId whose value no archetype
+    // supplies; that should read as "unbounded", not "clamped to zero".
+    const uncapped: RulesetDefinition = {
+      ...ruleset,
+      archetypes: ruleset.archetypes.map(a =>
+        a.id === 'Human'
+          ? {
+              ...a,
+              attributes: Object.fromEntries(
+                Object.entries(a.attributes).filter(
+                  ([id]) => id !== 'healthCap'
+                )
+              ),
+            }
+          : a
+      ),
+      attributes: ruleset.attributes.filter(a => a.id !== 'healthCap'),
+    };
+
+    const stats = calculateDerivedStats(
+      {
+        ...character(),
+        modifications: withModification({ health: 50 }).modifications,
+      } as GameCharacter,
+      uncapped
+    );
+
+    expect(stats.values.health).toBe(52);
+  });
+
+  it('applies no archetype rules when the ruleset declares none', () => {
+    const without: RulesetDefinition = {
+      ...ruleset,
+      archetypeRules: undefined,
+    };
+    const pm = {
+      ...character(),
+      archetypeId: 'Perfect Mutant',
+      traitIds: ['agility_15'],
+    } as GameCharacter;
+
+    // With the carve-out gone, the mutant-restricted trait now scores.
+    expect(
+      calculateDerivedStats(pm, without).categoryScores.get('Agility')
+    ).toBe(1);
+  });
+});

@@ -391,3 +391,111 @@ describe('validateRuleset', () => {
     });
   });
 });
+
+describe('attribute declaration checks', () => {
+  it('flags an attribute with an empty id or label', () => {
+    const ruleset = baseRuleset();
+    ruleset.attributes.push({ id: '', label: '', type: 'text' });
+    const result = validateRuleset(ruleset);
+
+    const index = ruleset.attributes.length - 1;
+    expect(result.issues).toContainEqual({
+      path: `attributes[${index}].id`,
+      message: 'id must be non-empty',
+    });
+    expect(result.issues).toContainEqual({
+      path: `attributes[${index}].label`,
+      message: 'label must be non-empty',
+    });
+  });
+
+  it('flags a capAttributeId on a non-resource attribute', () => {
+    const ruleset = baseRuleset();
+    ruleset.attributes.push({
+      id: 'mood',
+      label: 'Mood',
+      type: 'number',
+      role: 'freeform',
+      capAttributeId: 'healthCap',
+    });
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: `attributes[${ruleset.attributes.length - 1}].capAttributeId`,
+      message:
+        "Only attributes with role 'resource' may declare a capAttributeId",
+    });
+  });
+
+  it('flags a capAttributeId pointing at an attribute that does not exist', () => {
+    const ruleset = baseRuleset();
+    ruleset.attributes[0] = {
+      ...ruleset.attributes[0],
+      capAttributeId: 'nonexistent',
+    };
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'attributes[0].capAttributeId',
+      message: "Unknown attribute id 'nonexistent'",
+    });
+  });
+
+  it('flags refCollection on a non-ref attribute', () => {
+    const ruleset = baseRuleset();
+    ruleset.attributes[1] = {
+      ...ruleset.attributes[1],
+      refCollection: 'archetypes',
+    };
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'attributes[1].refCollection',
+      message: "refCollection is only meaningful for type 'ref'",
+    });
+  });
+
+  it('flags min/max on a non-number attribute', () => {
+    const ruleset = baseRuleset();
+    ruleset.attributes[4] = { ...ruleset.attributes[4], min: 0, max: 3 };
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'attributes[4].min/max',
+      message: "min/max are only meaningful for type 'number'",
+    });
+  });
+});
+
+describe('ref resolution across every collection', () => {
+  it.each([
+    ['traits', 'trait_1'],
+    ['qualities', 'quality_1'],
+    ['traitCategories', 'strength'],
+    ['groups', 'organic'],
+    ['recipes', 'recipe_1'],
+  ] as const)('resolves a %s ref', (collection, validId) => {
+    const ruleset = baseRuleset();
+    ruleset.attributes.push({
+      id: 'pointer',
+      label: 'Pointer',
+      type: 'ref',
+      refCollection: collection,
+    });
+
+    ruleset.archetypes[0].attributes.pointer = {
+      type: 'ref',
+      value: validId,
+    };
+    expect(validateRuleset(ruleset).valid).toBe(true);
+
+    ruleset.archetypes[0].attributes.pointer = {
+      type: 'ref',
+      value: 'nonexistent',
+    };
+    expect(validateRuleset(ruleset).issues).toContainEqual({
+      path: 'archetypes[0].attributes.pointer',
+      message: `Attribute 'pointer' references unknown ${collection} id 'nonexistent'`,
+    });
+  });
+});

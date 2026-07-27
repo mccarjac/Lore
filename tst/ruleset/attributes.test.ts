@@ -197,3 +197,32 @@ describe('validateAttributeDeltas', () => {
     expect(validateAttributeDeltas({ healthCap: 1 }, withCap, 'x')).toEqual([]);
   });
 });
+
+describe('validateAttributeBag — declaration edge cases', () => {
+  it('treats a list or map value as valid when declared', () => {
+    const definitions: AttributeDefinition[] = [
+      { id: 'tags', label: 'Tags', type: 'list' },
+      { id: 'meta', label: 'Meta', type: 'map' },
+    ];
+
+    expect(
+      validateAttributeBag(
+        {
+          tags: { type: 'list', value: [text('a')] },
+          meta: { type: 'map', value: { k: num(1) } },
+        },
+        definitions,
+        'x'
+      )
+    ).toEqual([]);
+  });
+
+  it('rejects a value whose tag is not a known attribute type', () => {
+    const issues = validateAttributeBag(
+      { health: { type: 'binary', value: 1 } } as never,
+      DEFINITIONS,
+      'x'
+    );
+    expect(issues[0].message).toContain('not a valid AttributeValue');
+  });
+});

@@ -334,6 +334,22 @@ describe('modification modifier reshape (#5 then #22)', () => {
     });
   });
 
+  it('handles a nested shape with neither values nor caps', () => {
+    const result = normalizeCharacterRulesetFields(
+      withModifications([
+        {
+          name: 'Targeting Suite',
+          description: '',
+          resourceModifiers: { categoryModifiers: { Agility: 1 } },
+        },
+      ])
+    );
+
+    expect(result.modifications?.[0].modifier).toEqual({
+      categoryDeltas: { Agility: 1 },
+    });
+  });
+
   it('migrates cyberware entries reached through the #5 key rename', () => {
     const legacy = {
       id: 'c1',
