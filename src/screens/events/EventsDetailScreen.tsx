@@ -27,6 +27,7 @@ import { colors as themeColors } from '@/styles/theme';
 import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
 import Markdown from 'react-native-markdown-display';
 import { formatEventDate } from '@utils/dateUtils';
+import { useFeature } from '@/ruleset';
 
 const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
   [QuestStatus.NotStarted]: 'Not Started',
@@ -57,6 +58,7 @@ interface EventWithDetails extends GameEvent {
 
 export const EventsDetailScreen: React.FC = () => {
   const navigation = useNavigation<EventsDetailNavigationProp>();
+  const questsEnabled = useFeature('quests');
   const route = useRoute<EventsDetailRouteProp>();
   const { eventId } = route.params;
 
@@ -219,8 +221,9 @@ export const EventsDetailScreen: React.FC = () => {
         </CollapsibleSection>
       )}
 
-      {/* Quests - Using CollapsibleSection */}
-      {event.quests.length > 0 && (
+      {/* Quests - Using CollapsibleSection. Gated: the QuestsDetail route is
+          unregistered when the ruleset has no quests, so the tap would throw. */}
+      {questsEnabled && event.quests.length > 0 && (
         <CollapsibleSection title="Quests">
           <View style={styles.list}>
             {event.quests.map(quest => (

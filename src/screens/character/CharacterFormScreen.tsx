@@ -37,7 +37,7 @@ import {
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { BaseFormScreen } from '@/components';
-import { useLabels, useRuleset } from '@/ruleset';
+import { useLabels, useRuleset, useFeature } from '@/ruleset';
 import { roleOf, type AttributeDefinition } from '@/ruleset/attributes';
 
 /**
@@ -110,6 +110,7 @@ export const CharacterFormScreen: React.FC = () => {
   const { ruleset } = useRuleset();
   const maxQualities = ruleset.limits?.maxQualities ?? 3;
   const editingCharacter = route.params?.character;
+  const modificationsEnabled = useFeature('modifications');
   const attributeRows = modifiableAttributeRows(ruleset.attributes);
   const archetypeLabel = (id: string): string =>
     ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
@@ -566,141 +567,126 @@ export const CharacterFormScreen: React.FC = () => {
         )}
       </View>
 
-      <View style={styles.formSection}>
-        <Text style={styles.label}>{label('modification.plural')}</Text>
-        {form.modifications &&
-          form.modifications.map((cyber, index) => (
-            <View key={index} style={styles.cyberwareContainer}>
-              <View style={styles.cyberwareHeaderRow}>
+      {/* Gated on `modifications`. Existing modifications stay on the
+          character and are saved untouched, so the flag hides the editor
+          rather than discarding data. */}
+      {modificationsEnabled && (
+        <View style={styles.formSection}>
+          <Text style={styles.label}>{label('modification.plural')}</Text>
+          {form.modifications &&
+            form.modifications.map((cyber, index) => (
+              <View key={index} style={styles.cyberwareContainer}>
+                <View style={styles.cyberwareHeaderRow}>
+                  <TextInput
+                    style={styles.cyberwareName}
+                    value={cyber.name}
+                    onChangeText={value => {
+                      const newCyberware = [...(form.modifications || [])];
+                      newCyberware[index] = { ...cyber, name: value };
+                      handleChange('modifications', newCyberware);
+                    }}
+                    placeholder={`${label('modification.singular')} name`}
+                  />
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => {
+                      const newCyberware = (form.modifications || []).filter(
+                        (_, i) => i !== index
+                      );
+                      handleChange('modifications', newCyberware);
+                    }}
+                  >
+                    <Text style={styles.removeButtonText}>×</Text>
+                  </TouchableOpacity>
+                </View>
                 <TextInput
-                  style={styles.cyberwareName}
-                  value={cyber.name}
+                  style={styles.cyberwareDescription}
+                  value={cyber.description}
                   onChangeText={value => {
                     const newCyberware = [...(form.modifications || [])];
-                    newCyberware[index] = { ...cyber, name: value };
+                    newCyberware[index] = { ...cyber, description: value };
                     handleChange('modifications', newCyberware);
                   }}
-                  placeholder={`${label('modification.singular')} name`}
+                  placeholder="Description"
+                  multiline
                 />
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => {
-                    const newCyberware = (form.modifications || []).filter(
-                      (_, i) => i !== index
-                    );
-                    handleChange('modifications', newCyberware);
-                  }}
-                >
-                  <Text style={styles.removeButtonText}>×</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={styles.cyberwareDescription}
-                value={cyber.description}
-                onChangeText={value => {
-                  const newCyberware = [...(form.modifications || [])];
-                  newCyberware[index] = { ...cyber, description: value };
-                  handleChange('modifications', newCyberware);
-                }}
-                placeholder="Description"
-                multiline
-              />
-              <View style={styles.cyberwareModifiersSection}>
-                <Text style={styles.cyberwareModifiersLabel}>
-                  Stat Modifiers (optional):
-                </Text>
-                {attributeRows.map((row, rowIndex) => (
-                  <View key={rowIndex} style={styles.modifierRow}>
-                    {row.map(attribute => (
-                      <View key={attribute.id} style={styles.modifierInput}>
-                        <Text style={styles.modifierLabel}>
-                          {attribute.label}:
-                        </Text>
-                        <TextInput
-                          style={styles.modifierField}
-                          value={
-                            cyber.modifier?.attributeDeltas?.[
-                              attribute.id
-                            ]?.toString() || ''
-                          }
-                          onChangeText={value => {
-                            const newCyberware = [
-                              ...(form.modifications || []),
-                            ];
-                            const numValue =
-                              value === '' ? undefined : parseInt(value) || 0;
-                            newCyberware[index] = setAttributeDelta(
-                              cyber,
-                              attribute.id,
-                              numValue
-                            );
-                            handleChange('modifications', newCyberware);
-                          }}
-                          placeholder="0"
-                          keyboardType="numeric"
-                        />
-                      </View>
-                    ))}
-                  </View>
-                ))}
-                <View style={styles.tagModifiersSection}>
-                  <Text style={styles.tagModifiersLabel}>
-                    {label('traitCategory.singular')} Score Modifiers
-                    (optional):
+                <View style={styles.cyberwareModifiersSection}>
+                  <Text style={styles.cyberwareModifiersLabel}>
+                    Stat Modifiers (optional):
                   </Text>
-                  <View style={styles.tagModifiersList}>
-                    {ruleset.traitCategories.map(category => {
-                      const tag = category.id;
-                      const currentValue =
-                        cyber.modifier?.categoryDeltas?.[tag];
-                      if (currentValue === undefined && !cyber.modifier)
-                        return null;
-
-                      return (
-                        <View key={tag} style={styles.tagModifierRow}>
-                          <Text style={styles.tagModifierName}>
-                            {category.label}:
+                  {attributeRows.map((row, rowIndex) => (
+                    <View key={rowIndex} style={styles.modifierRow}>
+                      {row.map(attribute => (
+                        <View key={attribute.id} style={styles.modifierInput}>
+                          <Text style={styles.modifierLabel}>
+                            {attribute.label}:
                           </Text>
                           <TextInput
-                            style={styles.tagModifierField}
-                            value={currentValue?.toString() || ''}
+                            style={styles.modifierField}
+                            value={
+                              cyber.modifier?.attributeDeltas?.[
+                                attribute.id
+                              ]?.toString() || ''
+                            }
                             onChangeText={value => {
                               const newCyberware = [
                                 ...(form.modifications || []),
                               ];
                               const numValue =
                                 value === '' ? undefined : parseInt(value) || 0;
-
-                              const currentTagModifiers = {
-                                ...(cyber.modifier?.categoryDeltas || {}),
-                              };
-
-                              if (numValue === undefined) {
-                                delete currentTagModifiers[tag];
-                              } else {
-                                currentTagModifiers[tag] = numValue;
-                              }
-
-                              newCyberware[index] = setCategoryModifiers(
+                              newCyberware[index] = setAttributeDelta(
                                 cyber,
-                                currentTagModifiers
+                                attribute.id,
+                                numValue
                               );
                               handleChange('modifications', newCyberware);
                             }}
                             placeholder="0"
                             keyboardType="numeric"
                           />
-                          {currentValue !== undefined && (
-                            <TouchableOpacity
-                              style={styles.tagModifierRemove}
-                              onPress={() => {
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                  <View style={styles.tagModifiersSection}>
+                    <Text style={styles.tagModifiersLabel}>
+                      {label('traitCategory.singular')} Score Modifiers
+                      (optional):
+                    </Text>
+                    <View style={styles.tagModifiersList}>
+                      {ruleset.traitCategories.map(category => {
+                        const tag = category.id;
+                        const currentValue =
+                          cyber.modifier?.categoryDeltas?.[tag];
+                        if (currentValue === undefined && !cyber.modifier)
+                          return null;
+
+                        return (
+                          <View key={tag} style={styles.tagModifierRow}>
+                            <Text style={styles.tagModifierName}>
+                              {category.label}:
+                            </Text>
+                            <TextInput
+                              style={styles.tagModifierField}
+                              value={currentValue?.toString() || ''}
+                              onChangeText={value => {
                                 const newCyberware = [
                                   ...(form.modifications || []),
                                 ];
+                                const numValue =
+                                  value === ''
+                                    ? undefined
+                                    : parseInt(value) || 0;
+
                                 const currentTagModifiers = {
                                   ...(cyber.modifier?.categoryDeltas || {}),
                                 };
-                                delete currentTagModifiers[tag];
+
+                                if (numValue === undefined) {
+                                  delete currentTagModifiers[tag];
+                                } else {
+                                  currentTagModifiers[tag] = numValue;
+                                }
 
                                 newCyberware[index] = setCategoryModifiers(
                                   cyber,
@@ -708,66 +694,88 @@ export const CharacterFormScreen: React.FC = () => {
                                 );
                                 handleChange('modifications', newCyberware);
                               }}
-                            >
-                              <Text style={styles.tagModifierRemoveText}>
-                                ×
-                              </Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      );
-                    })}
-                  </View>
-                  <TouchableOpacity
-                    style={styles.addTagModifierButton}
-                    onPress={() => {
-                      // Find first tag that doesn't have a modifier
-                      const currentTagModifiers =
-                        cyber.modifier?.categoryDeltas || {};
-                      const availableTags = ruleset.traitCategories
-                        .map(category => category.id)
-                        .filter(tag => !(tag in currentTagModifiers));
+                              placeholder="0"
+                              keyboardType="numeric"
+                            />
+                            {currentValue !== undefined && (
+                              <TouchableOpacity
+                                style={styles.tagModifierRemove}
+                                onPress={() => {
+                                  const newCyberware = [
+                                    ...(form.modifications || []),
+                                  ];
+                                  const currentTagModifiers = {
+                                    ...(cyber.modifier?.categoryDeltas || {}),
+                                  };
+                                  delete currentTagModifiers[tag];
 
-                      if (availableTags.length > 0) {
-                        const newCyberware = [...(form.modifications || [])];
-                        newCyberware[index] = setCategoryModifiers(cyber, {
-                          ...currentTagModifiers,
-                          [availableTags[0]]: 1,
-                        });
-                        handleChange('modifications', newCyberware);
-                      } else {
-                        Alert.alert(
-                          `All ${label('traitCategory.plural')} Added`,
-                          `All available ${label(
-                            'traitCategory.plural',
-                            'lower'
-                          )} already have modifiers.`
+                                  newCyberware[index] = setCategoryModifiers(
+                                    cyber,
+                                    currentTagModifiers
+                                  );
+                                  handleChange('modifications', newCyberware);
+                                }}
+                              >
+                                <Text style={styles.tagModifierRemoveText}>
+                                  ×
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
                         );
-                      }
-                    }}
-                  >
-                    <Text style={styles.addTagModifierButtonText}>
-                      + Add {label('traitCategory.singular')} Modifier
-                    </Text>
-                  </TouchableOpacity>
+                      })}
+                    </View>
+                    <TouchableOpacity
+                      style={styles.addTagModifierButton}
+                      onPress={() => {
+                        // Find first tag that doesn't have a modifier
+                        const currentTagModifiers =
+                          cyber.modifier?.categoryDeltas || {};
+                        const availableTags = ruleset.traitCategories
+                          .map(category => category.id)
+                          .filter(tag => !(tag in currentTagModifiers));
+
+                        if (availableTags.length > 0) {
+                          const newCyberware = [...(form.modifications || [])];
+                          newCyberware[index] = setCategoryModifiers(cyber, {
+                            ...currentTagModifiers,
+                            [availableTags[0]]: 1,
+                          });
+                          handleChange('modifications', newCyberware);
+                        } else {
+                          Alert.alert(
+                            `All ${label('traitCategory.plural')} Added`,
+                            `All available ${label(
+                              'traitCategory.plural',
+                              'lower'
+                            )} already have modifiers.`
+                          );
+                        }
+                      }}
+                    >
+                      <Text style={styles.addTagModifierButtonText}>
+                        + Add {label('traitCategory.singular')} Modifier
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => {
-            handleChange('modifications', [
-              ...(form.modifications || []),
-              { name: '', description: '' },
-            ]);
-          }}
-        >
-          <Text style={styles.addButtonText}>
-            Add {label('modification.singular')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+            ))}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => {
+              handleChange('modifications', [
+                ...(form.modifications || []),
+                { name: '', description: '' },
+              ]);
+            }}
+          >
+            <Text style={styles.addButtonText}>
+              Add {label('modification.singular')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.formSection}>
         <Text style={styles.label}>Factions</Text>

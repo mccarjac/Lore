@@ -31,6 +31,7 @@ import { clearDiscordData } from '@/utils/discordStorage';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { SyncConflictModal } from '@components/common/SyncConflictModal';
+import { useFeature } from '@/ruleset';
 
 type ProgressOperation =
   | 'export'
@@ -52,6 +53,7 @@ interface PendingSyncPlan {
 }
 
 export const DataManagementScreen: React.FC = () => {
+  const gitSyncEnabled = useFeature('gitSync');
   const [progress, setProgress] = useState<ProgressState>({
     visible: false,
     message: '',
@@ -457,65 +459,70 @@ export const DataManagementScreen: React.FC = () => {
         </View>
 
         {/* GitHub Integration Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>GitHub Repository Sync</Text>
-          <Text style={styles.sectionDescription}>
-            Share data with other users through the AWInvestigationsDataLibrary
-            GitHub repository. Exports create pull requests for review.
-          </Text>
-          {gitHubConfigured && (
-            <Text style={styles.syncStatusText}>
-              {lastSync
-                ? `Last synced: ${new Date(lastSync).toLocaleString()}`
-                : 'Never synced'}
+        {gitSyncEnabled && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>GitHub Repository Sync</Text>
+            <Text style={styles.sectionDescription}>
+              Share data with other users through the
+              AWInvestigationsDataLibrary GitHub repository. Exports create pull
+              requests for review.
             </Text>
-          )}
+            {gitHubConfigured && (
+              <Text style={styles.syncStatusText}>
+                {lastSync
+                  ? `Last synced: ${new Date(lastSync).toLocaleString()}`
+                  : 'Never synced'}
+              </Text>
+            )}
 
-          {!gitHubConfigured && (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.setupButton]}
-              onPress={handleGitHubSetup}
-            >
-              <Text style={styles.buttonText}>Set Up GitHub Token</Text>
-            </TouchableOpacity>
-          )}
-
-          {gitHubConfigured && (
-            <>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.gitMergeButton]}
-                onPress={handleGitHubMerge}
-              >
-                <Text style={styles.buttonText}>Sync from GitHub (Merge)</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.gitExportButton]}
-                onPress={handleGitHubExport}
-              >
-                <Text style={styles.buttonText}>
-                  Export to GitHub (Create PR)
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.gitImportButton]}
-                onPress={handleGitHubImport}
-              >
-                <Text style={styles.buttonText}>
-                  Import from GitHub (Replace)
-                </Text>
-              </TouchableOpacity>
-
+            {!gitHubConfigured && (
               <TouchableOpacity
                 style={[styles.actionButton, styles.setupButton]}
                 onPress={handleGitHubSetup}
               >
-                <Text style={styles.buttonText}>Update GitHub Token</Text>
+                <Text style={styles.buttonText}>Set Up GitHub Token</Text>
               </TouchableOpacity>
-            </>
-          )}
-        </View>
+            )}
+
+            {gitHubConfigured && (
+              <>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.gitMergeButton]}
+                  onPress={handleGitHubMerge}
+                >
+                  <Text style={styles.buttonText}>
+                    Sync from GitHub (Merge)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.gitExportButton]}
+                  onPress={handleGitHubExport}
+                >
+                  <Text style={styles.buttonText}>
+                    Export to GitHub (Create PR)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.gitImportButton]}
+                  onPress={handleGitHubImport}
+                >
+                  <Text style={styles.buttonText}>
+                    Import from GitHub (Replace)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.setupButton]}
+                  onPress={handleGitHubSetup}
+                >
+                  <Text style={styles.buttonText}>Update GitHub Token</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
 
         {/* Danger Zone */}
         <View style={[styles.section, styles.dangerSection]}>

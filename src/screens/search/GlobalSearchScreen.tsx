@@ -26,6 +26,7 @@ import {
 import { commonStyles } from '@/styles/commonStyles';
 import { spacing } from '@/styles/theme';
 import { BaseListScreen } from '@/components';
+import { useRuleset } from '@/ruleset';
 
 type NavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'GlobalSearch'>,
@@ -64,6 +65,7 @@ export const GlobalSearchScreen: React.FC = () => {
   const [data, setData] = useState<GlobalSearchData>(EMPTY_DATA);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const navigation = useNavigation<NavigationProp>();
+  const { ruleset } = useRuleset();
 
   const loadData = useCallback(async () => {
     const [characters, factions, locations, events, quests] = await Promise.all(
@@ -86,7 +88,7 @@ export const GlobalSearchScreen: React.FC = () => {
   );
 
   const rows = useMemo<SearchRow[]>(() => {
-    const results = searchAllDomains(data, searchQuery);
+    const results = searchAllDomains(data, searchQuery, ruleset);
     const grouped: SearchRow[] = [];
     for (const domain of SEARCH_DOMAIN_ORDER) {
       const domainResults = results.filter(result => result.domain === domain);
@@ -103,7 +105,7 @@ export const GlobalSearchScreen: React.FC = () => {
       }
     }
     return grouped;
-  }, [data, searchQuery]);
+  }, [data, searchQuery, ruleset]);
 
   const handleResultPress = useCallback(
     (result: GlobalSearchResult) => {

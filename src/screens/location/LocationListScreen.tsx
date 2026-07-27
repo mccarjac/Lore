@@ -12,6 +12,7 @@ import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
 import { commonStyles } from '@/styles/commonStyles';
 import { BaseListScreen, HeaderAddButton } from '@/components';
+import { useFeature } from '@/ruleset';
 
 type LocationNavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'Locations'>,
@@ -29,6 +30,7 @@ export const LocationListScreen: React.FC = () => {
   const [locationInfos, setLocationInfos] = useState<LocationInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const navigation = useNavigation<LocationNavigationProp>();
+  const mapEnabled = useFeature('map');
 
   const loadData = useCallback(async () => {
     const characters = await loadCharacters();
@@ -142,9 +144,14 @@ export const LocationListScreen: React.FC = () => {
 
   const renderHeaderRight = () => (
     <View style={styles.headerButtons}>
-      <TouchableOpacity style={styles.headerMapButton} onPress={handleViewMap}>
-        <Text style={styles.headerMapButtonText}>🗺️</Text>
-      </TouchableOpacity>
+      {mapEnabled && (
+        <TouchableOpacity
+          style={styles.headerMapButton}
+          onPress={handleViewMap}
+        >
+          <Text style={styles.headerMapButtonText}>🗺️</Text>
+        </TouchableOpacity>
+      )}
       <HeaderAddButton onPress={handleCreateLocation} />
     </View>
   );

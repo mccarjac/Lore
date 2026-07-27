@@ -14,7 +14,12 @@ import { GameCharacter, RelationshipStanding } from '@/models/types';
 import { RootStackParamList } from '@/navigation/types';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
-import { useLabels, useRuleset, type RulesetDefinition } from '@/ruleset';
+import {
+  useLabels,
+  useRuleset,
+  useFeature,
+  type RulesetDefinition,
+} from '@/ruleset';
 import { loadCharacters } from '@/utils/characterStorage';
 
 type SearchScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -60,6 +65,7 @@ export const CharacterSearchScreen: React.FC = () => {
   });
   const [searchResults, setSearchResults] = useState<GameCharacter[]>([]);
 
+  const recipesEnabled = useFeature('recipes');
   const archetypeLabel = (id: string): string =>
     ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
 
@@ -232,28 +238,30 @@ export const CharacterSearchScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={styles.criteriaItem}>
-          <Text style={styles.label}>{label('recipe.singular')}</Text>
-          <Picker
-            selectedValue={searchCriteria.recipeId}
-            style={styles.picker}
-            onValueChange={value =>
-              setSearchCriteria(prev => ({
-                ...prev,
-                recipeId: value || undefined,
-              }))
-            }
-          >
-            <Picker.Item label={`Any ${label('recipe.singular')}`} value="" />
-            {(ruleset.recipes ?? []).map(recipe => (
-              <Picker.Item
-                key={recipe.id}
-                label={recipe.name}
-                value={recipe.id}
-              />
-            ))}
-          </Picker>
-        </View>
+        {recipesEnabled && (
+          <View style={styles.criteriaItem}>
+            <Text style={styles.label}>{label('recipe.singular')}</Text>
+            <Picker
+              selectedValue={searchCriteria.recipeId}
+              style={styles.picker}
+              onValueChange={value =>
+                setSearchCriteria(prev => ({
+                  ...prev,
+                  recipeId: value || undefined,
+                }))
+              }
+            >
+              <Picker.Item label={`Any ${label('recipe.singular')}`} value="" />
+              {(ruleset.recipes ?? []).map(recipe => (
+                <Picker.Item
+                  key={recipe.id}
+                  label={recipe.name}
+                  value={recipe.id}
+                />
+              ))}
+            </Picker>
+          </View>
+        )}
 
         <View style={styles.criteriaItem}>
           <Text style={styles.label}>Present Status</Text>

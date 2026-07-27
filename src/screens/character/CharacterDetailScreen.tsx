@@ -17,7 +17,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
 import { calculateDerivedStats, type DerivedStats } from '@/ruleset/derived';
-import { useLabels, useRuleset } from '@/ruleset';
+import { useLabels, useRuleset, useFeature } from '@/ruleset';
 import { roleOf } from '@/ruleset/attributes';
 import { GameCharacter, GameLocation, DiscordMessage } from '@/models/types';
 import {
@@ -50,6 +50,9 @@ export const CharacterDetailScreen: React.FC = () => {
     ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
   const categoryLabel = (id: string): string =>
     ruleset.traitCategories.find(category => category.id === id)?.label ?? id;
+  const modificationsEnabled = useFeature('modifications');
+  const recipesEnabled = useFeature('recipes');
+  const discordEnabled = useFeature('discord');
   const { character } = route.params || {};
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
   const [locations, setLocations] = useState<GameLocation[]>([]);
@@ -221,37 +224,39 @@ export const CharacterDetailScreen: React.FC = () => {
             <View key={trait.id} style={styles.itemContainer}>
               <Text style={styles.titleText}>{trait.name}</Text>
               <Text style={styles.descriptionText}>{trait.description}</Text>
-              {trait.recipeIds && trait.recipeIds.length > 0 && (
-                <View style={styles.recipesContainer}>
-                  <Text style={styles.recipesTitle}>
-                    Known {label('recipe.plural')}:
-                  </Text>
-                  {trait.recipeIds.map(recipeId => {
-                    const recipe = (ruleset.recipes ?? []).find(
-                      r => r.id === recipeId
-                    );
-                    if (!recipe) return null;
-                    return (
-                      <View key={recipe.id} style={styles.recipeItem}>
-                        <View style={styles.recipeHeader}>
-                          <Text style={styles.recipeName}>{recipe.name}</Text>
-                        </View>
-                        <Text style={styles.recipeDescription}>
-                          {recipe.description}
-                        </Text>
-                        <Text style={styles.materialsTitle}>
-                          Materials Needed:
-                        </Text>
-                        {recipe.materials.map((material, index) => (
-                          <Text key={index} style={styles.materialItem}>
-                            • {material}
+              {recipesEnabled &&
+                trait.recipeIds &&
+                trait.recipeIds.length > 0 && (
+                  <View style={styles.recipesContainer}>
+                    <Text style={styles.recipesTitle}>
+                      Known {label('recipe.plural')}:
+                    </Text>
+                    {trait.recipeIds.map(recipeId => {
+                      const recipe = (ruleset.recipes ?? []).find(
+                        r => r.id === recipeId
+                      );
+                      if (!recipe) return null;
+                      return (
+                        <View key={recipe.id} style={styles.recipeItem}>
+                          <View style={styles.recipeHeader}>
+                            <Text style={styles.recipeName}>{recipe.name}</Text>
+                          </View>
+                          <Text style={styles.recipeDescription}>
+                            {recipe.description}
                           </Text>
-                        ))}
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
+                          <Text style={styles.materialsTitle}>
+                            Materials Needed:
+                          </Text>
+                          {recipe.materials.map((material, index) => (
+                            <Text key={index} style={styles.materialItem}>
+                              • {material}
+                            </Text>
+                          ))}
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
             </View>
           ))}
       </CollapsibleSection>
@@ -357,7 +362,11 @@ export const CharacterDetailScreen: React.FC = () => {
   };
 
   const renderCyberware = () => {
-    if (!character.modifications || character.modifications.length === 0) {
+    if (
+      !modificationsEnabled ||
+      !character.modifications ||
+      character.modifications.length === 0
+    ) {
       return null;
     }
 
@@ -409,7 +418,7 @@ export const CharacterDetailScreen: React.FC = () => {
   };
 
   const renderDiscordConversations = () => {
-    if (!discordMessages || discordMessages.length === 0) {
+    if (!discordEnabled || !discordMessages || discordMessages.length === 0) {
       return null;
     }
 
