@@ -16,13 +16,9 @@ import {
 } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
-import {
-  AVAILABLE_PERKS,
-  AVAILABLE_DISTINCTIONS,
-  AVAILABLE_RECIPES,
-} from '@models/gameData';
 import { calculateDerivedStats, type DerivedStats } from '@/ruleset/derived';
 import { useLabels, useRuleset } from '@/ruleset';
+import { roleOf } from '@/ruleset/attributes';
 import { GameCharacter, GameLocation, DiscordMessage } from '@/models/types';
 import {
   loadCharacters,
@@ -50,6 +46,10 @@ export const CharacterDetailScreen: React.FC = () => {
   const { ruleset } = useRuleset();
   const attributeLabel = (attributeId: string): string =>
     ruleset.attributes.find(a => a.id === attributeId)?.label ?? attributeId;
+  const archetypeLabel = (id: string): string =>
+    ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
+  const categoryLabel = (id: string): string =>
+    ruleset.traitCategories.find(category => category.id === id)?.label ?? id;
   const { character } = route.params || {};
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
   const [locations, setLocations] = useState<GameLocation[]>([]);
@@ -176,7 +176,7 @@ export const CharacterDetailScreen: React.FC = () => {
   // Calculate derived stats with error handling
   let derivedStats: DerivedStats;
   try {
-    derivedStats = calculateDerivedStats(character);
+    derivedStats = calculateDerivedStats(character, ruleset);
     // eslint-disable-next-line no-console
     console.log('[CharacterDetail] Derived stats calculated successfully');
   } catch (error) {
@@ -215,43 +215,45 @@ export const CharacterDetailScreen: React.FC = () => {
 
     return (
       <CollapsibleSection title={label('trait.plural')} defaultCollapsed={true}>
-        {AVAILABLE_PERKS.filter(perk =>
-          character.traitIds.includes(perk.id)
-        ).map(perk => (
-          <View key={perk.id} style={styles.itemContainer}>
-            <Text style={styles.titleText}>{perk.name}</Text>
-            <Text style={styles.descriptionText}>{perk.description}</Text>
-            {perk.recipeIds && perk.recipeIds.length > 0 && (
-              <View style={styles.recipesContainer}>
-                <Text style={styles.recipesTitle}>
-                  Known {label('recipe.plural')}:
-                </Text>
-                {perk.recipeIds.map(recipeId => {
-                  const recipe = AVAILABLE_RECIPES.find(r => r.id === recipeId);
-                  if (!recipe) return null;
-                  return (
-                    <View key={recipe.id} style={styles.recipeItem}>
-                      <View style={styles.recipeHeader}>
-                        <Text style={styles.recipeName}>{recipe.name}</Text>
-                      </View>
-                      <Text style={styles.recipeDescription}>
-                        {recipe.description}
-                      </Text>
-                      <Text style={styles.materialsTitle}>
-                        Materials Needed:
-                      </Text>
-                      {recipe.materials.map((material, index) => (
-                        <Text key={index} style={styles.materialItem}>
-                          • {material}
+        {ruleset.traits
+          .filter(trait => character.traitIds.includes(trait.id))
+          .map(trait => (
+            <View key={trait.id} style={styles.itemContainer}>
+              <Text style={styles.titleText}>{trait.name}</Text>
+              <Text style={styles.descriptionText}>{trait.description}</Text>
+              {trait.recipeIds && trait.recipeIds.length > 0 && (
+                <View style={styles.recipesContainer}>
+                  <Text style={styles.recipesTitle}>
+                    Known {label('recipe.plural')}:
+                  </Text>
+                  {trait.recipeIds.map(recipeId => {
+                    const recipe = (ruleset.recipes ?? []).find(
+                      r => r.id === recipeId
+                    );
+                    if (!recipe) return null;
+                    return (
+                      <View key={recipe.id} style={styles.recipeItem}>
+                        <View style={styles.recipeHeader}>
+                          <Text style={styles.recipeName}>{recipe.name}</Text>
+                        </View>
+                        <Text style={styles.recipeDescription}>
+                          {recipe.description}
                         </Text>
-                      ))}
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
-        ))}
+                        <Text style={styles.materialsTitle}>
+                          Materials Needed:
+                        </Text>
+                        {recipe.materials.map((material, index) => (
+                          <Text key={index} style={styles.materialItem}>
+                            • {material}
+                          </Text>
+                        ))}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          ))}
       </CollapsibleSection>
     );
   };
@@ -266,16 +268,14 @@ export const CharacterDetailScreen: React.FC = () => {
         title={label('quality.plural')}
         defaultCollapsed={true}
       >
-        {AVAILABLE_DISTINCTIONS.filter(distinction =>
-          character.qualityIds.includes(distinction.id)
-        ).map(distinction => (
-          <View key={distinction.id} style={styles.itemContainer}>
-            <Text style={styles.titleText}>{distinction.name}</Text>
-            <Text style={styles.descriptionText}>
-              {distinction.description}
-            </Text>
-          </View>
-        ))}
+        {ruleset.qualities
+          .filter(quality => character.qualityIds.includes(quality.id))
+          .map(quality => (
+            <View key={quality.id} style={styles.itemContainer}>
+              <Text style={styles.titleText}>{quality.name}</Text>
+              <Text style={styles.descriptionText}>{quality.description}</Text>
+            </View>
+          ))}
       </CollapsibleSection>
     );
   };
@@ -386,7 +386,8 @@ export const CharacterDetailScreen: React.FC = () => {
                 {Object.entries(cyber.modifier.categoryDeltas ?? {}).map(
                   ([categoryId, delta]) => (
                     <Text key={categoryId} style={styles.cyberwareModifier}>
-                      • {categoryId} {label('traitCategory.singular')} Score:{' '}
+                      • {categoryLabel(categoryId)}{' '}
+                      {label('traitCategory.singular')} Score:{' '}
                       {delta > 0 ? '+' : ''}
                       {delta}
                     </Text>
@@ -492,7 +493,8 @@ export const CharacterDetailScreen: React.FC = () => {
         <Text style={styles.name}>{character.name}</Text>
         <View style={styles.headerInfo}>
           <Text style={styles.subheader}>
-            Species: {character.archetypeId} / Location:{' '}
+            {label('archetype.singular')}:{' '}
+            {archetypeLabel(character.archetypeId)} / Location:{' '}
             {getLocationName(character.locationId)}
           </Text>
           {character.occupation && (
@@ -507,7 +509,7 @@ export const CharacterDetailScreen: React.FC = () => {
           )}
           <View style={styles.statsContainer}>
             {ruleset.attributes
-              .filter(attribute => attribute.role === 'resource')
+              .filter(attribute => roleOf(attribute) === 'resource')
               .map(attribute => (
                 <Text key={attribute.id} style={styles.statItem}>
                   Max {attribute.label}:{' '}

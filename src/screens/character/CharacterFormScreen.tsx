@@ -26,7 +26,6 @@ import {
   RelationshipStanding,
   Modification,
 } from '@models/types';
-import { SPECIES_BASE_STATS } from '@models/speciesTypes';
 import {
   addCharacter,
   updateCharacter,
@@ -35,21 +34,17 @@ import {
   loadFactions,
   loadLocations,
 } from '@utils/characterStorage';
-import {
-  AVAILABLE_PERKS,
-  AVAILABLE_DISTINCTIONS,
-  PerkTag,
-} from '@models/gameData';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { BaseFormScreen } from '@/components';
 import { useLabels, useRuleset } from '@/ruleset';
+import { roleOf, type AttributeDefinition } from '@/ruleset/attributes';
 
 /**
  * A modification's numeric deltas are a flat attribute-id -> delta map since
  * #22 (a cap is simply another attribute), so these keep the per-input update
- * readable. #8 replaces this whole section with a loop over the ruleset's
- * attribute definitions.
+ * readable — the editor loops over the ruleset's attribute definitions and
+ * calls these per input.
  */
 const setAttributeDelta = (
   modification: Modification,
@@ -86,6 +81,26 @@ const setCategoryModifiers = (
   },
 });
 
+/**
+ * Numeric modification inputs are laid out two per row. `derived.ts` applies a
+ * modification's deltas to `resource` and `cap` attributes only, so those are
+ * exactly the ones worth an input — a capability flag would get a meaningless
+ * numeric field.
+ */
+const modifiableAttributeRows = (
+  attributes: AttributeDefinition[]
+): AttributeDefinition[][] => {
+  const modifiable = attributes.filter(
+    attribute => roleOf(attribute) === 'resource' || roleOf(attribute) === 'cap'
+  );
+
+  const rows: AttributeDefinition[][] = [];
+  for (let index = 0; index < modifiable.length; index += 2) {
+    rows.push(modifiable.slice(index, index + 2));
+  }
+  return rows;
+};
+
 type CharacterFormRouteProp = RouteProp<RootStackParamList, 'CharacterForm'>;
 
 export const CharacterFormScreen: React.FC = () => {
@@ -95,7 +110,12 @@ export const CharacterFormScreen: React.FC = () => {
   const { ruleset } = useRuleset();
   const maxQualities = ruleset.limits?.maxQualities ?? 3;
   const editingCharacter = route.params?.character;
-  const [selectedPerkTag, setSelectedPerkTag] = useState<string>('');
+  const attributeRows = modifiableAttributeRows(ruleset.attributes);
+  const archetypeLabel = (id: string): string =>
+    ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
+  const categoryLabel = (id: string): string =>
+    ruleset.traitCategories.find(category => category.id === id)?.label ?? id;
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
   const [availableFactions, setAvailableFactions] = useState<string[]>([]);
   const [availableLocations, setAvailableLocations] = useState<GameLocation[]>(
@@ -126,7 +146,8 @@ export const CharacterFormScreen: React.FC = () => {
         }
       : {
           name: '',
-          archetypeId: 'Human',
+          archetypeId:
+            ruleset.defaultArchetypeId ?? ruleset.archetypes[0]?.id ?? '',
           traitIds: [],
           qualityIds: [],
           factions: [],
@@ -382,11 +403,11 @@ export const CharacterFormScreen: React.FC = () => {
           style={[styles.picker, { flex: 1 }]}
           onValueChange={(value: string) => handleChange('archetypeId', value)}
         >
-          {Object.keys(SPECIES_BASE_STATS).map(archetypeId => (
+          {ruleset.archetypes.map(archetype => (
             <Picker.Item
-              key={archetypeId}
-              label={archetypeId}
-              value={archetypeId}
+              key={archetype.id}
+              label={archetype.label}
+              value={archetype.id}
             />
           ))}
         </Picker>
@@ -427,60 +448,69 @@ export const CharacterFormScreen: React.FC = () => {
                 Filter by {label('traitCategory.singular')}:
               </Text>
               <Picker
-                selectedValue={selectedPerkTag}
+                selectedValue={selectedCategoryId}
                 style={[styles.picker, { flex: 1 }]}
-                onValueChange={setSelectedPerkTag}
+                onValueChange={setSelectedCategoryId}
               >
                 <Picker.Item
                   label={`All ${label('traitCategory.plural')}`}
                   value=""
                 />
-                {Array.from(new Set(AVAILABLE_PERKS.map(perk => perk.tag)))
-                  .sort()
-                  .map(tag => (
-                    <Picker.Item key={tag} label={tag} value={tag} />
-                  ))}
+                {ruleset.traitCategories.map(category => (
+                  <Picker.Item
+                    key={category.id}
+                    label={category.label}
+                    value={category.id}
+                  />
+                ))}
               </Picker>
             </View>
-            {AVAILABLE_PERKS.filter(
-              perk =>
-                (!selectedPerkTag || perk.tag === selectedPerkTag) &&
-                (!perk.allowedSpecies ||
-                  (perk.allowedSpecies as string[]).includes(form.archetypeId))
-            ).map(perk => (
-              <TouchableOpacity
-                key={perk.id}
-                style={[
-                  styles.selectionItem,
-                  form.traitIds.includes(perk.id) && styles.selectedItem,
-                  perk.allowedSpecies && styles.speciesSpecificItem,
-                ]}
-                onPress={() => {
-                  const newPerkIds = form.traitIds.includes(perk.id)
-                    ? form.traitIds.filter(id => id !== perk.id)
-                    : [...form.traitIds, perk.id];
-                  handleChange('traitIds', newPerkIds);
-                }}
-              >
-                <View style={styles.perkContainer}>
-                  <View style={styles.perkHeaderContainer}>
-                    <Text style={styles.itemName}>{perk.name}</Text>
-                    <View style={styles.perkBadgeContainer}>
-                      {perk.allowedSpecies &&
-                        perk.allowedSpecies.length > 0 && (
-                          <Text style={styles.speciesText}>
-                            {perk.allowedSpecies.length === 1
-                              ? perk.allowedSpecies[0]
-                              : `${perk.allowedSpecies.length} ${label('archetype.plural')}`}
-                          </Text>
-                        )}
-                      <Text style={styles.tagText}>{perk.tag}</Text>
+            {ruleset.traits
+              .filter(
+                trait =>
+                  (!selectedCategoryId ||
+                    trait.categoryId === selectedCategoryId) &&
+                  (!trait.allowedArchetypeIds ||
+                    trait.allowedArchetypeIds.includes(form.archetypeId))
+              )
+              .map(trait => (
+                <TouchableOpacity
+                  key={trait.id}
+                  style={[
+                    styles.selectionItem,
+                    form.traitIds.includes(trait.id) && styles.selectedItem,
+                    trait.allowedArchetypeIds && styles.speciesSpecificItem,
+                  ]}
+                  onPress={() => {
+                    const newTraitIds = form.traitIds.includes(trait.id)
+                      ? form.traitIds.filter(id => id !== trait.id)
+                      : [...form.traitIds, trait.id];
+                    handleChange('traitIds', newTraitIds);
+                  }}
+                >
+                  <View style={styles.perkContainer}>
+                    <View style={styles.perkHeaderContainer}>
+                      <Text style={styles.itemName}>{trait.name}</Text>
+                      <View style={styles.perkBadgeContainer}>
+                        {trait.allowedArchetypeIds &&
+                          trait.allowedArchetypeIds.length > 0 && (
+                            <Text style={styles.speciesText}>
+                              {trait.allowedArchetypeIds.length === 1
+                                ? archetypeLabel(trait.allowedArchetypeIds[0])
+                                : `${trait.allowedArchetypeIds.length} ${label('archetype.plural')}`}
+                            </Text>
+                          )}
+                        <Text style={styles.tagText}>
+                          {categoryLabel(trait.categoryId)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-                <Text style={styles.descriptionText}>{perk.description}</Text>
-              </TouchableOpacity>
-            ))}
+                  <Text style={styles.descriptionText}>
+                    {trait.description}
+                  </Text>
+                </TouchableOpacity>
+              ))}
           </>
         )}
       </View>
@@ -497,30 +527,26 @@ export const CharacterFormScreen: React.FC = () => {
         </TouchableOpacity>
         {distinctionsExpanded && (
           <>
-            {AVAILABLE_DISTINCTIONS.map(distinction => (
+            {ruleset.qualities.map(quality => (
               <TouchableOpacity
-                key={distinction.id}
+                key={quality.id}
                 style={[
                   styles.selectionItem,
-                  form.qualityIds.includes(distinction.id) &&
-                    styles.selectedItem,
+                  form.qualityIds.includes(quality.id) && styles.selectedItem,
                 ]}
                 onPress={() => {
-                  const isSelected = form.qualityIds.includes(distinction.id);
+                  const isSelected = form.qualityIds.includes(quality.id);
 
                   if (isSelected) {
                     // Allow deselection
-                    const newDistinctionIds = form.qualityIds.filter(
-                      id => id !== distinction.id
+                    const newQualityIds = form.qualityIds.filter(
+                      id => id !== quality.id
                     );
-                    handleChange('qualityIds', newDistinctionIds);
+                    handleChange('qualityIds', newQualityIds);
                   } else if (form.qualityIds.length < maxQualities) {
                     // Allow selection if under limit
-                    const newDistinctionIds = [
-                      ...form.qualityIds,
-                      distinction.id,
-                    ];
-                    handleChange('qualityIds', newDistinctionIds);
+                    const newQualityIds = [...form.qualityIds, quality.id];
+                    handleChange('qualityIds', newQualityIds);
                   } else {
                     // Show alert when limit reached
                     Alert.alert(
@@ -533,7 +559,7 @@ export const CharacterFormScreen: React.FC = () => {
                   }
                 }}
               >
-                <Text style={styles.itemName}>{distinction.name}</Text>
+                <Text style={styles.itemName}>{quality.name}</Text>
               </TouchableOpacity>
             ))}
           </>
@@ -583,108 +609,48 @@ export const CharacterFormScreen: React.FC = () => {
                 <Text style={styles.cyberwareModifiersLabel}>
                   Stat Modifiers (optional):
                 </Text>
-                <View style={styles.modifierRow}>
-                  <View style={styles.modifierInput}>
-                    <Text style={styles.modifierLabel}>Health:</Text>
-                    <TextInput
-                      style={styles.modifierField}
-                      value={
-                        cyber.modifier?.attributeDeltas?.health?.toString() ||
-                        ''
-                      }
-                      onChangeText={value => {
-                        const newCyberware = [...(form.modifications || [])];
-                        const numValue =
-                          value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = setAttributeDelta(
-                          cyber,
-                          'health',
-                          numValue
-                        );
-                        handleChange('modifications', newCyberware);
-                      }}
-                      placeholder="0"
-                      keyboardType="numeric"
-                    />
+                {attributeRows.map((row, rowIndex) => (
+                  <View key={rowIndex} style={styles.modifierRow}>
+                    {row.map(attribute => (
+                      <View key={attribute.id} style={styles.modifierInput}>
+                        <Text style={styles.modifierLabel}>
+                          {attribute.label}:
+                        </Text>
+                        <TextInput
+                          style={styles.modifierField}
+                          value={
+                            cyber.modifier?.attributeDeltas?.[
+                              attribute.id
+                            ]?.toString() || ''
+                          }
+                          onChangeText={value => {
+                            const newCyberware = [
+                              ...(form.modifications || []),
+                            ];
+                            const numValue =
+                              value === '' ? undefined : parseInt(value) || 0;
+                            newCyberware[index] = setAttributeDelta(
+                              cyber,
+                              attribute.id,
+                              numValue
+                            );
+                            handleChange('modifications', newCyberware);
+                          }}
+                          placeholder="0"
+                          keyboardType="numeric"
+                        />
+                      </View>
+                    ))}
                   </View>
-                  <View style={styles.modifierInput}>
-                    <Text style={styles.modifierLabel}>Limit:</Text>
-                    <TextInput
-                      style={styles.modifierField}
-                      value={
-                        cyber.modifier?.attributeDeltas?.limit?.toString() || ''
-                      }
-                      onChangeText={value => {
-                        const newCyberware = [...(form.modifications || [])];
-                        const numValue =
-                          value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = setAttributeDelta(
-                          cyber,
-                          'limit',
-                          numValue
-                        );
-                        handleChange('modifications', newCyberware);
-                      }}
-                      placeholder="0"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-                <View style={styles.modifierRow}>
-                  <View style={styles.modifierInput}>
-                    <Text style={styles.modifierLabel}>Health Cap:</Text>
-                    <TextInput
-                      style={styles.modifierField}
-                      value={
-                        cyber.modifier?.attributeDeltas?.healthCap?.toString() ||
-                        ''
-                      }
-                      onChangeText={value => {
-                        const newCyberware = [...(form.modifications || [])];
-                        const numValue =
-                          value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = setAttributeDelta(
-                          cyber,
-                          'healthCap',
-                          numValue
-                        );
-                        handleChange('modifications', newCyberware);
-                      }}
-                      placeholder="0"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={styles.modifierInput}>
-                    <Text style={styles.modifierLabel}>Limit Cap:</Text>
-                    <TextInput
-                      style={styles.modifierField}
-                      value={
-                        cyber.modifier?.attributeDeltas?.limitCap?.toString() ||
-                        ''
-                      }
-                      onChangeText={value => {
-                        const newCyberware = [...(form.modifications || [])];
-                        const numValue =
-                          value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = setAttributeDelta(
-                          cyber,
-                          'limitCap',
-                          numValue
-                        );
-                        handleChange('modifications', newCyberware);
-                      }}
-                      placeholder="0"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
+                ))}
                 <View style={styles.tagModifiersSection}>
                   <Text style={styles.tagModifiersLabel}>
                     {label('traitCategory.singular')} Score Modifiers
                     (optional):
                   </Text>
                   <View style={styles.tagModifiersList}>
-                    {Object.values(PerkTag).map(tag => {
+                    {ruleset.traitCategories.map(category => {
+                      const tag = category.id;
                       const currentValue =
                         cyber.modifier?.categoryDeltas?.[tag];
                       if (currentValue === undefined && !cyber.modifier)
@@ -692,7 +658,9 @@ export const CharacterFormScreen: React.FC = () => {
 
                       return (
                         <View key={tag} style={styles.tagModifierRow}>
-                          <Text style={styles.tagModifierName}>{tag}:</Text>
+                          <Text style={styles.tagModifierName}>
+                            {category.label}:
+                          </Text>
                           <TextInput
                             style={styles.tagModifierField}
                             value={currentValue?.toString() || ''}
@@ -756,9 +724,9 @@ export const CharacterFormScreen: React.FC = () => {
                       // Find first tag that doesn't have a modifier
                       const currentTagModifiers =
                         cyber.modifier?.categoryDeltas || {};
-                      const availableTags = Object.values(PerkTag).filter(
-                        tag => !(tag in currentTagModifiers)
-                      );
+                      const availableTags = ruleset.traitCategories
+                        .map(category => category.id)
+                        .filter(tag => !(tag in currentTagModifiers));
 
                       if (availableTags.length > 0) {
                         const newCyberware = [...(form.modifications || [])];
@@ -791,11 +759,7 @@ export const CharacterFormScreen: React.FC = () => {
           onPress={() => {
             handleChange('modifications', [
               ...(form.modifications || []),
-              {
-                name: '',
-                description: '',
-                statModifiers: {},
-              },
+              { name: '', description: '' },
             ]);
           }}
         >
