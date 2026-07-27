@@ -44,9 +44,8 @@ const CAP_CYBERWARE: Modification[] = [
   {
     name: 'Reinforced Frame',
     description: '',
-    resourceModifiers: {
-      values: { health: 5, limit: 5 },
-      caps: { health: 3, limit: 2 },
+    modifier: {
+      attributeDeltas: { health: 5, limit: 5, healthCap: 3, limitCap: 2 },
     },
   },
 ] as Modification[];
@@ -93,7 +92,7 @@ export const buildParityCases = (): Record<string, GameCharacter> => {
     {
       name: 'Targeting Suite',
       description: '',
-      resourceModifiers: { categoryModifiers: { [PerkTag.Agility]: 3 } },
+      modifier: { categoryDeltas: { [PerkTag.Agility]: 3 } },
     },
   ] as Modification[]);
 

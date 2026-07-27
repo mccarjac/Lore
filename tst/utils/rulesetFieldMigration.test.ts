@@ -12,6 +12,7 @@ import {
   normalizeQuestRulesetFields,
   normalizeQuestsRulesetFields,
 } from '@utils/rulesetFieldMigration';
+import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
 import { QuestStatus, type GameCharacter, type GameQuest } from '@models/types';
 
 const TS = '2026-01-01T00:00:00.000Z';
@@ -223,7 +224,7 @@ describe('array normalizers', () => {
   });
 });
 
-describe('modification resource-modifier reshape (#5)', () => {
+describe('modification modifier reshape (#5 then #22)', () => {
   const withModifications = (modifications: unknown[]): GameCharacter =>
     ({
       id: 'c1',
@@ -238,7 +239,7 @@ describe('modification resource-modifier reshape (#5)', () => {
       updatedAt: TS,
     }) as unknown as GameCharacter;
 
-  it('splits flat stat modifiers into values and caps', () => {
+  it('flattens pre-#5 stat modifiers into attribute deltas', () => {
     const result = normalizeCharacterRulesetFields(
       withModifications([
         {
@@ -249,14 +250,41 @@ describe('modification resource-modifier reshape (#5)', () => {
       ])
     );
 
-    expect(result.modifications?.[0].resourceModifiers).toEqual({
-      values: { health: 5, limit: 5 },
-      caps: { health: 3, limit: 2 },
+    // The non-obvious part: a cap keyed by a *resource* id lands under that
+    // resource's capAttributeId, not under the resource itself.
+    expect(result.modifications?.[0].modifier).toEqual({
+      attributeDeltas: { health: 5, limit: 5, healthCap: 3, limitCap: 2 },
     });
     expect('statModifiers' in (result.modifications?.[0] ?? {})).toBe(false);
   });
 
-  it('renames tagModifiers to categoryModifiers', () => {
+  it('flattens the post-#5 nested shape that shipped in #21', () => {
+    // Anyone who ran the Phase 1 build has this vintage on disk, so it has to
+    // migrate as reliably as the original flat one.
+    const result = normalizeCharacterRulesetFields(
+      withModifications([
+        {
+          name: 'Reinforced Frame',
+          description: '',
+          resourceModifiers: {
+            values: { health: 5 },
+            caps: { limit: 2 },
+            categoryModifiers: { Agility: 3 },
+          },
+        },
+      ])
+    );
+
+    expect(result.modifications?.[0].modifier).toEqual({
+      attributeDeltas: { health: 5, limitCap: 2 },
+      categoryDeltas: { Agility: 3 },
+    });
+    expect('resourceModifiers' in (result.modifications?.[0] ?? {})).toBe(
+      false
+    );
+  });
+
+  it('renames tagModifiers to categoryDeltas', () => {
     const result = normalizeCharacterRulesetFields(
       withModifications([
         {
@@ -267,20 +295,42 @@ describe('modification resource-modifier reshape (#5)', () => {
       ])
     );
 
-    expect(result.modifications?.[0].resourceModifiers).toEqual({
-      categoryModifiers: { Agility: 3 },
+    expect(result.modifications?.[0].modifier).toEqual({
+      categoryDeltas: { Agility: 3 },
     });
   });
 
-  it('omits empty groups rather than emitting empty objects', () => {
+  it('maps a lone cap onto its cap attribute', () => {
     const result = normalizeCharacterRulesetFields(
       withModifications([
         { name: 'Plating', description: '', statModifiers: { healthCap: 1 } },
       ])
     );
 
-    expect(result.modifications?.[0].resourceModifiers).toEqual({
-      caps: { health: 1 },
+    expect(result.modifications?.[0].modifier).toEqual({
+      attributeDeltas: { healthCap: 1 },
+    });
+  });
+
+  it('keeps a cap delta under the resource id when no cap attribute exists', () => {
+    // Losing the delta silently would be worse than emitting one the
+    // validator can flag.
+    const rulesetWithoutCaps = {
+      ...afterworldsRuleset,
+      attributes: afterworldsRuleset.attributes.map(a =>
+        a.id === 'health' ? { ...a, capAttributeId: undefined } : a
+      ),
+    };
+
+    const result = normalizeCharacterRulesetFields(
+      withModifications([
+        { name: 'Plating', description: '', statModifiers: { healthCap: 1 } },
+      ]),
+      rulesetWithoutCaps
+    );
+
+    expect(result.modifications?.[0].modifier).toEqual({
+      attributeDeltas: { health: 1 },
     });
   });
 
@@ -303,38 +353,42 @@ describe('modification resource-modifier reshape (#5)', () => {
     const result = normalizeCharacterRulesetFields(legacy);
 
     expect('cyberware' in result).toBe(false);
-    expect(result.modifications?.[0].resourceModifiers).toEqual({
-      values: { health: 2 },
+    expect(result.modifications?.[0].modifier).toEqual({
+      attributeDeltas: { health: 2 },
     });
   });
 
-  it('is idempotent and preserves the reference when already nested', () => {
+  it('is idempotent and preserves the reference when already current', () => {
     const current = withModifications([
       {
         name: 'Frame',
         description: '',
-        resourceModifiers: { values: { health: 2 } },
+        modifier: { attributeDeltas: { health: 2 } },
       },
     ]);
 
     expect(normalizeCharacterRulesetFields(current)).toBe(current);
   });
 
-  it('drops a stale statModifiers when resourceModifiers already exists', () => {
+  it('drops stale predecessors when modifier already exists', () => {
     const result = normalizeCharacterRulesetFields(
       withModifications([
         {
           name: 'Frame',
           description: '',
-          resourceModifiers: { values: { health: 9 } },
+          modifier: { attributeDeltas: { health: 9 } },
+          resourceModifiers: { values: { health: 5 } },
           statModifiers: { health: 2 },
         },
       ])
     );
 
-    expect(result.modifications?.[0].resourceModifiers).toEqual({
-      values: { health: 9 },
+    expect(result.modifications?.[0].modifier).toEqual({
+      attributeDeltas: { health: 9 },
     });
     expect('statModifiers' in (result.modifications?.[0] ?? {})).toBe(false);
+    expect('resourceModifiers' in (result.modifications?.[0] ?? {})).toBe(
+      false
+    );
   });
 });

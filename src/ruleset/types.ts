@@ -4,6 +4,9 @@
  * through JSON for a future in-app ruleset editor. Non-serializable assets
  * (images) are resolved separately through RulesetAssets in assets.ts.
  */
+import type { AttributeBag, AttributeDefinition } from './attributes';
+
+export type { AttributeBag, AttributeDefinition };
 
 export type TermKey =
   | 'archetype.singular'
@@ -26,39 +29,27 @@ export type TermKey =
 
 export type TerminologyMap = Record<TermKey, string>;
 
-/** Replaces the hardcoded health/limit pair. */
-export interface ResourceDefinition {
-  id: string;
-  label: string;
-  abbreviation?: string;
-  /** When true, a per-archetype cap applies and derived values clamp to it. */
-  capped: boolean;
-}
-
 /** A named group an archetype can belong to (e.g. organic, robotic). */
 export interface ArchetypeGroup {
   id: string;
   label: string;
 }
 
-/** A capability flag an archetype can declare (e.g. canUseCyberware). */
-export interface CapabilityDefinition {
-  id: string;
-  label: string;
-}
-
-/** Replaces Species + SPECIES_BASE_STATS. */
+/**
+ * Replaces Species + SPECIES_BASE_STATS.
+ *
+ * The former `baseValues` / `caps` / `capabilities` trio collapsed into one
+ * attribute bag in #22 — they were three parallel maps split by value type
+ * rather than by meaning. Which entries are resources, caps, or capability
+ * flags is now declared once in `RulesetDefinition.attributes`.
+ */
 export interface Archetype {
   id: string;
   label: string;
   /** Group ids this archetype belongs to; membership may overlap. */
   groups: string[];
-  /** resourceId -> starting value. Must cover every ruleset resource. */
-  baseValues: Record<string, number>;
-  /** resourceId -> ceiling. Must cover exactly the resources with capped: true. */
-  caps: Record<string, number>;
-  /** capabilityId -> flag. Must cover exactly the declared capabilities. */
-  capabilities: Record<string, boolean>;
+  /** attributeId -> base value, keyed by RulesetDefinition.attributes. */
+  attributes: AttributeBag;
 }
 
 export interface TraitCategory {
@@ -67,14 +58,23 @@ export interface TraitCategory {
   color?: string;
 }
 
-/** Replaces StatModifiers. Keyed by resource/category id instead of health/limit/tag. */
-export interface ResourceModifiers {
-  /** resourceId -> delta applied to the running value. */
-  values?: Record<string, number>;
-  /** resourceId -> delta applied to the cap. */
-  caps?: Record<string, number>;
-  /** traitCategoryId -> delta applied to the category score. */
-  categoryModifiers?: Record<string, number>;
+/**
+ * A change applied by a trait, modification, or category bonus.
+ *
+ * `values` and `caps` merged into one delta map in #22 — a cap is simply
+ * another numeric attribute (with `role: 'cap'`), so the split was redundant.
+ * `categoryDeltas` stays separate because category scores are *derived* from
+ * the traits a character holds rather than stored attributes.
+ *
+ * Which roles a given source actually applies is enforced in `derived.ts`,
+ * not here: traits touch only `role: 'resource'`, modifications touch
+ * `'resource'` and `'cap'`.
+ */
+export interface Modifier {
+  /** attributeId -> delta. */
+  attributeDeltas?: Record<string, number>;
+  /** traitCategoryId -> delta applied to the derived category score. */
+  categoryDeltas?: Record<string, number>;
 }
 
 /** Replaces AVAILABLE_PERKS entries. */
@@ -83,7 +83,7 @@ export interface Trait {
   name: string;
   description: string;
   categoryId: string;
-  resourceModifiers?: ResourceModifiers;
+  modifier?: Modifier;
   allowedArchetypeIds?: string[];
   recipeIds?: string[];
 }
@@ -107,8 +107,8 @@ export interface Recipe {
 export interface CategoryBonusRule {
   categoryId: string;
   requiredScore: number;
-  /** resourceId -> bonus granted when the score threshold is met. */
-  grants: Record<string, number>;
+  /** Applied when the score threshold is met. */
+  grants: Modifier;
 }
 
 /** Declarative form of the 'Perfect Mutant' carve-out in derivedStats.ts. */
@@ -143,9 +143,9 @@ export interface RulesetDefinition {
   name: string;
   version: string;
   terminology: Partial<TerminologyMap>;
-  resources: ResourceDefinition[];
+  /** Every attribute any entity in this ruleset may carry. */
+  attributes: AttributeDefinition[];
   groups: ArchetypeGroup[];
-  capabilities: CapabilityDefinition[];
   archetypes: Archetype[];
   traitCategories: TraitCategory[];
   traits: Trait[];

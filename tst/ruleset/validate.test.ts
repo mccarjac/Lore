@@ -7,20 +7,37 @@ const baseRuleset = (): RulesetDefinition => ({
   name: 'Fixture Ruleset',
   version: '1.0.0',
   terminology: {},
-  resources: [
-    { id: 'health', label: 'Health', capped: true },
-    { id: 'stamina', label: 'Stamina', capped: false },
+  attributes: [
+    {
+      id: 'health',
+      label: 'Health',
+      type: 'number',
+      role: 'resource',
+      capAttributeId: 'healthCap',
+    },
+    { id: 'healthCap', label: 'Health Cap', type: 'number', role: 'cap' },
+    { id: 'stamina', label: 'Stamina', type: 'number', role: 'resource' },
+    { id: 'flight', label: 'Can Fly', type: 'flag', role: 'capability' },
+    { id: 'homeworld', label: 'Homeworld', type: 'text' },
+    {
+      id: 'patron',
+      label: 'Patron',
+      type: 'ref',
+      refCollection: 'archetypes',
+    },
   ],
   groups: [{ id: 'organic', label: 'Organic' }],
-  capabilities: [{ id: 'flight', label: 'Can Fly' }],
   archetypes: [
     {
       id: 'human',
       label: 'Human',
       groups: ['organic'],
-      baseValues: { health: 2, stamina: 1 },
-      caps: { health: 5 },
-      capabilities: { flight: false },
+      attributes: {
+        health: { type: 'number', value: 2 },
+        healthCap: { type: 'number', value: 5 },
+        stamina: { type: 'number', value: 1 },
+        flight: { type: 'flag', value: false },
+      },
     },
   ],
   traitCategories: [{ id: 'strength', label: 'Strength' }],
@@ -32,10 +49,9 @@ const baseRuleset = (): RulesetDefinition => ({
       categoryId: 'strength',
       allowedArchetypeIds: ['human'],
       recipeIds: ['recipe_1'],
-      resourceModifiers: {
-        values: { health: 1 },
-        caps: { health: 1 },
-        categoryModifiers: { strength: 1 },
+      modifier: {
+        attributeDeltas: { health: 1, healthCap: 1 },
+        categoryDeltas: { strength: 1 },
       },
     },
   ],
@@ -56,7 +72,11 @@ const baseRuleset = (): RulesetDefinition => ({
     },
   ],
   categoryBonuses: [
-    { categoryId: 'strength', requiredScore: 3, grants: { health: 1 } },
+    {
+      categoryId: 'strength',
+      requiredScore: 3,
+      grants: { attributeDeltas: { health: 1 } },
+    },
   ],
   archetypeRules: [
     {
@@ -154,25 +174,31 @@ describe('validateRuleset', () => {
     });
   });
 
-  it('flags resourceModifiers keys that resolve to nothing', () => {
+  it('flags modifier keys that resolve to nothing', () => {
     const ruleset = baseRuleset();
-    ruleset.traits[0].resourceModifiers = {
-      values: { nonexistent: 1 },
-      caps: { nonexistent: 1 },
-      categoryModifiers: { nonexistent: 1 },
+    ruleset.traits[0].modifier = {
+      attributeDeltas: { nonexistent: 1 },
+      categoryDeltas: { nonexistent: 1 },
     };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'traits[0].resourceModifiers.values.nonexistent',
-      message: "Unknown resource id 'nonexistent'",
+      path: 'traits[0].modifier.attributeDeltas.nonexistent',
+      message: "Unknown attribute id 'nonexistent'",
     });
     expect(result.issues).toContainEqual({
-      path: 'traits[0].resourceModifiers.caps.nonexistent',
-      message: "Unknown resource id 'nonexistent'",
-    });
-    expect(result.issues).toContainEqual({
-      path: 'traits[0].resourceModifiers.categoryModifiers.nonexistent',
+      path: 'traits[0].modifier.categoryDeltas.nonexistent',
       message: "Unknown traitCategory id 'nonexistent'",
+    });
+  });
+
+  it('flags a delta targeting a non-numeric attribute', () => {
+    const ruleset = baseRuleset();
+    ruleset.traits[0].modifier = { attributeDeltas: { homeworld: 1 } };
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'traits[0].modifier.attributeDeltas.homeworld',
+      message:
+        "Attribute 'homeworld' is 'text'; only 'number' attributes accept deltas",
     });
   });
 
@@ -186,72 +212,82 @@ describe('validateRuleset', () => {
     });
   });
 
-  it('flags a missing base value for a declared resource', () => {
+  it('flags a missing value for a declared resource or cap', () => {
     const ruleset = baseRuleset();
-    delete ruleset.archetypes[0].baseValues.stamina;
+    delete ruleset.archetypes[0].attributes.stamina;
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].baseValues.stamina',
-      message: "Missing base value for resource 'stamina'",
+      path: 'archetypes[0].attributes.stamina',
+      message: "Missing required attribute 'stamina'",
     });
   });
 
-  it('flags an unknown base value key', () => {
+  it('flags an undeclared attribute id on an archetype', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].baseValues = {
-      ...ruleset.archetypes[0].baseValues,
-      nonexistent: 1,
+    ruleset.archetypes[0].attributes.nonexistent = {
+      type: 'number',
+      value: 1,
     };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].baseValues.nonexistent',
-      message: "Unknown resource id 'nonexistent'",
+      path: 'archetypes[0].attributes.nonexistent',
+      message:
+        "Unknown attribute id 'nonexistent' (not declared in ruleset.attributes)",
     });
   });
 
-  it('flags a missing cap for a capped resource', () => {
+  it('flags a value whose type contradicts its declaration', () => {
     const ruleset = baseRuleset();
-    delete ruleset.archetypes[0].caps.health;
+    ruleset.archetypes[0].attributes.health = { type: 'text', value: 'lots' };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].caps.health',
-      message: "Missing cap for capped resource 'health'",
+      path: 'archetypes[0].attributes.health',
+      message: "Attribute 'health' is declared as 'number' but holds 'text'",
     });
   });
 
-  it('flags a cap entry for a resource that is not capped', () => {
+  it('flags a ref attribute pointing at a nonexistent id', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].caps = {
-      ...ruleset.archetypes[0].caps,
-      stamina: 5,
+    ruleset.archetypes[0].attributes.patron = {
+      type: 'ref',
+      value: 'nonexistent',
     };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].caps.stamina',
-      message: "Resource 'stamina' is not capped; unexpected cap entry",
+      path: 'archetypes[0].attributes.patron',
+      message:
+        "Attribute 'patron' references unknown archetypes id 'nonexistent'",
     });
   });
 
-  it('flags a missing declared capability on an archetype', () => {
+  it('accepts a ref attribute that resolves', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].capabilities = {};
+    ruleset.archetypes[0].attributes.patron = { type: 'ref', value: 'human' };
+    expect(validateRuleset(ruleset).valid).toBe(true);
+  });
+
+  it('flags a number outside its declared bounds', () => {
+    const ruleset = baseRuleset();
+    ruleset.attributes[0] = { ...ruleset.attributes[0], min: 0, max: 10 };
+    ruleset.archetypes[0].attributes.health = { type: 'number', value: 99 };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].capabilities.flight',
-      message: "Missing capability 'flight'",
+      path: 'archetypes[0].attributes.health',
+      message: "Attribute 'health' is 99, above its maximum of 10",
     });
   });
 
-  it('flags an undeclared capability on an archetype', () => {
+  it('flags a capAttributeId that does not point at a cap-role attribute', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].capabilities = {
-      flight: false,
-      nonexistent: true,
+    ruleset.attributes[0] = {
+      ...ruleset.attributes[0],
+      capAttributeId: 'stamina',
     };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].capabilities.nonexistent',
-      message: "Unknown capability id 'nonexistent'",
+      path: 'attributes[0].capAttributeId',
+      message:
+        "Attribute 'stamina' has role 'resource'; a cap must have role 'cap'",
     });
   });
 
@@ -277,11 +313,13 @@ describe('validateRuleset', () => {
 
   it('flags a category bonus grant key that does not resolve', () => {
     const ruleset = baseRuleset();
-    ruleset.categoryBonuses[0].grants = { nonexistent: 1 };
+    ruleset.categoryBonuses[0].grants = {
+      attributeDeltas: { nonexistent: 1 },
+    };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'categoryBonuses[0].grants.nonexistent',
-      message: "Unknown resource id 'nonexistent'",
+      path: 'categoryBonuses[0].grants.attributeDeltas.nonexistent',
+      message: "Unknown attribute id 'nonexistent'",
     });
   });
 

@@ -1,55 +1,65 @@
 /**
- * Data-driven derived stats (issue #6).
+ * Data-driven derived stats (#6), rebuilt on the attribute primitive (#22).
  *
- * Replaces the hardcoded `{ maxHealth, maxLimit }` pair with a per-resource
- * record computed entirely from the ruleset, so a flavor with three
- * resources — or one, or none — needs no code change.
+ * Every value in the pipeline is a ruleset-declared attribute, and the engine
+ * dispatches on `role` rather than on hardcoded resource ids. Nothing here
+ * names health or limit.
  *
- * Evaluation order is load-bearing and matches the pre-generalization
- * implementation exactly; `tst/utils/derivedStats.parity.test.ts` asserts
- * every case against numbers captured before the rewrite.
+ * Evaluation order is load-bearing and reproduces the pre-generalization
+ * numbers exactly; `tst/utils/derivedStats.parity.test.ts` asserts all 26
+ * cases against a baseline captured before any of this existed.
  *
- *   1. archetype base values
- *   2. trait value modifiers, and category scores
- *   3. category-bonus grants
- *   4. modification value/cap/category modifiers
- *   5. clamp to caps
+ *   1.  archetype base attributes
+ *   1b. character attribute overrides (absolute, not deltas)
+ *   2.  trait deltas (role 'resource' only) and category scores
+ *   3.  category-bonus grants (role 'resource')
+ *   4.  modification deltas (roles 'resource' and 'cap')
+ *   5.  clamp each resource to its cap attribute
  *
- * Two deliberate carry-overs from the old behavior, both verified by the
- * parity suite:
+ * Three behaviors are preserved deliberately, each pinned by the parity suite.
+ * All three are arguably bugs; changing any of them moves real users' numbers
+ * and is a rules change rather than a refactor.
  *
- * - **Trait cap modifiers are ignored.** A trait may declare
- *   `resourceModifiers.caps` (Afterworlds' `smarts_20` does), but the engine
- *   has never applied them and doing so now would move real users' numbers.
- *   Correcting that is a deliberate rules change, not part of a rename.
- * - **Modification category modifiers do not feed category bonuses.** They
- *   are applied in step 4, after grants are computed in step 3, so they
- *   affect the reported score without retroactively unlocking a threshold.
+ * - **Traits cannot raise caps.** Afterworlds' `smarts_20` declares
+ *   `limitCap: +1` and the engine has never applied it. Rather than a special
+ *   case, this now falls out of the role rule at step 2.
+ * - **Modification category deltas do not feed category bonuses.** They land
+ *   at step 4, after grants are computed at step 3, so they change the
+ *   reported score without retroactively unlocking a threshold.
+ * - **Only capped resources clamp.** A resource whose definition names no
+ *   `capAttributeId` is unbounded.
  */
 import type { GameCharacter } from '@models/types';
 import { afterworldsRuleset } from './defaultRuleset';
-import type { Archetype, RulesetDefinition, Trait } from './types';
+import {
+  getNumber,
+  roleOf,
+  type AttributeBag,
+  type AttributeDefinition,
+  type AttributeRole,
+} from './attributes';
+import type { Modifier, RulesetDefinition, Trait } from './types';
 
 export interface DerivedStats {
-  /** resourceId -> final value, already clamped to the effective cap. */
+  /** attributeId -> final numeric value, clamped where a cap applies. */
   values: Record<string, number>;
   /** traitCategoryId -> score. */
   categoryScores: Map<string, number>;
+  /**
+   * The resolved attribute set (archetype base overlaid with the character's
+   * own values). Non-numeric attributes live only here — screens and search
+   * read this for display; `values` is the numeric computation result.
+   */
+  attributes: AttributeBag;
 }
 
 /**
  * Archetype ids are free-form strings since #3, so stored data can name one
- * the active ruleset does not define. Fall back to a zeroed archetype rather
- * than throwing — a character with an unknown archetype should still render.
+ * the active ruleset does not define. Fall back to an empty attribute set
+ * rather than throwing — a character with an unknown archetype should still
+ * render.
  */
-const fallbackArchetype = (ruleset: RulesetDefinition): Archetype => ({
-  id: '',
-  label: '',
-  groups: [],
-  baseValues: Object.fromEntries(ruleset.resources.map(r => [r.id, 0])),
-  caps: Object.fromEntries(ruleset.resources.map(r => [r.id, 0])),
-  capabilities: {},
-});
+const EMPTY_BAG: AttributeBag = {};
 
 /**
  * True when `trait` is restricted to exactly the membership of `groupId` —
@@ -87,13 +97,30 @@ const contributesCategoryScore = (
       isRestrictedToGroup(trait, rule.groupId, ruleset)
   );
 
-const addTo = (
+/**
+ * Applies a modifier's numeric deltas, but only to attributes whose role the
+ * caller permits. This is where "traits cannot raise caps" actually lives.
+ */
+const applyDeltas = (
   target: Record<string, number>,
-  deltas: Record<string, number> | undefined
+  modifier: Modifier | undefined,
+  definitionsById: Map<string, AttributeDefinition>,
+  allowedRoles: AttributeRole[]
 ): void => {
-  if (!deltas) return;
-  Object.entries(deltas).forEach(([id, delta]) => {
-    if (delta) target[id] = (target[id] ?? 0) + delta;
+  Object.entries(modifier?.attributeDeltas ?? {}).forEach(([id, delta]) => {
+    if (!delta) return;
+    const definition = definitionsById.get(id);
+    if (!definition || !allowedRoles.includes(roleOf(definition))) return;
+    target[id] = (target[id] ?? 0) + delta;
+  });
+};
+
+const applyCategoryDeltas = (
+  scores: Map<string, number>,
+  modifier: Modifier | undefined
+): void => {
+  Object.entries(modifier?.categoryDeltas ?? {}).forEach(([id, delta]) => {
+    scores.set(id, (scores.get(id) ?? 0) + delta);
   });
 };
 
@@ -101,22 +128,34 @@ export const calculateDerivedStats = (
   character: GameCharacter,
   ruleset: RulesetDefinition = afterworldsRuleset
 ): DerivedStats => {
-  const archetype =
-    ruleset.archetypes.find(a => a.id === character.archetypeId) ??
-    fallbackArchetype(ruleset);
+  const definitionsById = new Map(ruleset.attributes.map(d => [d.id, d]));
+  const archetype = ruleset.archetypes.find(
+    a => a.id === character.archetypeId
+  );
 
-  // Copies, not references. The pre-#6 implementation applied modification
-  // cap modifiers straight onto the shared archetype record, which leaked
-  // the raised cap into every other character of that archetype for the
-  // lifetime of the process.
-  const values: Record<string, number> = { ...archetype.baseValues };
-  const caps: Record<string, number> = { ...archetype.caps };
+  // 1 + 1b. Base attributes, overlaid with the character's own values.
+  // Character attributes are absolute overrides, not deltas — "this character
+  // has Corruption 3" and "this character's base Health is 3" both read as
+  // assignments. Deltas are what traits and modifications are for.
+  const attributes: AttributeBag = {
+    ...(archetype?.attributes ?? EMPTY_BAG),
+    ...(character.attributes ?? EMPTY_BAG),
+  };
+
+  // Numeric attributes seed the computation; non-numeric ones ride along in
+  // `attributes` untouched.
+  const values: Record<string, number> = {};
+  ruleset.attributes.forEach(definition => {
+    if (definition.type !== 'number') return;
+    values[definition.id] = getNumber(attributes, definition.id, 0);
+  });
 
   const traits = ruleset.traits.filter(trait =>
     character.traitIds.includes(trait.id)
   );
 
-  // 2. Trait category scores and value modifiers.
+  // 2. Trait deltas and category scores. Resource role only: a trait may not
+  //    raise a cap (see the module comment).
   const categoryScores = new Map<string, number>();
   traits.forEach(trait => {
     if (contributesCategoryScore(trait, character.archetypeId, ruleset)) {
@@ -125,42 +164,33 @@ export const calculateDerivedStats = (
         (categoryScores.get(trait.categoryId) ?? 0) + 1
       );
     }
-    addTo(values, trait.resourceModifiers?.values);
+    applyDeltas(values, trait.modifier, definitionsById, ['resource']);
   });
 
   // 3. Category-bonus grants.
   ruleset.categoryBonuses.forEach(bonus => {
     const score = categoryScores.get(bonus.categoryId) ?? 0;
-    if (score >= bonus.requiredScore) addTo(values, bonus.grants);
-  });
-
-  // 4. Modification modifiers.
-  (character.modifications ?? []).forEach(modification => {
-    const modifiers = modification.resourceModifiers;
-    if (!modifiers) return;
-
-    addTo(values, modifiers.values);
-    addTo(caps, modifiers.caps);
-
-    if (modifiers.categoryModifiers) {
-      Object.entries(modifiers.categoryModifiers).forEach(
-        ([categoryId, delta]) => {
-          categoryScores.set(
-            categoryId,
-            (categoryScores.get(categoryId) ?? 0) + delta
-          );
-        }
-      );
+    if (score >= bonus.requiredScore) {
+      applyDeltas(values, bonus.grants, definitionsById, ['resource']);
     }
   });
 
-  // 5. Clamp each capped resource to its effective cap.
-  ruleset.resources.forEach(resource => {
-    if (!resource.capped) return;
-    const cap = caps[resource.id];
-    if (cap === undefined) return;
-    values[resource.id] = Math.min(values[resource.id] ?? 0, cap);
+  // 4. Modification deltas — these may move caps as well as values.
+  (character.modifications ?? []).forEach(modification => {
+    applyDeltas(values, modification.modifier, definitionsById, [
+      'resource',
+      'cap',
+    ]);
+    applyCategoryDeltas(categoryScores, modification.modifier);
   });
 
-  return { values, categoryScores };
+  // 5. Clamp each resource to its cap attribute, where one is declared.
+  ruleset.attributes.forEach(definition => {
+    if (roleOf(definition) !== 'resource' || !definition.capAttributeId) return;
+    const cap = values[definition.capAttributeId];
+    if (cap === undefined) return;
+    values[definition.id] = Math.min(values[definition.id] ?? 0, cap);
+  });
+
+  return { values, categoryScores, attributes };
 };
