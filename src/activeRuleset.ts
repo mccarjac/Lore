@@ -1,5 +1,4 @@
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
-import { afterworldsAssets } from '@/rulesets/afterworlds/assets';
+import { exampleRuleset } from '@/ruleset/exampleRuleset';
 import type { RulesetAssets } from '@/ruleset/assets';
 import type { RulesetDefinition } from '@/ruleset/types';
 
@@ -20,6 +19,8 @@ import type { RulesetDefinition } from '@/ruleset/types';
  * the barrel re-exports `context.tsx`, which imports this file, and that is a
  * cycle.
  */
-export const activeRuleset: RulesetDefinition = afterworldsRuleset;
+export const activeRuleset: RulesetDefinition = exampleRuleset;
 
-export const activeAssets: RulesetAssets = afterworldsAssets;
+// The example ruleset declares no `map`, so it needs no bundled images.
+// A flavor swaps this for its own asset map alongside its ruleset.
+export const activeAssets: RulesetAssets = {};

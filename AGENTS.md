@@ -209,6 +209,16 @@ drag those override _values_ along with it.
   `@/ruleset/types` / `@/ruleset/attributes` / etc. **directly, never the
   `@/ruleset` barrel** — the barrel re-exports `context.tsx`, which imports
   the seam.
+- `src/ruleset/exampleRuleset.ts` — what the engine ships as its default: a
+  small, complete, generic ruleset. Two things about it are deliberate.
+  It **overrides no terminology**, so every noun comes from
+  `DEFAULT_TERMINOLOGY` and "the app boots with generic labels" is literally
+  checkable — it is also the only place the `getLabel` fallback is exercised
+  in a running app. And it declares **no map, with `features.map: false`**,
+  because the map is the one feature needing a bundled binary and images
+  belong to the ruleset that uses them; a placeholder PNG in the engine would
+  be in every fork's way. Every other flag is on, so the engine's screens are
+  reachable out of the box.
 - `src/ruleset/attributes.ts` — the `AttributeValue` primitive (#22). A
   tagged union (`{ type, value }`) covering number/text/flag/ref/list/map,
   plus `AttributeDefinition`, typed accessors, and a generic bag validator.
@@ -220,9 +230,9 @@ drag those override _values_ along with it.
   from becoming untyped soup** — the union is storage, roles are meaning, and
   `derived.ts` dispatches on role rather than on hardcoded ids. Which roles a
   modifier may touch is an _application_ rule in `derived.ts`, never a
-  validity rule: the shipped Afterworlds ruleset declares a trait cap delta
-  the engine ignores, and flagging that as invalid would make
-  `RulesetProvider` throw under `__DEV__`.
+  validity rule: the Afterworlds ruleset declares a trait cap delta the
+  engine ignores, and flagging that as invalid would make `RulesetProvider`
+  throw under `__DEV__` for any build running it.
 - `src/ruleset/types.ts` — the `RulesetDefinition` schema (attributes,
   archetypes, traits, trait categories, qualities, category-bonus rules,
   feature flags, terminology). **Must stay JSON-serializable** — no functions, no
@@ -236,11 +246,13 @@ drag those override _values_ along with it.
   can surface errors in UI instead of crashing at startup. `RulesetProvider`
   throws on an invalid ruleset in `__DEV__` and logs-and-renders otherwise.
 - `src/ruleset/context.tsx` — `RulesetProvider` / `useRuleset()`.
-  **`useRuleset()` returns the default Afterworlds ruleset outside a
-  provider rather than throwing** — every screen test in `tst/` renders
-  bare, and a throwing hook would require wrapping all of them. Use
-  `tst/helpers/ruleset.tsx`'s `renderWithRuleset()` for a test that needs a
-  non-default ruleset.
+  **`useRuleset()` returns the _active_ ruleset outside a provider rather
+  than throwing** — many screen tests render bare, and a throwing hook would
+  require wrapping all of them. In this repo that is
+  `src/ruleset/exampleRuleset.ts`, via `src/activeRuleset.ts`. Do not write a
+  test that depends on which one it is: render through
+  `tst/helpers/ruleset.tsx`'s `renderWithRuleset()`, whose own default is the
+  neutral fixture.
 - `src/ruleset/derived.ts` — `calculateDerivedStats(character, ruleset?)`
   returns `{ values, categoryScores, attributes }`. Order is load-bearing:
   archetype base attributes → **character attribute overrides (absolute, not
