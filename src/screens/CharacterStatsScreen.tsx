@@ -17,6 +17,7 @@ import { GameCharacter } from '@/models/types';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { useLabels, useRuleset } from '@/ruleset';
+import { colorsForKeys } from '@/styles/chartPalette';
 
 export const CharacterStatsScreen = () => {
   const label = useLabels();
@@ -77,34 +78,27 @@ export const CharacterStatsScreen = () => {
     }, [loadStats])
   );
 
-  const getSpeciesPieChartData = () => {
+  const archetypeLabel = (id: string): string =>
+    ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
+
+  /**
+   * One assignment shared by the chart and its legend, so the two cannot
+   * disagree — they used to build the same palette array independently.
+   */
+  const archetypeColors = React.useMemo(
+    () => colorsForKeys(Object.keys(stats?.archetypeDistribution ?? {})),
+    [stats]
+  );
+
+  const getArchetypePieChartData = () => {
     if (!stats) return [];
 
-    // More distinct and readable colors
-    const colors = [
-      '#E74C3C', // Red
-      '#3498DB', // Blue
-      '#F39C12', // Orange
-      '#2ECC71', // Green
-      '#9B59B6', // Purple
-      '#1ABC9C', // Teal
-      '#E67E22', // Dark Orange
-      '#34495E', // Dark Blue-Gray
-      '#F1C40F', // Yellow
-      '#95A5A6', // Gray
-      '#E91E63', // Pink
-      '#00BCD4', // Cyan
-      '#FF9800', // Amber
-      '#4CAF50', // Light Green
-      '#673AB7', // Deep Purple
-    ];
-
-    return Object.entries(stats.speciesDistribution).map(
-      ([archetypeId, count], index) => ({
+    return Object.entries(stats.archetypeDistribution).map(
+      ([archetypeId, count]) => ({
         value: count,
-        color: colors[index % colors.length],
+        color: archetypeColors[archetypeId],
         text: `${count}`, // Show count on slice
-        label: archetypeId,
+        label: archetypeLabel(archetypeId),
         onPress: () => handleSlicePress(archetypeId, count),
       })
     );
@@ -119,35 +113,6 @@ export const CharacterStatsScreen = () => {
         setSelectedSlice(null);
       }, 3000); // Auto-hide after 3 seconds
     }
-  };
-
-  const getSpeciesColors = () => {
-    if (!stats) return {};
-
-    const colors = [
-      '#E74C3C',
-      '#3498DB',
-      '#F39C12',
-      '#2ECC71',
-      '#9B59B6',
-      '#1ABC9C',
-      '#E67E22',
-      '#34495E',
-      '#F1C40F',
-      '#95A5A6',
-      '#E91E63',
-      '#00BCD4',
-      '#FF9800',
-      '#4CAF50',
-      '#673AB7',
-    ];
-
-    const colorMap: { [key: string]: string } = {};
-    Object.keys(stats.speciesDistribution).forEach((species, index) => {
-      colorMap[species] = colors[index % colors.length];
-    });
-
-    return colorMap;
   };
 
   return (
@@ -204,10 +169,10 @@ export const CharacterStatsScreen = () => {
               <Text style={styles.sectionHeader}>
                 {label('archetype.plural')} Distribution
               </Text>
-              {getSpeciesPieChartData().length > 0 && (
+              {getArchetypePieChartData().length > 0 && (
                 <View style={styles.chartContainer}>
                   <PieChart
-                    data={getSpeciesPieChartData()}
+                    data={getArchetypePieChartData()}
                     donut
                     showText
                     textColor="white"
@@ -223,15 +188,16 @@ export const CharacterStatsScreen = () => {
                     toggleFocusOnPress
                     centerLabelComponent={() => {
                       if (selectedSlice && stats) {
-                        const count = stats.speciesDistribution[selectedSlice];
+                        const count =
+                          stats.archetypeDistribution[selectedSlice];
                         const percentage = (
                           (count / stats.totalCharacters) *
                           100
                         ).toFixed(1);
                         return (
                           <View style={styles.centerLabel}>
-                            <Text style={styles.centerLabelSpecies}>
-                              {selectedSlice}
+                            <Text style={styles.centerLabelArchetype}>
+                              {archetypeLabel(selectedSlice)}
                             </Text>
                             <Text style={styles.centerLabelNumber}>
                               {count}
@@ -261,18 +227,17 @@ export const CharacterStatsScreen = () => {
                   )}
                 </View>
               )}
-              <View style={styles.speciesLegend}>
-                {Object.entries(stats.speciesDistribution).map(
-                  ([species, count]) => {
-                    const colors = getSpeciesColors();
+              <View style={styles.archetypeLegend}>
+                {Object.entries(stats.archetypeDistribution).map(
+                  ([archetypeId, count]) => {
                     const percentage = (
                       (count / stats.totalCharacters) *
                       100
                     ).toFixed(1);
-                    const isSelected = selectedSlice === species;
+                    const isSelected = selectedSlice === archetypeId;
                     return (
                       <View
-                        key={species}
+                        key={archetypeId}
                         style={[
                           styles.legendItem,
                           isSelected && styles.legendItemSelected,
@@ -281,7 +246,7 @@ export const CharacterStatsScreen = () => {
                         <View
                           style={[
                             styles.legendColorBox,
-                            { backgroundColor: colors[species] },
+                            { backgroundColor: archetypeColors[archetypeId] },
                             isSelected && styles.legendColorBoxSelected,
                           ]}
                         />
@@ -291,7 +256,7 @@ export const CharacterStatsScreen = () => {
                             isSelected && styles.legendTextSelected,
                           ]}
                         >
-                          {species}: {count} ({percentage}%)
+                          {archetypeLabel(archetypeId)}: {count} ({percentage}%)
                         </Text>
                       </View>
                     );
@@ -412,7 +377,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  centerLabelSpecies: {
+  centerLabelArchetype: {
     fontSize: 16,
     color: themeColors.text.primary,
     fontWeight: '600',
@@ -441,7 +406,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-  speciesLegend: {
+  archetypeLegend: {
     marginTop: 20,
   },
   legendItem: {

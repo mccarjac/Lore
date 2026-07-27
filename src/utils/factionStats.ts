@@ -1,5 +1,4 @@
 import { GameCharacter, RelationshipStanding } from '../models/types';
-import { AVAILABLE_PERKS, AVAILABLE_DISTINCTIONS } from '../models/gameData';
 import { FactionRelationship } from './characterStorage';
 import {
   getLabel,
@@ -22,7 +21,7 @@ export interface FactionStats {
   commonDistinctions: { name: string; count: number; percentage: number }[];
 
   // Species distribution
-  speciesDistribution: Record<string, number>;
+  archetypeDistribution: Record<string, number>;
 
   // Relationships
   relationships: FactionRelationship[];
@@ -74,7 +73,7 @@ export const calculateFactionStats = (
       topPerkTags: [],
       commonPerks: [],
       commonDistinctions: [],
-      speciesDistribution: {},
+      archetypeDistribution: {},
       relationships: factionRelationships,
       alliedFactions: [],
       enemyFactions: [],
@@ -93,9 +92,10 @@ export const calculateFactionStats = (
 
   members.forEach(member => {
     member.traitIds.forEach(perkId => {
-      const perk = AVAILABLE_PERKS.find(p => p.id === perkId);
-      if (perk && perk.tag) {
-        perkTagCounts[perk.tag] = (perkTagCounts[perk.tag] || 0) + 1;
+      const trait = ruleset.traits.find(t => t.id === perkId);
+      if (trait && trait.categoryId) {
+        perkTagCounts[trait.categoryId] =
+          (perkTagCounts[trait.categoryId] || 0) + 1;
       }
     });
   });
@@ -122,7 +122,7 @@ export const calculateFactionStats = (
   const commonPerks = Object.entries(perkCount)
     .map(([id, count]) => ({
       name:
-        AVAILABLE_PERKS.find(p => p.id === id)?.name ||
+        ruleset.traits.find(trait => trait.id === id)?.name ||
         `Unknown ${getLabel(ruleset, 'trait.singular')}`,
       count,
       percentage: (count / totalMembers) * 100,
@@ -142,7 +142,7 @@ export const calculateFactionStats = (
   const commonDistinctions = Object.entries(distinctionCount)
     .map(([id, count]) => ({
       name:
-        AVAILABLE_DISTINCTIONS.find(d => d.id === id)?.name ||
+        ruleset.qualities.find(quality => quality.id === id)?.name ||
         `Unknown ${getLabel(ruleset, 'quality.singular')}`,
       count,
       percentage: (count / totalMembers) * 100,
@@ -151,7 +151,7 @@ export const calculateFactionStats = (
     .slice(0, 5);
 
   // Calculate species distribution
-  const speciesDistribution = members.reduce(
+  const archetypeDistribution = members.reduce(
     (acc, member) => {
       acc[member.archetypeId] = (acc[member.archetypeId] || 0) + 1;
       return acc;
@@ -184,7 +184,7 @@ export const calculateFactionStats = (
     topPerkTags,
     commonPerks,
     commonDistinctions,
-    speciesDistribution,
+    archetypeDistribution,
     relationships: factionRelationships,
     alliedFactions,
     enemyFactions,
@@ -259,7 +259,8 @@ export const calculateCombinedFactionStats = (
  */
 export const getAllFactionStats = (
   allCharacters: GameCharacter[],
-  allFactionRelationships: Map<string, FactionRelationship[]>
+  allFactionRelationships: Map<string, FactionRelationship[]>,
+  ruleset: RulesetDefinition = afterworldsRuleset
 ): FactionStats[] => {
   const factionNames = Array.from(allFactionRelationships.keys());
 
@@ -267,7 +268,8 @@ export const getAllFactionStats = (
     calculateFactionStats(
       factionName,
       allCharacters,
-      allFactionRelationships.get(factionName) || []
+      allFactionRelationships.get(factionName) || [],
+      ruleset
     )
   );
 };

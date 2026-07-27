@@ -1,5 +1,4 @@
 import { GameCharacter } from '../models/types';
-import { AVAILABLE_PERKS, AVAILABLE_DISTINCTIONS } from '../models/gameData';
 import {
   getLabel,
   afterworldsRuleset,
@@ -8,7 +7,7 @@ import {
 
 export interface CharacterStats {
   totalCharacters: number;
-  speciesDistribution: Record<string, number>;
+  archetypeDistribution: Record<string, number>;
   factionDistribution: Record<string, number>;
   commonPerks: { name: string; count: number }[];
   commonDistinctions: { name: string; count: number }[];
@@ -30,7 +29,7 @@ export const calculateCharacterStats = (
   const totalCharacters = characters.length;
 
   // Calculate species distribution
-  const speciesDistribution = characters.reduce(
+  const archetypeDistribution = characters.reduce(
     (acc, char) => {
       acc[char.archetypeId] = (acc[char.archetypeId] || 0) + 1;
       return acc;
@@ -72,7 +71,7 @@ export const calculateCharacterStats = (
   const commonPerks = Object.entries(perkCount)
     .map(([id, count]) => ({
       name:
-        AVAILABLE_PERKS.find(p => p.id === id)?.name ||
+        ruleset.traits.find(trait => trait.id === id)?.name ||
         `Unknown ${getLabel(ruleset, 'trait.singular')}`,
       count,
     }))
@@ -91,7 +90,7 @@ export const calculateCharacterStats = (
   const commonDistinctions = Object.entries(distinctionCount)
     .map(([id, count]) => ({
       name:
-        AVAILABLE_DISTINCTIONS.find(d => d.id === id)?.name ||
+        ruleset.qualities.find(quality => quality.id === id)?.name ||
         `Unknown ${getLabel(ruleset, 'quality.singular')}`,
       count,
     }))
@@ -100,7 +99,7 @@ export const calculateCharacterStats = (
 
   return {
     totalCharacters,
-    speciesDistribution,
+    archetypeDistribution,
     factionDistribution,
     commonPerks,
     commonDistinctions,
