@@ -162,7 +162,7 @@ export const InfluenceReportScreen: React.FC = () => {
                 <View style={styles.influencerInfo}>
                   <Text style={styles.characterName}>{inf.character.name}</Text>
                   <Text style={styles.characterSpecies}>
-                    {inf.character.species}
+                    {inf.character.archetypeId}
                     {inf.character.occupation
                       ? ` • ${inf.character.occupation}`
                       : ''}

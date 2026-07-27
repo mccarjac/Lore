@@ -32,7 +32,7 @@ export const calculateCharacterStats = (
   // Calculate species distribution
   const speciesDistribution = characters.reduce(
     (acc, char) => {
-      acc[char.species] = (acc[char.species] || 0) + 1;
+      acc[char.archetypeId] = (acc[char.archetypeId] || 0) + 1;
       return acc;
     },
     {} as Record<string, number>
@@ -64,7 +64,7 @@ export const calculateCharacterStats = (
   // Calculate most common perks
   const perkCount: Record<string, number> = {};
   characters.forEach(char => {
-    char.perkIds.forEach(perkId => {
+    char.traitIds.forEach(perkId => {
       perkCount[perkId] = (perkCount[perkId] || 0) + 1;
     });
   });
@@ -82,7 +82,7 @@ export const calculateCharacterStats = (
   // Calculate most common distinctions
   const distinctionCount: Record<string, number> = {};
   characters.forEach(char => {
-    char.distinctionIds.forEach(distinctionId => {
+    char.qualityIds.forEach(distinctionId => {
       distinctionCount[distinctionId] =
         (distinctionCount[distinctionId] || 0) + 1;
     });

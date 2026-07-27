@@ -15,6 +15,11 @@ import { SafeAsyncStorageJSONParser } from './safeAsyncStorageJSONParser';
 import { exportDiscordDataset, importDiscordDataset } from './discordStorage';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { runExclusive } from './storageQueue';
+import {
+  normalizeCharactersRulesetFields,
+  normalizeDatasetRulesetFields,
+  normalizeQuestsRulesetFields,
+} from './rulesetFieldMigration';
 import type { SyncDataset } from './syncMerge';
 
 export interface FactionRelationship {
@@ -305,7 +310,9 @@ const ensureLocationsExist = async (
 
 export const importDataset = async (jsonData: string): Promise<boolean> => {
   try {
-    const dataset = JSON.parse(jsonData);
+    // Accept both the pre- and post-Phase-1 field names, so a backup taken
+    // by an older build still imports (issues #3-#7).
+    const dataset = normalizeDatasetRulesetFields(JSON.parse(jsonData));
 
     // Handle location data first (merge with existing, don't replace)
     if (dataset.locations && Array.isArray(dataset.locations)) {
@@ -425,25 +432,22 @@ const mergeCharacterProperties = (
     merged.updatedAt = imported.updatedAt;
   }
 
-  // Merge arrays (like perkIds, distinctionIds, factions)
-  if (imported.perkIds && imported.perkIds.length > 0) {
-    const existingPerkIds = new Set(existing.perkIds || []);
-    const newPerks = imported.perkIds.filter(id => !existingPerkIds.has(id));
+  // Merge arrays (like traitIds, qualityIds, factions)
+  if (imported.traitIds && imported.traitIds.length > 0) {
+    const existingPerkIds = new Set(existing.traitIds || []);
+    const newPerks = imported.traitIds.filter(id => !existingPerkIds.has(id));
     if (newPerks.length > 0) {
-      merged.perkIds = [...(existing.perkIds || []), ...newPerks];
+      merged.traitIds = [...(existing.traitIds || []), ...newPerks];
     }
   }
 
-  if (imported.distinctionIds && imported.distinctionIds.length > 0) {
-    const existingDistinctionIds = new Set(existing.distinctionIds || []);
-    const newDistinctions = imported.distinctionIds.filter(
+  if (imported.qualityIds && imported.qualityIds.length > 0) {
+    const existingDistinctionIds = new Set(existing.qualityIds || []);
+    const newDistinctions = imported.qualityIds.filter(
       id => !existingDistinctionIds.has(id)
     );
     if (newDistinctions.length > 0) {
-      merged.distinctionIds = [
-        ...(existing.distinctionIds || []),
-        ...newDistinctions,
-      ];
+      merged.qualityIds = [...(existing.qualityIds || []), ...newDistinctions];
     }
   }
 
@@ -497,7 +501,7 @@ const mergeCharacterProperties = (
   // Handle conflicting simple properties
   const simpleProperties: (keyof GameCharacter)[] = [
     'name',
-    'species',
+    'archetypeId',
     'locationId',
     'notes',
   ];
@@ -718,9 +722,10 @@ export const mergeDatasetWithConflictResolution = async (
  * a resolution the user already made.
  */
 export const applyMergedDataset = async (
-  dataset: SyncDataset
+  rawDataset: SyncDataset
 ): Promise<boolean> => {
   try {
+    const dataset = normalizeDatasetRulesetFields(rawDataset);
     await migrateOldLocationData(dataset.characters);
     await ensureLocationsExist(dataset.characters);
 
@@ -1856,5 +1861,51 @@ export const reconcileQuestEventLinks = async (): Promise<void> => {
   }
   if (eventsChanged) {
     await runExclusive(EVENT_STORAGE_KEY, () => saveEvents(reconciledEvents));
+  }
+};
+
+/**
+ * Rewrites stored characters and quests from the pre-Phase-1 field names to
+ * the ruleset-neutral ones (issues #3-#7). Idempotent and safe to call on
+ * every load, same as `migrateFactionDescriptions` / `migrateImageUris`.
+ *
+ * The two storage keys are locked *sequentially, never nested* — see
+ * AGENTS.md's concurrency rule. Each key is only written when normalization
+ * actually changed something, so a steady-state app pays two reads and no
+ * writes.
+ */
+export const migrateRulesetFields = async (): Promise<void> => {
+  try {
+    await runExclusive(STORAGE_KEY, async () => {
+      const dataset =
+        await SafeAsyncStorageJSONParser.getItem<CharacterDataset>(STORAGE_KEY);
+      const characters = dataset?.characters;
+      if (!characters?.length) return;
+
+      const normalized = normalizeCharactersRulesetFields(characters);
+      if (normalized === characters) return;
+
+      await saveCharacters(normalized);
+    });
+  } catch (error) {
+    console.error('Error migrating character ruleset fields:', error);
+  }
+
+  try {
+    await runExclusive(QUEST_STORAGE_KEY, async () => {
+      const dataset =
+        await SafeAsyncStorageJSONParser.getItem<QuestDataset>(
+          QUEST_STORAGE_KEY
+        );
+      const quests = dataset?.quests;
+      if (!quests?.length) return;
+
+      const normalized = normalizeQuestsRulesetFields(quests);
+      if (normalized === quests) return;
+
+      await saveQuests(normalized);
+    });
+  } catch (error) {
+    console.error('Error migrating quest ruleset fields:', error);
   }
 };

@@ -93,8 +93,8 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Member A',
-          species: 'Human',
-          perkIds: ['agility_1'],
+          archetypeId: 'Human',
+          traitIds: ['agility_1'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -102,8 +102,8 @@ describe('factionStats', () => {
         makeCharacter({
           id: '2',
           name: 'Member B',
-          species: 'Human',
-          perkIds: ['agility_1', 'agility_2'],
+          archetypeId: 'Human',
+          traitIds: ['agility_1', 'agility_2'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Friend },
           ],
@@ -111,8 +111,8 @@ describe('factionStats', () => {
         makeCharacter({
           id: '3',
           name: 'Member C',
-          species: 'Mutant',
-          perkIds: [],
+          archetypeId: 'Mutant',
+          traitIds: [],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -144,8 +144,8 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Member A',
-          perkIds: ['not-a-real-perk'],
-          distinctionIds: ['not-a-real-distinction'],
+          traitIds: ['not-a-real-perk'],
+          qualityIds: ['not-a-real-distinction'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -206,7 +206,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Brotherhood Member',
-          perkIds: ['agility_1'],
+          traitIds: ['agility_1'],
           factions: [
             { name: 'Brotherhood', standing: RelationshipStanding.Ally },
           ],
@@ -214,7 +214,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '2',
           name: 'Ally Member',
-          perkIds: ['agility_1'],
+          traitIds: ['agility_1'],
           factions: [
             { name: 'Scavengers', standing: RelationshipStanding.Ally },
           ],

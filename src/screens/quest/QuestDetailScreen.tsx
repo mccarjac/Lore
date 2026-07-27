@@ -145,15 +145,15 @@ export const QuestDetailScreen: React.FC = () => {
 
   const hasPreferences =
     (quest.desirable &&
-      ((quest.desirable.tags?.length ?? 0) > 0 ||
-        (quest.desirable.species?.length ?? 0) > 0 ||
-        (quest.desirable.perkIds?.length ?? 0) > 0 ||
-        (quest.desirable.distinctionIds?.length ?? 0) > 0)) ||
+      ((quest.desirable.traitCategoryIds?.length ?? 0) > 0 ||
+        (quest.desirable.archetypeIds?.length ?? 0) > 0 ||
+        (quest.desirable.traitIds?.length ?? 0) > 0 ||
+        (quest.desirable.qualityIds?.length ?? 0) > 0)) ||
     (quest.undesirable &&
-      ((quest.undesirable.tags?.length ?? 0) > 0 ||
-        (quest.undesirable.species?.length ?? 0) > 0 ||
-        (quest.undesirable.perkIds?.length ?? 0) > 0 ||
-        (quest.undesirable.distinctionIds?.length ?? 0) > 0));
+      ((quest.undesirable.traitCategoryIds?.length ?? 0) > 0 ||
+        (quest.undesirable.archetypeIds?.length ?? 0) > 0 ||
+        (quest.undesirable.traitIds?.length ?? 0) > 0 ||
+        (quest.undesirable.qualityIds?.length ?? 0) > 0));
 
   return (
     <BaseDetailScreen
@@ -209,12 +209,12 @@ export const QuestDetailScreen: React.FC = () => {
             <Text style={styles.overviewValue}>{quest.locationName}</Text>
           </View>
         )}
-        {quest.junktownOffice && (
+        {quest.sponsor && (
           <View style={styles.overviewRow}>
             <Text style={styles.overviewLabel}>
               {label('questSponsor.singular')}
             </Text>
-            <Text style={styles.overviewValue}>{quest.junktownOffice}</Text>
+            <Text style={styles.overviewValue}>{quest.sponsor}</Text>
           </View>
         )}
       </Section>
@@ -262,22 +262,25 @@ export const QuestDetailScreen: React.FC = () => {
             <View style={styles.preferenceGroup}>
               <Text style={styles.preferenceLabel}>Desirable</Text>
               <View style={styles.chipList}>
-                {quest.desirable.tags?.map(tag => (
+                {quest.desirable.traitCategoryIds?.map(tag => (
                   <View key={`tag-${tag}`} style={styles.chipPositive}>
                     <Text style={styles.chipText}>{tag}</Text>
                   </View>
                 ))}
-                {quest.desirable.species?.map(species => (
-                  <View key={`species-${species}`} style={styles.chipPositive}>
-                    <Text style={styles.chipText}>{species}</Text>
+                {quest.desirable.archetypeIds?.map(archetypeId => (
+                  <View
+                    key={`archetype-${archetypeId}`}
+                    style={styles.chipPositive}
+                  >
+                    <Text style={styles.chipText}>{archetypeId}</Text>
                   </View>
                 ))}
-                {quest.desirable.perkIds?.map(perkId => (
+                {quest.desirable.traitIds?.map(perkId => (
                   <View key={`perk-${perkId}`} style={styles.chipPositive}>
                     <Text style={styles.chipText}>{perkId}</Text>
                   </View>
                 ))}
-                {quest.desirable.distinctionIds?.map(distinctionId => (
+                {quest.desirable.qualityIds?.map(distinctionId => (
                   <View
                     key={`distinction-${distinctionId}`}
                     style={styles.chipPositive}
@@ -292,22 +295,25 @@ export const QuestDetailScreen: React.FC = () => {
             <View style={styles.preferenceGroup}>
               <Text style={styles.preferenceLabel}>Undesirable</Text>
               <View style={styles.chipList}>
-                {quest.undesirable.tags?.map(tag => (
+                {quest.undesirable.traitCategoryIds?.map(tag => (
                   <View key={`tag-${tag}`} style={styles.chipNegative}>
                     <Text style={styles.chipText}>{tag}</Text>
                   </View>
                 ))}
-                {quest.undesirable.species?.map(species => (
-                  <View key={`species-${species}`} style={styles.chipNegative}>
-                    <Text style={styles.chipText}>{species}</Text>
+                {quest.undesirable.archetypeIds?.map(archetypeId => (
+                  <View
+                    key={`archetype-${archetypeId}`}
+                    style={styles.chipNegative}
+                  >
+                    <Text style={styles.chipText}>{archetypeId}</Text>
                   </View>
                 ))}
-                {quest.undesirable.perkIds?.map(perkId => (
+                {quest.undesirable.traitIds?.map(perkId => (
                   <View key={`perk-${perkId}`} style={styles.chipNegative}>
                     <Text style={styles.chipText}>{perkId}</Text>
                   </View>
                 ))}
-                {quest.undesirable.distinctionIds?.map(distinctionId => (
+                {quest.undesirable.qualityIds?.map(distinctionId => (
                   <View
                     key={`distinction-${distinctionId}`}
                     style={styles.chipNegative}

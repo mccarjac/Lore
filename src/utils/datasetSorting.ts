@@ -73,21 +73,21 @@ const sortCharacterNestedArrays = (character: GameCharacter): GameCharacter => {
     );
   }
 
-  // Sort perkIds alphabetically
-  if (sorted.perkIds && sorted.perkIds.length > 0) {
-    sorted.perkIds = [...sorted.perkIds].sort((a, b) => a.localeCompare(b));
+  // Sort traitIds alphabetically
+  if (sorted.traitIds && sorted.traitIds.length > 0) {
+    sorted.traitIds = [...sorted.traitIds].sort((a, b) => a.localeCompare(b));
   }
 
-  // Sort distinctionIds alphabetically
-  if (sorted.distinctionIds && sorted.distinctionIds.length > 0) {
-    sorted.distinctionIds = [...sorted.distinctionIds].sort((a, b) =>
+  // Sort qualityIds alphabetically
+  if (sorted.qualityIds && sorted.qualityIds.length > 0) {
+    sorted.qualityIds = [...sorted.qualityIds].sort((a, b) =>
       a.localeCompare(b)
     );
   }
 
-  // Sort cyberware by name
-  if (sorted.cyberware && sorted.cyberware.length > 0) {
-    sorted.cyberware = [...sorted.cyberware].sort((a, b) =>
+  // Sort modifications by name
+  if (sorted.modifications && sorted.modifications.length > 0) {
+    sorted.modifications = [...sorted.modifications].sort((a, b) =>
       a.name.toLowerCase().localeCompare(b.name.toLowerCase())
     );
   }

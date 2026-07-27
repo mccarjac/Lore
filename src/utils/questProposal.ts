@@ -1,5 +1,5 @@
 import { GameCharacter, GameQuest, QuestStatus } from '@models/types';
-import { calculateDerivedStats } from './derivedStats';
+import { calculateDerivedStats } from '@/ruleset/derived';
 
 export interface QuestProposal {
   questId: string;
@@ -27,39 +27,39 @@ export const scoreCharacterForQuest = (
   character: GameCharacter,
   quest: GameQuest
 ): number => {
-  const { tagScores } = calculateDerivedStats(character);
+  const { categoryScores } = calculateDerivedStats(character);
   const desirable = quest.desirable;
   const undesirable = quest.undesirable;
   let score = 0;
 
-  desirable?.tags?.forEach(tag => {
-    score += (tagScores?.get(tag) ?? 0) * TAG_SCORE_WEIGHT;
+  desirable?.traitCategoryIds?.forEach(categoryId => {
+    score += (categoryScores.get(categoryId) ?? 0) * TAG_SCORE_WEIGHT;
   });
-  undesirable?.tags?.forEach(tag => {
-    score -= (tagScores?.get(tag) ?? 0) * TAG_SCORE_WEIGHT;
+  undesirable?.traitCategoryIds?.forEach(categoryId => {
+    score -= (categoryScores.get(categoryId) ?? 0) * TAG_SCORE_WEIGHT;
   });
 
-  if (desirable?.species?.includes(character.species)) {
+  if (desirable?.archetypeIds?.includes(character.archetypeId)) {
     score += SPECIES_WEIGHT;
   }
-  if (undesirable?.species?.includes(character.species)) {
+  if (undesirable?.archetypeIds?.includes(character.archetypeId)) {
     score -= SPECIES_WEIGHT;
   }
 
-  desirable?.perkIds?.forEach(perkId => {
-    if (character.perkIds.includes(perkId)) score += PERK_WEIGHT;
+  desirable?.traitIds?.forEach(perkId => {
+    if (character.traitIds.includes(perkId)) score += PERK_WEIGHT;
   });
-  undesirable?.perkIds?.forEach(perkId => {
-    if (character.perkIds.includes(perkId)) score -= PERK_WEIGHT;
+  undesirable?.traitIds?.forEach(perkId => {
+    if (character.traitIds.includes(perkId)) score -= PERK_WEIGHT;
   });
 
-  desirable?.distinctionIds?.forEach(distinctionId => {
-    if (character.distinctionIds.includes(distinctionId)) {
+  desirable?.qualityIds?.forEach(distinctionId => {
+    if (character.qualityIds.includes(distinctionId)) {
       score += DISTINCTION_WEIGHT;
     }
   });
-  undesirable?.distinctionIds?.forEach(distinctionId => {
-    if (character.distinctionIds.includes(distinctionId)) {
+  undesirable?.qualityIds?.forEach(distinctionId => {
+    if (character.qualityIds.includes(distinctionId)) {
       score -= DISTINCTION_WEIGHT;
     }
   });

@@ -90,7 +90,7 @@ describe('globalSearch', () => {
           makeQuest({
             id: 'q1',
             name: 'Delivery Run',
-            junktownOffice: 'Scrap Office',
+            sponsor: 'Scrap Office',
           }),
         ],
       });

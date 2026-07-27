@@ -1,12 +1,7 @@
-import {
-  AVAILABLE_PERKS,
-  AVAILABLE_DISTINCTIONS,
-  type PerkTag,
-  type StatModifiers,
-} from './gameData';
+import { AVAILABLE_DISTINCTIONS } from './gameData';
+import type { ResourceModifiers } from '@/ruleset/types';
 import type { Species } from './speciesTypes';
 
-export type PerkId = (typeof AVAILABLE_PERKS)[number]['id'];
 export type DistinctionId = (typeof AVAILABLE_DISTINCTIONS)[number]['id'];
 
 export interface GameLocation {
@@ -73,25 +68,36 @@ export interface Relationship {
   customName?: string;
 }
 
-export interface Cyberware {
+/**
+ * A free-text, per-character entry that attaches resource modifiers — the
+ * generic form of what the Afterworlds ruleset calls Cyberware. Authored per
+ * character rather than picked from a ruleset catalog, which is how it has
+ * always worked; a catalog could come later.
+ */
+export interface Modification {
   name: string;
   description: string;
-  statModifiers?: StatModifiers;
+  resourceModifiers?: ResourceModifiers;
 }
 
 export interface GameCharacter {
   id: string;
   name: string;
-  species: Species;
-  perkIds: PerkId[];
-  distinctionIds: DistinctionId[];
+  /**
+   * Ruleset archetype id (RulesetDefinition.archetypes[].id). Was the closed
+   * `species` union before #3; migrateRulesetFields() rewrites stored data.
+   */
+  archetypeId: string;
+  /** Ruleset trait ids (RulesetDefinition.traits[].id). Was `traitIds`. */
+  traitIds: string[];
+  qualityIds: DistinctionId[];
   factions: Faction[];
   relationships: Relationship[];
   imageUris?: string[];
   notes?: string;
   locationId?: string; // Reference to GameLocation.id
   occupation?: string;
-  cyberware?: Cyberware[];
+  modifications?: Modification[];
   present?: boolean;
   retired?: boolean;
   createdAt: string;
@@ -151,10 +157,10 @@ export interface QuestMaterial {
 }
 
 export interface QuestAttributePreferences {
-  tags?: PerkTag[];
-  species?: Species[];
-  distinctionIds?: DistinctionId[];
-  perkIds?: PerkId[];
+  traitCategoryIds?: string[];
+  archetypeIds?: string[];
+  qualityIds?: DistinctionId[];
+  traitIds?: string[];
 }
 
 export interface GameQuest {
@@ -170,7 +176,7 @@ export interface GameQuest {
   locationId?: string; // Reference to GameLocation.id
   factionNames?: string[]; // Faction names related to the quest
   eventIds?: string[]; // References to GameEvent.id
-  junktownOffice?: string; // Related Junktown office (free text)
+  sponsor?: string; // Who commissioned the quest (free text)
   requiredMaterials?: QuestMaterial[];
   teamSize?: number; // Desired team size for proposal generation
   notes?: string;

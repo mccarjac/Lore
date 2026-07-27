@@ -100,21 +100,21 @@ export const CharacterStatsScreen = () => {
     ];
 
     return Object.entries(stats.speciesDistribution).map(
-      ([species, count], index) => ({
+      ([archetypeId, count], index) => ({
         value: count,
         color: colors[index % colors.length],
         text: `${count}`, // Show count on slice
-        label: species,
-        onPress: () => handleSlicePress(species, count),
+        label: archetypeId,
+        onPress: () => handleSlicePress(archetypeId, count),
       })
     );
   };
 
-  const handleSlicePress = (species: string, _count: number) => {
-    setSelectedSlice(selectedSlice === species ? null : species);
+  const handleSlicePress = (archetypeId: string, _count: number) => {
+    setSelectedSlice(selectedSlice === archetypeId ? null : archetypeId);
 
     // Show a temporary alert or tooltip-like behavior
-    if (selectedSlice !== species) {
+    if (selectedSlice !== archetypeId) {
       setTimeout(() => {
         setSelectedSlice(null);
       }, 3000); // Auto-hide after 3 seconds

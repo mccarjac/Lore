@@ -3,6 +3,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Alert } from 'react-native';
 import { Buffer } from 'buffer';
 import { exportDataset, applyMergedDataset } from './characterStorage';
+import { normalizeDatasetRulesetFields } from './rulesetFieldMigration';
+import { afterworldsRuleset } from '@/ruleset';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { classifySyncError, SyncError, SyncErrorKind } from './syncErrors';
 import {
@@ -548,7 +550,7 @@ export const exportToGitHub = async (
       title: `Data export by ${user.login}`,
       head: branchName,
       base: DATA_REPO_BRANCH,
-      body: `Automated data export from Junktown Intelligence.
+      body: `Automated data export from ${afterworldsRuleset.branding.appName}.
 
 **Export Details:**
 - User: ${user.login}
@@ -1015,9 +1017,18 @@ export const computeGitHubSyncPlan =
       }
       const remoteCommitSha = await getMainHeadSha(octokit);
 
-      const remote = JSON.parse(remoteResult.data) as SyncDataset;
-      const local = JSON.parse(await exportDataset()) as SyncDataset;
-      const base = await getSyncBaseSnapshot();
+      // Normalize every side to the current field names before diffing.
+      // A remote or base snapshot written before the Phase 1 renames would
+      // otherwise differ from freshly-migrated local data on every single
+      // character, manufacturing a conflict per record.
+      const remote = normalizeDatasetRulesetFields(
+        JSON.parse(remoteResult.data) as SyncDataset
+      );
+      const local = normalizeDatasetRulesetFields(
+        JSON.parse(await exportDataset()) as SyncDataset
+      );
+      const rawBase = await getSyncBaseSnapshot();
+      const base = rawBase ? normalizeDatasetRulesetFields(rawBase) : rawBase;
 
       return {
         success: true,

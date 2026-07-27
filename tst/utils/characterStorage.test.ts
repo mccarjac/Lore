@@ -68,9 +68,9 @@ describe('characterStorage', () => {
     const mockCharacter: GameCharacter = {
       id: 'char-1',
       name: 'Test Character',
-      species: 'Human',
-      perkIds: ['perk1'],
-      distinctionIds: ['dist1'],
+      archetypeId: 'Human',
+      traitIds: ['perk1'],
+      qualityIds: ['dist1'],
       factions: [{ name: 'Brotherhood', standing: RelationshipStanding.Ally }],
       relationships: [],
       present: false,
@@ -112,9 +112,9 @@ describe('characterStorage', () => {
         const oldCharacter = {
           id: 'char-1',
           name: 'Old Character',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -187,9 +187,9 @@ describe('characterStorage', () => {
 
         const newCharacterData = {
           name: 'New Character',
-          species: 'Mutant' as const,
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Mutant' as const,
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
         };
@@ -213,9 +213,9 @@ describe('characterStorage', () => {
 
         const newCharacterData = {
           name: 'Second Character',
-          species: 'Android' as const,
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Android' as const,
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
         };
@@ -238,9 +238,9 @@ describe('characterStorage', () => {
 
         const newCharacterData = {
           name: 'Character Without Relationships',
-          species: 'Human' as const,
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human' as const,
+          traitIds: [],
+          qualityIds: [],
           factions: [],
         } as any;
 
@@ -295,7 +295,7 @@ describe('characterStorage', () => {
         const result = await updateCharacter('char-1', { retired: true });
 
         expect(result?.name).toBe('Test Character');
-        expect(result?.species).toBe('Human');
+        expect(result?.archetypeId).toBe('Human');
         expect(result?.retired).toBe(true);
       });
     });
@@ -432,9 +432,9 @@ describe('characterStorage', () => {
             {
               id: 'char-1',
               name: 'Test',
-              species: 'Human',
-              perkIds: [],
-              distinctionIds: [],
+              archetypeId: 'Human',
+              traitIds: [],
+              qualityIds: [],
               factions: [],
               relationships: [],
               createdAt: mockDate,
@@ -522,9 +522,9 @@ describe('characterStorage', () => {
             {
               id: 'char-1',
               name: 'Imported',
-              species: 'Human',
-              perkIds: [],
-              distinctionIds: [],
+              archetypeId: 'Human',
+              traitIds: [],
+              qualityIds: [],
               factions: [],
               relationships: [],
               createdAt: mockDate,
@@ -1185,10 +1185,10 @@ describe('characterStorage', () => {
             {
               id: 'char-1',
               name: 'Test',
-              species: 'Human',
+              archetypeId: 'Human',
               location: 'Old Town', // Old location field
-              perkIds: [],
-              distinctionIds: [],
+              traitIds: [],
+              qualityIds: [],
               factions: [],
               relationships: [],
               present: false,
@@ -1236,10 +1236,10 @@ describe('characterStorage', () => {
             {
               id: 'char-1',
               name: 'Test',
-              species: 'Human',
+              archetypeId: 'Human',
               locationId: 'nonexistent-location-id',
-              perkIds: [],
-              distinctionIds: [],
+              traitIds: [],
+              qualityIds: [],
               factions: [],
               relationships: [],
               present: false,
@@ -1338,9 +1338,9 @@ describe('characterStorage', () => {
         const characterWithFaction: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [
             { name: 'ToDelete', standing: RelationshipStanding.Ally },
             { name: 'ToKeep', standing: RelationshipStanding.Neutral },
@@ -1456,9 +1456,9 @@ describe('characterStorage', () => {
         const character: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [{ name: 'OldName', standing: RelationshipStanding.Ally }],
           relationships: [],
           present: false,
@@ -1710,9 +1710,9 @@ describe('characterStorage', () => {
         const character: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [
             {
               name: 'Brotherhood',
@@ -1754,9 +1754,9 @@ describe('characterStorage', () => {
         const character: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [
             {
               name: 'Brotherhood',
@@ -1808,9 +1808,9 @@ describe('characterStorage', () => {
         const character = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -1997,10 +1997,10 @@ describe('characterStorage', () => {
         const character: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
+          archetypeId: 'Human',
           locationId: 'loc-to-delete',
-          perkIds: [],
-          distinctionIds: [],
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -2258,10 +2258,10 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'John',
-          species: 'Human',
+          archetypeId: 'Human',
           notes: 'Original notes',
-          perkIds: ['perk1'],
-          distinctionIds: [],
+          traitIds: ['perk1'],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -2273,10 +2273,10 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Jane',
-          species: 'Mutant',
+          archetypeId: 'Mutant',
           notes: 'Different notes',
-          perkIds: ['perk2'],
-          distinctionIds: [],
+          traitIds: ['perk2'],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -2307,7 +2307,7 @@ describe('characterStorage', () => {
         expect(result.success).toBe(true);
         expect(result.conflicts.length).toBeGreaterThan(0);
         expect(result.conflicts[0].conflicts).toContain('name');
-        expect(result.conflicts[0].conflicts).toContain('species');
+        expect(result.conflicts[0].conflicts).toContain('archetypeId');
         expect(result.conflicts[0].conflicts).toContain('notes');
       });
 
@@ -2315,9 +2315,9 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: ['perk1'],
-          distinctionIds: ['dist1'],
+          archetypeId: 'Human',
+          traitIds: ['perk1'],
+          qualityIds: ['dist1'],
           factions: [{ name: 'Faction1', standing: RelationshipStanding.Ally }],
           relationships: [],
           present: false,
@@ -2329,9 +2329,9 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: ['perk2'],
-          distinctionIds: ['dist2'],
+          archetypeId: 'Human',
+          traitIds: ['perk2'],
+          qualityIds: ['dist2'],
           factions: [
             { name: 'Faction2', standing: RelationshipStanding.Neutral },
           ],
@@ -2363,8 +2363,8 @@ describe('characterStorage', () => {
 
         expect(result.success).toBe(true);
         expect(result.conflicts).toHaveLength(0);
-        expect(result.merged[0].perkIds).toEqual(['perk1', 'perk2']);
-        expect(result.merged[0].distinctionIds).toEqual(['dist1', 'dist2']);
+        expect(result.merged[0].traitIds).toEqual(['perk1', 'perk2']);
+        expect(result.merged[0].qualityIds).toEqual(['dist1', 'dist2']);
         expect(result.merged[0].factions).toHaveLength(2);
       });
 
@@ -2372,10 +2372,10 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: '',
-          species: 'Human',
+          archetypeId: 'Human',
           notes: '',
-          perkIds: [],
-          distinctionIds: [],
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -2387,10 +2387,10 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Imported Name',
-          species: 'Human',
+          archetypeId: 'Human',
           notes: 'Imported notes',
-          perkIds: [],
-          distinctionIds: [],
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -2428,9 +2428,9 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [
             {
@@ -2448,9 +2448,9 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [
             {
@@ -2590,9 +2590,9 @@ describe('characterStorage', () => {
         const testChar: GameCharacter = {
           id: 'test-1',
           name: 'Test',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -2954,9 +2954,9 @@ describe('characterStorage', () => {
         const characterWithFaction: GameCharacter = {
           id: 'char-1',
           name: 'Test Character',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [factionToDelete, factionToKeep],
           relationships: [],
           present: false,
@@ -3007,9 +3007,9 @@ describe('characterStorage', () => {
         const characterWithoutFaction: GameCharacter = {
           id: 'char-2',
           name: 'Other Character',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [otherFaction],
           relationships: [],
           present: false,
@@ -3061,9 +3061,9 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'Existing',
-          species: 'Human',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Human',
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -3075,9 +3075,9 @@ describe('characterStorage', () => {
         const newChar: GameCharacter = {
           id: 'char-2',
           name: 'New Character',
-          species: 'Mutant',
-          perkIds: [],
-          distinctionIds: [],
+          archetypeId: 'Mutant',
+          traitIds: [],
+          qualityIds: [],
           factions: [],
           relationships: [],
           present: false,
@@ -3132,9 +3132,9 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'Test Character',
-          species: 'Human',
-          perkIds: ['perk1'],
-          distinctionIds: ['dist1'],
+          archetypeId: 'Human',
+          traitIds: ['perk1'],
+          qualityIds: ['dist1'],
           factions: [faction1],
           relationships: [],
           notes: 'Original notes',
@@ -3147,9 +3147,9 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Test Character',
-          species: 'Human',
-          perkIds: ['perk2', 'perk3'], // New perks
-          distinctionIds: ['dist2'], // New distinction
+          archetypeId: 'Human',
+          traitIds: ['perk2', 'perk3'], // New perks
+          qualityIds: ['dist2'], // New distinction
           factions: [faction2], // New faction
           relationships: [],
           present: false,
@@ -3187,8 +3187,8 @@ describe('characterStorage', () => {
         expect(savedCharacters[0]).toEqual(
           expect.objectContaining({
             id: 'char-1',
-            perkIds: ['perk1', 'perk2', 'perk3'],
-            distinctionIds: ['dist1', 'dist2'],
+            traitIds: ['perk1', 'perk2', 'perk3'],
+            qualityIds: ['dist1', 'dist2'],
             factions: [faction1, faction2],
           })
         );

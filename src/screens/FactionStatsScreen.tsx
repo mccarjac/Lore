@@ -109,7 +109,7 @@ export const FactionStatsScreen: React.FC = () => {
     }
   };
 
-  const renderPerkTagBar = (tag: PerkTag, count: number, maxCount: number) => {
+  const renderPerkTagBar = (tag: string, count: number, maxCount: number) => {
     const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
     const widthPercentage = `${Math.max(percentage, 5)}%` as const; // Minimum 5% width for visibility
 
@@ -133,8 +133,12 @@ export const FactionStatsScreen: React.FC = () => {
     );
   };
 
-  const getPerkTagColor = (tag: PerkTag): string => {
-    const colorMap: Record<PerkTag, string> = {
+  // Still a hardcoded Afterworlds palette; #9 replaces this by reading
+  // `color` off the ruleset's TraitCategory. Widened to `string` here only
+  // so a ruleset-defined category id type-checks, with the existing
+  // fallback covering any id the map does not know.
+  const getPerkTagColor = (tag: string): string => {
+    const colorMap: Record<string, string> = {
       [PerkTag.Agility]: '#3498DB',
       [PerkTag.Charisma]: '#E91E63',
       [PerkTag.Crafting]: '#FF9800',
