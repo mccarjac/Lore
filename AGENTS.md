@@ -46,11 +46,37 @@ src/
                         AppNavigator.tsx (the whole navigation tree)
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
   utils/                storage, export/import, discord, git, stats
+  branding.ts           app identity (see "Branding" below)
 tst/                    Jest tests, mirroring src/
 ```
 
 Path aliases (tsconfig + babel-plugin-module-resolver): `@/*` → `src/*`, plus
 `@components/*`, `@screens/*`, `@models/*`, `@utils/*`. Use them.
+
+## Branding
+
+`src/branding.ts` is the only place app identity lives — name, slug, bundle
+identifier, EAS project id, Expo owner, and the paths of the four branding
+PNGs in `assets/`. A fork changes that file and those images, nothing else.
+
+- **`app.config.ts` is engine-owned** and holds no identity literals; it is the
+  config _shape_ and reads every value from `src/branding.ts`. There is no
+  `app.json` — leaving one in place would make it a base config merged under
+  the dynamic one, i.e. two sources again.
+- **`src/branding.ts` must stay dependency-free.** Expo loads `app.config.ts`
+  outside Metro, so no `react-native` imports and no path aliases. For the same
+  reason the import in `app.config.ts` is relative _and_ carries an explicit
+  `.ts` extension — Expo transpiles that entry file with sucrase but resolves
+  its requires with plain Node, which would look for `./src/branding.js`.
+  `allowImportingTsExtensions` in `tsconfig.json` exists solely for this.
+- **`APP_NAME` is not the same thing as `RulesetDefinition.branding.appName`.**
+  The ruleset field is _runtime display_ identity, owned by whichever ruleset
+  is active and correctly per-ruleset; `src/branding.ts` is _build_ identity,
+  resolved before a ruleset is chosen. `APP_NAME` is the single source —
+  rulesets import it, never the reverse.
+- Changing the slug or bundle identifiers affects EAS builds and would orphan
+  installed apps. Relocating those values (this section) is safe; changing
+  them is issue #15's job.
 
 ## Data & storage architecture
 

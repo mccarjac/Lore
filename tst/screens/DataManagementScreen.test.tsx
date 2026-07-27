@@ -5,6 +5,8 @@ import * as characterStorage from '@utils/characterStorage';
 import * as gitIntegration from '@utils/gitIntegration';
 import { spyOnAlert, pressAlertButton } from '../helpers/alertAndPlatform';
 import { makeCharacter } from '../helpers/factories';
+import { renderWithRuleset } from '../helpers/ruleset';
+import { genericRuleset } from '../fixtures/genericRuleset';
 
 jest.mock('@utils/characterStorage');
 jest.mock('@utils/exportImport');
@@ -195,7 +197,9 @@ describe('DataManagementScreen', () => {
       prUrl: 'https://github.com/mccarjac/AWInvestigationsDataLibrary/pull/2',
     });
 
-    const { getByText } = render(<DataManagementScreen />);
+    const { getByText } = renderWithRuleset(<DataManagementScreen />, {
+      ruleset: genericRuleset,
+    });
     await waitFor(() => getByText('Export to GitHub (Create PR)'));
 
     fireEvent.press(getByText('Export to GitHub (Create PR)'));
@@ -210,8 +214,13 @@ describe('DataManagementScreen', () => {
 
     await pressAlertButton(alertSpy, 'Export Anyway');
 
+    // The ruleset comes from the provider, not a module-level singleton — the
+    // PR body names the ruleset the data was exported from.
     await waitFor(() => {
-      expect(git.exportToGitHub).toHaveBeenLastCalledWith({ force: true });
+      expect(git.exportToGitHub).toHaveBeenLastCalledWith({
+        force: true,
+        ruleset: genericRuleset,
+      });
     });
   });
 });

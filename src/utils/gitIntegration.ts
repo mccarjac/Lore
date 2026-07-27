@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 import { Buffer } from 'buffer';
 import { exportDataset, applyMergedDataset } from './characterStorage';
 import { normalizeDatasetRulesetFields } from './rulesetFieldMigration';
-import { afterworldsRuleset } from '@/ruleset';
+import { afterworldsRuleset, type RulesetDefinition } from '@/ruleset';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { classifySyncError, SyncError, SyncErrorKind } from './syncErrors';
 import {
@@ -182,7 +182,7 @@ const getMainHeadSha = async (octokit: Octokit): Promise<string> => {
  * Export data to GitHub repository by creating a Pull Request
  */
 export const exportToGitHub = async (
-  options: { force?: boolean } = {}
+  options: { force?: boolean; ruleset?: RulesetDefinition } = {}
 ): Promise<{
   success: boolean;
   prUrl?: string;
@@ -550,7 +550,7 @@ export const exportToGitHub = async (
       title: `Data export by ${user.login}`,
       head: branchName,
       base: DATA_REPO_BRANCH,
-      body: `Automated data export from ${afterworldsRuleset.branding.appName}.
+      body: `Automated data export from ${(options.ruleset ?? afterworldsRuleset).branding.appName}.
 
 **Export Details:**
 - User: ${user.login}

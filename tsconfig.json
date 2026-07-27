@@ -2,6 +2,10 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // app.config.ts must import src/branding.ts with an explicit extension —
+    // Expo resolves that require with plain Node, which cannot find a bare
+    // './src/branding'. Safe here because the build is `tsc --noEmit`.
+    "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
