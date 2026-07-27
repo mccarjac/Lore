@@ -3,12 +3,25 @@ name: Build Android APK
 on:
   workflow_dispatch:
 
-jobs: 
+jobs:
   build:
     name:  Build APK
     runs-on: ubuntu-latest
-    permissions: 
+    permissions:
       contents: write
+
+    # App identity comes from the environment (see src/branding.ts and
+    # .env.example); repository variables override the Lore defaults so a fork
+    # never has to patch this workflow. These reach the *local* config
+    # evaluation and the links below — the remote EAS build reads its own
+    # environment, so set the same values in eas.json's `env` or the EAS
+    # dashboard. See docs/github-actions.md.
+    env:
+      EXPO_OWNER: ${{ vars.EXPO_OWNER || 'mccarjac' }}
+      EXPO_PUBLIC_APP_NAME: ${{ vars.EXPO_PUBLIC_APP_NAME || 'Lore' }}
+      EXPO_PUBLIC_APP_SLUG: ${{ vars.EXPO_PUBLIC_APP_SLUG || 'lore' }}
+      EXPO_PUBLIC_BUNDLE_IDENTIFIER: ${{ vars.EXPO_PUBLIC_BUNDLE_IDENTIFIER || 'com.mccarjac.lore' }}
+      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
 
     steps:
       - name: Checkout repository
@@ -101,7 +114,7 @@ jobs:
             fi
           else
             echo "⚠️ Build did not complete successfully. Status: $BUILD_STATUS"
-            echo "Check build details at: https://expo.dev/accounts/mccarjac/projects/GameCharacterManager/builds/$BUILD_ID"
+            echo "Check build details at: https://expo.dev/accounts/$EXPO_OWNER/projects/$EXPO_PUBLIC_APP_SLUG/builds/$BUILD_ID"
           fi
 
       - name: Create GitHub Release
@@ -123,7 +136,7 @@ jobs:
             [Download APK](${{ steps.build_apk.outputs. artifacts_url }})
 
             **View Build Details:**
-            [View on Expo](https://expo.dev/accounts/mccarjac/projects/GameCharacterManager/builds/${{ steps.build_apk.outputs.build_id }})
+            [View on Expo](https://expo.dev/accounts/${{ env.EXPO_OWNER }}/projects/${{ env.EXPO_PUBLIC_APP_SLUG }}/builds/${{ steps.build_apk.outputs.build_id }})
 
             This build was automatically generated from commit ${{ github.sha }}.
           draft: false
@@ -137,5 +150,5 @@ jobs:
           echo "❌ Build did not complete successfully"
           echo "Status:  ${{ steps.build_apk.outputs.build_status }}"
           echo "Build ID: ${{ steps.build_apk. outputs.build_id }}"
-          echo "View details at: https://expo.dev/accounts/mccarjac/projects/GameCharacterManager/builds/${{ steps. build_apk.outputs.build_id }}"
+          echo "View details at: https://expo.dev/accounts/${{ env.EXPO_OWNER }}/projects/${{ env.EXPO_PUBLIC_APP_SLUG }}/builds/${{ steps.build_apk.outputs.build_id }}"
           exit 1
