@@ -1,5 +1,4 @@
 import type { AttributeBag, Modifier } from '@/ruleset/types';
-import type { Species } from './speciesTypes';
 
 export interface GameLocation {
   id: string;
@@ -37,20 +36,6 @@ export const NEGATIVE_RELATIONSHIP_TYPE: RelationshipStanding[] = [
   RelationshipStanding.Hostile,
   RelationshipStanding.Enemy,
 ];
-
-export interface Recipe {
-  id: string;
-  name: string;
-  description: string;
-  materials: string[];
-}
-
-export interface Distinction {
-  id: string;
-  name: string;
-  description: string;
-  allowedSpecies?: Species[];
-}
 
 export interface Faction {
   name: string;

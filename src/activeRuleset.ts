@@ -1,5 +1,6 @@
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
-import { afterworldsAssets, type RulesetAssets } from '@/ruleset/assets';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { afterworldsAssets } from '@/rulesets/afterworlds/assets';
+import type { RulesetAssets } from '@/ruleset/assets';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 /**

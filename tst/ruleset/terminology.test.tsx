@@ -6,7 +6,7 @@ import {
   DEFAULT_TERMINOLOGY,
 } from '@/ruleset/terminology';
 import { RulesetProvider } from '@/ruleset/context';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const rulesetWithoutOverrides: RulesetDefinition = {

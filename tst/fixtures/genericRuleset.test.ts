@@ -1,4 +1,5 @@
-import { validateRuleset, afterworldsRuleset } from '@/ruleset';
+import { validateRuleset } from '@/ruleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { genericRuleset } from './genericRuleset';
 
 describe('the generic fixture ruleset', () => {

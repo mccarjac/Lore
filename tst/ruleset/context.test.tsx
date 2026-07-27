@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { RulesetProvider, useRuleset } from '@/ruleset/context';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const Probe: React.FC = () => {

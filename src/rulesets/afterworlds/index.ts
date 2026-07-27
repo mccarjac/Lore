@@ -5,15 +5,18 @@ import {
   MUTANT_SPECIES,
   ANDROID_SPECIES,
   type Species,
-} from '@models/speciesTypes';
+} from './content/speciesTypes';
 import {
   AVAILABLE_PERKS,
   AVAILABLE_DISTINCTIONS,
   AVAILABLE_RECIPES,
   TAG_SCORE_BONUSES,
   PerkTag,
-} from '@models/gameData';
-import { flag, num, type AttributeDefinition } from './attributes';
+} from './content/gameData';
+import { flag, num, type AttributeDefinition } from '@/ruleset/attributes';
+import { APP_NAME } from '@/branding';
+import { afterworldsTerminology } from './terminology';
+import { afterworldsTraitCategories } from './categories';
 import type {
   RulesetDefinition,
   Archetype,
@@ -21,7 +24,7 @@ import type {
   Quality,
   CategoryBonusRule,
   Modifier,
-} from './types';
+} from '@/ruleset/types';
 
 const GROUP_MEMBERSHIP: Record<string, Species[]> = {
   organic: ORGANIC_SPECIES,
@@ -94,26 +97,6 @@ const attributes: AttributeDefinition[] = [
     role: 'capability',
   },
 ];
-
-/**
- * Was a hardcoded `Record<PerkTag, string>` inside FactionStatsScreen (#9).
- * Category colors are ruleset content — a flavor with five categories gets to
- * pick its own five, and the screen cycles a shared palette for any it omits.
- */
-const CATEGORY_COLORS: Record<string, string> = {
-  [PerkTag.Agility]: '#3498DB',
-  [PerkTag.Charisma]: '#E91E63',
-  [PerkTag.Crafting]: '#FF9800',
-  [PerkTag.Defense]: '#9C27B0',
-  [PerkTag.Endurance]: '#4CAF50',
-  [PerkTag.Finesse]: '#00BCD4',
-  [PerkTag.Grit]: '#795548',
-  [PerkTag.Medical]: '#F44336',
-  [PerkTag.Smarts]: '#2196F3',
-  [PerkTag.Strength]: '#E74C3C',
-  [PerkTag.Teamwork]: '#009688',
-  [PerkTag.Technical]: '#607D8B',
-};
 
 const archetypes: Archetype[] = Object.entries(SPECIES_BASE_STATS).map(
   ([id, stats]) => ({
@@ -202,25 +185,7 @@ export const afterworldsRuleset: RulesetDefinition = {
   id: 'afterworlds',
   name: 'Junktown Intelligence',
   version: '1.0.0',
-  terminology: {
-    'archetype.singular': 'Species',
-    'archetype.plural': 'Species',
-    'trait.singular': 'Perk',
-    'trait.plural': 'Perks',
-    'traitCategory.singular': 'Tag',
-    'traitCategory.plural': 'Tags',
-    'quality.singular': 'Distinction',
-    'quality.plural': 'Distinctions',
-    'modification.singular': 'Cyberware',
-    'modification.plural': 'Cyberware',
-    'resource.singular': 'Resource',
-    'resource.plural': 'Resources',
-    'recipe.singular': 'Recipe',
-    'recipe.plural': 'Recipes',
-    'questSponsor.singular': 'Junktown Office',
-    'questSponsor.plural': 'Junktown Offices',
-    'map.label': 'Junktown Map',
-  },
+  terminology: afterworldsTerminology,
   attributes,
   groups: [
     { id: 'organic', label: 'Organic' },
@@ -230,11 +195,7 @@ export const afterworldsRuleset: RulesetDefinition = {
   ],
   archetypes,
   defaultArchetypeId: 'Human',
-  traitCategories: Object.values(PerkTag).map(tag => ({
-    id: tag,
-    label: tag,
-    color: CATEGORY_COLORS[tag],
-  })),
+  traitCategories: afterworldsTraitCategories,
   traits,
   qualities,
   recipes: AVAILABLE_RECIPES.map(recipe => ({ ...recipe })),
@@ -252,5 +213,5 @@ export const afterworldsRuleset: RulesetDefinition = {
   },
   limits: { maxQualities: 3 },
   map: { imageKey: 'map' },
-  branding: { appName: 'Junktown Intelligence' },
+  branding: { appName: APP_NAME },
 };

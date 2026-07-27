@@ -1,6 +1,6 @@
 import { calculateDerivedStats } from '@/ruleset/derived';
 import { GameCharacter } from '@/models/types';
-import { PerkTag } from '@/models/gameData';
+import { PerkTag } from '@/rulesets/afterworlds/content/gameData';
 
 describe('derivedStats', () => {
   describe('calculateDerivedStats', () => {

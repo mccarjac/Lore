@@ -2,11 +2,11 @@ import React from 'react';
 import { render, type RenderResult } from '@testing-library/react-native';
 import {
   RulesetProvider,
-  afterworldsRuleset,
-  afterworldsAssets,
   type RulesetDefinition,
   type RulesetAssets,
 } from '@/ruleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { afterworldsAssets } from '@/rulesets/afterworlds/assets';
 
 export const renderWithRuleset = (
   ui: React.ReactElement,

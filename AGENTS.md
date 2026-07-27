@@ -38,20 +38,58 @@ src/
   components/common/    reusable UI (Card, Section, Header*Button, ...)
   components/screens/   Base{List,Form,Detail}Screen — generic screen scaffolds
   screens/<feature>/    character/ faction/ location/ events/ discord/
-  models/               types.ts (all domain types); gameData.ts +
-                        speciesTypes.ts are Afterworlds *content* (see #13)
-  ruleset/              attribute primitive, pluggable ruleset schema,
+  models/               types.ts — all domain types, and nothing else
+  ruleset/              THE ENGINE: attribute primitive, ruleset schema,
                         provider, validator, terminology, derived stats
+  rulesets/<flavor>/    A ruleset's content — fork-owned. See below.
   navigation/           types.ts (navigator + param-list types) and
                         AppNavigator.tsx (the whole navigation tree)
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
   utils/                storage, export/import, discord, git, stats
-  branding.ts           app identity (see "Branding" below)
+  activeRuleset.ts      which ruleset this build runs on (fork-owned)
+  branding.ts           app identity (fork-owned; see "Branding")
 tst/                    Jest tests, mirroring src/
 ```
 
+Note the singular/plural distinction, which is easy to misread: **`ruleset/`
+is the engine, `rulesets/` is content.** Nothing under `rulesets/` may be
+imported by engine code — only `src/activeRuleset.ts` names a flavor.
+
 Path aliases (tsconfig + babel-plugin-module-resolver): `@/*` → `src/*`, plus
-`@components/*`, `@screens/*`, `@models/*`, `@utils/*`. Use them.
+`@components/*`, `@screens/*`, `@models/*`, `@utils/*`. Use them. All five are
+declared in **three** places that must stay in sync — `tsconfig.json`,
+`babel.config.js`, and `jest.config.js`'s `moduleNameMapper`. `src/rulesets/`
+deliberately gets no alias of its own: `@/rulesets/…` already resolves, and a
+sixth alias would be a fourth thing to keep in sync. `@models/*` now points at
+a directory holding one file and is a candidate for retirement.
+
+## Engine vs fork
+
+Lore is the engine; Junktown Intelligence is a flavor of it (#19). The
+fork-owned surface is exactly:
+
+```
+src/branding.ts             app identity
+src/activeRuleset.ts        which ruleset this build runs on
+src/rulesets/<flavor>/**    the ruleset itself: content, terminology,
+                            categories, and its bundled images
+assets/{icon,adaptive-icon,splash-icon,favicon}.png
+```
+
+Everything else is engine-owned and merges cleanly from upstream. When you
+add something Afterworlds-specific, it belongs in that list or it is a bug.
+
+`src/rulesets/afterworlds/` is laid out as `index.ts` (the
+`RulesetDefinition`), `terminology.ts`, `categories.ts`, `assets.ts` +
+`assets/`, and `content/` — the last holding `gameData.ts`, `speciesTypes.ts`
+and their authoring types. **The content is still authored in the legacy
+Afterworlds vocabulary** (`PerkTag`, `Species`, `Perk`, `StatModifiers`) and
+transformed into ruleset shapes by `index.ts` at module load. Issue #13
+sketched a fuller split (`archetypes.ts` / `traits.ts` / `qualities.ts` /
+`recipes.ts` / `bonuses.ts`); that was deliberately not adopted, because
+regenerating ~2200 lines of literals buys reviewability problems and no
+behavior. Data-entry work (JunktownIntelligence#116) happens against
+`content/gameData.ts`.
 
 ## Branding
 
@@ -145,18 +183,15 @@ which is what forced `models/types.ts` to import a content _value_ and made
 (the `AVAILABLE_DISTINCTIONS: Distinction[]` annotation defeats its
 `as const`), so removing it changed no stored bytes and needed no migration.
 
-Afterworlds data still lives in `gameData.ts` and `speciesTypes.ts`, and
-`src/ruleset/defaultRuleset.ts` derives a `RulesetDefinition` from it via a
+Afterworlds data lives entirely under `src/rulesets/afterworlds/`, whose
+`index.ts` derives a `RulesetDefinition` from the tables in `content/` via a
 transform rather than a hand-written literal, so the two cannot drift.
-**Treat those two files as content, not code** — they are moved wholesale to
-`src/rulesets/afterworlds/` and deleted in #13. `speciesTypes.ts` could not
-be folded into the ruleset during Phase 1 because `gameData.ts` imports its
-`Species` type and group arrays, and inverting that would make
-`gameData → defaultRuleset → gameData` circular.
+**Treat everything under `content/` as content, not code.**
 
-Ruleset _terminology overrides are also content_. The Afterworlds ruleset
-maps `modification.singular` to "Cyberware", `archetype.plural` to "Species",
-and so on, which is the only reason the Junktown app still reads the way its
+Ruleset _terminology overrides are also content_
+(`rulesets/afterworlds/terminology.ts`). That ruleset maps
+`modification.singular` to "Cyberware", `archetype.plural` to "Species", and
+so on, which is the only reason the Junktown app still reads the way its
 users expect after the Phase 1 renames. Renaming an engine field must never
 drag those override _values_ along with it.
 

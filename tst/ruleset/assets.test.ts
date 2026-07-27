@@ -1,4 +1,5 @@
-import { resolveAsset, afterworldsAssets } from '@/ruleset/assets';
+import { resolveAsset } from '@/ruleset/assets';
+import { afterworldsAssets } from '@/rulesets/afterworlds/assets';
 
 describe('resolveAsset', () => {
   it('resolves a known key', () => {

@@ -6,8 +6,14 @@
  * rewrite in #6 must keep these numbers identical for the Afterworlds
  * ruleset — if a case here moves, user-visible stat numbers moved with it.
  */
-import { AVAILABLE_PERKS, PerkTag } from '@/models/gameData';
-import { SPECIES_BASE_STATS, type Species } from '@/models/speciesTypes';
+import {
+  AVAILABLE_PERKS,
+  PerkTag,
+} from '@/rulesets/afterworlds/content/gameData';
+import {
+  SPECIES_BASE_STATS,
+  type Species,
+} from '@/rulesets/afterworlds/content/speciesTypes';
 import { calculateDerivedStats } from '@/ruleset/derived';
 import type { Modification, GameCharacter } from '@/models/types';
 import { DERIVED_STATS_BASELINE } from '../fixtures/derivedStatsBaseline';

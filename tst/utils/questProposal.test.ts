@@ -6,7 +6,7 @@ import {
   DEFAULT_TEAM_SIZE,
 } from '@/utils/questProposal';
 import { GameCharacter, GameQuest, QuestStatus } from '@/models/types';
-import { PerkTag } from '@/models/gameData';
+import { PerkTag } from '@/rulesets/afterworlds/content/gameData';
 
 const mockDate = '2025-01-01T00:00:00.000Z';
 

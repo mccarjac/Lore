@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderWithRuleset } from '../helpers/ruleset';
 import { genericRuleset } from '../fixtures/genericRuleset';
-import { afterworldsRuleset } from '@/ruleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 
 /**
  * The navigator factories are replaced with pass-throughs that surface each

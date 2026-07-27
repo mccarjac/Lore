@@ -1,5 +1,5 @@
 import { validateRuleset } from '@/ruleset/validate';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const baseRuleset = (): RulesetDefinition => ({

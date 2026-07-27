@@ -12,7 +12,7 @@ import {
   normalizeQuestRulesetFields,
   normalizeQuestsRulesetFields,
 } from '@utils/rulesetFieldMigration';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { QuestStatus, type GameCharacter, type GameQuest } from '@models/types';
 
 const TS = '2026-01-01T00:00:00.000Z';

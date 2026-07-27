@@ -7,7 +7,7 @@
  * and that adding it did not disturb the steps around it.
  */
 import { calculateDerivedStats } from '@/ruleset/derived';
-import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { validateCharacterAttributes } from '@/ruleset/validate';
 import { flag, num, text, type AttributeBag } from '@/ruleset/attributes';
 import type { RulesetDefinition } from '@/ruleset/types';
