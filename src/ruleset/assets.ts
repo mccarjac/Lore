@@ -6,8 +6,8 @@ import type { ImageSourcePropType } from 'react-native';
  * from RulesetDefinition because bundled images cannot round-trip through
  * JSON, and the definition itself must stay serializable.
  *
- * The images themselves are ruleset content and live with the ruleset — see
- * `src/rulesets/afterworlds/assets.ts`.
+ * The images themselves are ruleset content and live with the ruleset, in
+ * `src/rulesets/<flavor>/assets.ts`.
  */
 export type RulesetAssets = Record<string, ImageSourcePropType>;
 

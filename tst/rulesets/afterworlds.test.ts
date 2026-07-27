@@ -1,6 +1,7 @@
 import { getNumber } from '@/ruleset/attributes';
 import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { validateRuleset } from '@/ruleset/validate';
+import { getLabel } from '@/ruleset/terminology';
 import { SPECIES_BASE_STATS } from '@/rulesets/afterworlds/content/speciesTypes';
 import {
   AVAILABLE_PERKS,
@@ -60,6 +61,22 @@ describe('afterworldsRuleset', () => {
         a => a.id === afterworldsRuleset.defaultArchetypeId
       )
     ).toBe(true);
+  });
+
+  it('keeps saying Species, Perks and Junktown Office on screen', () => {
+    // The Phase 1 renames moved the *fields* to neutral names; these overrides
+    // are the only reason the app still reads the way its players expect.
+    // Terminology assertions belong here with the flavor, not in the engine's
+    // own suites.
+    expect(getLabel(afterworldsRuleset, 'archetype.singular')).toBe('Species');
+    expect(getLabel(afterworldsRuleset, 'trait.plural')).toBe('Perks');
+    expect(getLabel(afterworldsRuleset, 'quality.plural')).toBe('Distinctions');
+    expect(getLabel(afterworldsRuleset, 'modification.singular')).toBe(
+      'Cyberware'
+    );
+    expect(getLabel(afterworldsRuleset, 'questSponsor.singular')).toBe(
+      'Junktown Office'
+    );
   });
 
   it('enables every feature — Junktown uses all of them', () => {

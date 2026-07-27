@@ -6,12 +6,16 @@ import {
   DEFAULT_TERMINOLOGY,
 } from '@/ruleset/terminology';
 import { RulesetProvider } from '@/ruleset/context';
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
 import { activeRuleset } from '@/activeRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
+import { genericRuleset } from '../fixtures/genericRuleset';
 
+// The fixture overrides most nouns; stripping them is how the fallback path
+// gets exercised. Neither variant is a flavor — that a *particular* ruleset's
+// overrides read the way its players expect is asserted with that ruleset,
+// in `tst/rulesets/`.
 const rulesetWithoutOverrides: RulesetDefinition = {
-  ...afterworldsRuleset,
+  ...genericRuleset,
   terminology: {},
 };
 
@@ -21,15 +25,13 @@ describe('getLabel', () => {
   });
 
   it('uses the ruleset override when present', () => {
-    expect(getLabel(afterworldsRuleset, 'trait.plural')).toBe('Perks');
-    expect(getLabel(afterworldsRuleset, 'archetype.singular')).toBe('Species');
-    expect(getLabel(afterworldsRuleset, 'questSponsor.singular')).toBe(
-      'Junktown Office'
-    );
+    expect(getLabel(genericRuleset, 'trait.plural')).toBe('Talents');
+    expect(getLabel(genericRuleset, 'archetype.singular')).toBe('Lineage');
+    expect(getLabel(genericRuleset, 'modification.plural')).toBe('Augments');
   });
 
   it('applies lower casing', () => {
-    expect(getLabel(afterworldsRuleset, 'trait.plural', 'lower')).toBe('perks');
+    expect(getLabel(genericRuleset, 'trait.plural', 'lower')).toBe('talents');
   });
 
   it('applies title casing', () => {
@@ -49,10 +51,10 @@ describe('getLabel', () => {
 describe('useLabels', () => {
   it('reads from the nearest RulesetProvider', () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <RulesetProvider ruleset={afterworldsRuleset}>{children}</RulesetProvider>
+      <RulesetProvider ruleset={genericRuleset}>{children}</RulesetProvider>
     );
     const { result } = renderHook(() => useLabels(), { wrapper });
-    expect(result.current('trait.plural')).toBe('Perks');
+    expect(result.current('trait.plural')).toBe('Talents');
   });
 
   it('falls back to the active ruleset outside a provider', () => {

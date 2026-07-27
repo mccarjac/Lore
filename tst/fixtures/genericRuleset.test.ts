@@ -1,8 +1,12 @@
 import { validateRuleset } from '@/ruleset';
 import type { RulesetDefinition } from '@/ruleset/types';
-import { afterworldsRuleset } from '@/rulesets/afterworlds';
+import { exampleRuleset } from '@/ruleset/exampleRuleset';
 import { genericRuleset } from './genericRuleset';
 import { mechanicsRuleset } from './mechanicsRuleset';
+// The one flavor in the tree, checked here because a flavor's ids collide with
+// a fixture's just as silently. Extracting a flavor deletes this import and
+// its row below, and nothing else in this file. See docs/ruleset-authoring.md.
+import { afterworldsRuleset } from '@/rulesets/afterworlds';
 
 const identifiersOf = (ruleset: RulesetDefinition): string[] => [
   ...ruleset.archetypes.map(a => a.id),
@@ -28,9 +32,10 @@ describe.each([
  */
 describe('the fixture rulesets share no ids with anything else', () => {
   const rulesets: [string, RulesetDefinition][] = [
-    ['afterworlds', afterworldsRuleset],
+    ['example', exampleRuleset],
     ['generic', genericRuleset],
     ['mechanics', mechanicsRuleset],
+    ['afterworlds', afterworldsRuleset],
   ];
 
   const pairs = rulesets.flatMap(([leftName, left], index) =>
