@@ -1,3 +1,10 @@
+import {
+  roleOf,
+  validateAttributeBag,
+  validateAttributeDeltas,
+  type AttributeDefinition,
+  type RefCollection,
+} from './attributes';
 import type { RulesetDefinition } from './types';
 
 export interface ValidationIssue {
@@ -53,6 +60,70 @@ const checkUniqueIds = (
   });
 };
 
+/**
+ * Checks the attribute *declarations* themselves — the vocabulary every other
+ * check is expressed against, so problems here would otherwise surface as
+ * confusing downstream errors.
+ */
+const checkAttributeDefinitions = (
+  definitions: AttributeDefinition[],
+  issues: ValidationIssue[]
+): void => {
+  const byId = new Map(definitions.map(d => [d.id, d]));
+
+  definitions.forEach((definition, index) => {
+    const path = `attributes[${index}]`;
+
+    if (!definition.id) {
+      issues.push({ path: `${path}.id`, message: 'id must be non-empty' });
+    }
+    if (!definition.label) {
+      issues.push({
+        path: `${path}.label`,
+        message: 'label must be non-empty',
+      });
+    }
+
+    if (definition.capAttributeId !== undefined) {
+      if (roleOf(definition) !== 'resource') {
+        issues.push({
+          path: `${path}.capAttributeId`,
+          message: `Only attributes with role 'resource' may declare a capAttributeId`,
+        });
+      }
+      const cap = byId.get(definition.capAttributeId);
+      if (!cap) {
+        issues.push({
+          path: `${path}.capAttributeId`,
+          message: `Unknown attribute id '${definition.capAttributeId}'`,
+        });
+      } else if (roleOf(cap) !== 'cap') {
+        issues.push({
+          path: `${path}.capAttributeId`,
+          message: `Attribute '${cap.id}' has role '${roleOf(cap)}'; a cap must have role 'cap'`,
+        });
+      }
+    }
+
+    if (definition.refCollection && definition.type !== 'ref') {
+      issues.push({
+        path: `${path}.refCollection`,
+        message: `refCollection is only meaningful for type 'ref'`,
+      });
+    }
+
+    if (
+      (definition.min !== undefined || definition.max !== undefined) &&
+      definition.type !== 'number'
+    ) {
+      issues.push({
+        path: `${path}.min/max`,
+        message: `min/max are only meaningful for type 'number'`,
+      });
+    }
+  });
+};
+
 export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
   const issues: ValidationIssue[] = [];
 
@@ -64,24 +135,66 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
     issues.push({ path: 'version', message: 'version must be non-empty' });
   }
 
-  checkUniqueIds(ruleset.resources, 'resources', issues);
+  checkUniqueIds(ruleset.attributes, 'attributes', issues);
   checkUniqueIds(ruleset.groups, 'groups', issues);
-  checkUniqueIds(ruleset.capabilities, 'capabilities', issues);
   checkUniqueIds(ruleset.archetypes, 'archetypes', issues);
   checkUniqueIds(ruleset.traitCategories, 'traitCategories', issues);
   checkUniqueIds(ruleset.traits, 'traits', issues);
   checkUniqueIds(ruleset.qualities, 'qualities', issues);
   if (ruleset.recipes) checkUniqueIds(ruleset.recipes, 'recipes', issues);
 
-  const resourceIds = new Set(ruleset.resources.map(r => r.id));
-  const cappedResourceIds = new Set(
-    ruleset.resources.filter(r => r.capped).map(r => r.id)
-  );
+  checkAttributeDefinitions(ruleset.attributes, issues);
+
   const groupIds = new Set(ruleset.groups.map(g => g.id));
-  const capabilityIds = new Set(ruleset.capabilities.map(c => c.id));
   const categoryIds = new Set(ruleset.traitCategories.map(c => c.id));
   const archetypeIds = new Set(ruleset.archetypes.map(a => a.id));
   const recipeIds = new Set((ruleset.recipes ?? []).map(r => r.id));
+  const traitIds = new Set(ruleset.traits.map(t => t.id));
+  const qualityIds = new Set(ruleset.qualities.map(q => q.id));
+
+  /** Generic `ref` resolution, so a ref attribute needs no bespoke check. */
+  const resolveRef = (collection: RefCollection, id: string): boolean => {
+    switch (collection) {
+      case 'archetypes':
+        return archetypeIds.has(id);
+      case 'traits':
+        return traitIds.has(id);
+      case 'qualities':
+        return qualityIds.has(id);
+      case 'traitCategories':
+        return categoryIds.has(id);
+      case 'groups':
+        return groupIds.has(id);
+      case 'recipes':
+        return recipeIds.has(id);
+    }
+  };
+
+  // Every archetype must carry a value for each declared resource and cap.
+  // (Capability and freeform attributes may be omitted.)
+  const requiredArchetypeAttributes = ruleset.attributes
+    .filter(d => roleOf(d) === 'resource' || roleOf(d) === 'cap')
+    .map(d => d.id);
+
+  ruleset.archetypes.forEach((archetype, index) => {
+    archetype.groups.forEach((groupId, i) => {
+      if (!groupIds.has(groupId)) {
+        issues.push({
+          path: `archetypes[${index}].groups[${i}]`,
+          message: `Unknown group id '${groupId}'`,
+        });
+      }
+    });
+
+    issues.push(
+      ...validateAttributeBag(
+        archetype.attributes,
+        ruleset.attributes,
+        `archetypes[${index}].attributes`,
+        { required: requiredArchetypeAttributes, resolveRef }
+      )
+    );
+  });
 
   ruleset.traits.forEach((trait, index) => {
     if (!categoryIds.has(trait.categoryId)) {
@@ -106,34 +219,22 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
         });
       }
     });
-    if (trait.resourceModifiers) {
-      Object.keys(trait.resourceModifiers.values ?? {}).forEach(id => {
-        if (!resourceIds.has(id)) {
-          issues.push({
-            path: `traits[${index}].resourceModifiers.values.${id}`,
-            message: `Unknown resource id '${id}'`,
-          });
-        }
-      });
-      Object.keys(trait.resourceModifiers.caps ?? {}).forEach(id => {
-        if (!resourceIds.has(id)) {
-          issues.push({
-            path: `traits[${index}].resourceModifiers.caps.${id}`,
-            message: `Unknown resource id '${id}'`,
-          });
-        }
-      });
-      Object.keys(trait.resourceModifiers.categoryModifiers ?? {}).forEach(
-        id => {
-          if (!categoryIds.has(id)) {
-            issues.push({
-              path: `traits[${index}].resourceModifiers.categoryModifiers.${id}`,
-              message: `Unknown traitCategory id '${id}'`,
-            });
-          }
-        }
-      );
-    }
+
+    issues.push(
+      ...validateAttributeDeltas(
+        trait.modifier?.attributeDeltas,
+        ruleset.attributes,
+        `traits[${index}].modifier.attributeDeltas`
+      )
+    );
+    Object.keys(trait.modifier?.categoryDeltas ?? {}).forEach(id => {
+      if (!categoryIds.has(id)) {
+        issues.push({
+          path: `traits[${index}].modifier.categoryDeltas.${id}`,
+          message: `Unknown traitCategory id '${id}'`,
+        });
+      }
+    });
   });
 
   ruleset.qualities.forEach((quality, index) => {
@@ -142,68 +243,6 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
         issues.push({
           path: `qualities[${index}].allowedArchetypeIds[${i}]`,
           message: `Unknown archetype id '${id}'`,
-        });
-      }
-    });
-  });
-
-  ruleset.archetypes.forEach((archetype, index) => {
-    archetype.groups.forEach((groupId, i) => {
-      if (!groupIds.has(groupId)) {
-        issues.push({
-          path: `archetypes[${index}].groups[${i}]`,
-          message: `Unknown group id '${groupId}'`,
-        });
-      }
-    });
-
-    resourceIds.forEach(resourceId => {
-      if (!(resourceId in archetype.baseValues)) {
-        issues.push({
-          path: `archetypes[${index}].baseValues.${resourceId}`,
-          message: `Missing base value for resource '${resourceId}'`,
-        });
-      }
-    });
-    Object.keys(archetype.baseValues).forEach(resourceId => {
-      if (!resourceIds.has(resourceId)) {
-        issues.push({
-          path: `archetypes[${index}].baseValues.${resourceId}`,
-          message: `Unknown resource id '${resourceId}'`,
-        });
-      }
-    });
-
-    cappedResourceIds.forEach(resourceId => {
-      if (!(resourceId in archetype.caps)) {
-        issues.push({
-          path: `archetypes[${index}].caps.${resourceId}`,
-          message: `Missing cap for capped resource '${resourceId}'`,
-        });
-      }
-    });
-    Object.keys(archetype.caps).forEach(resourceId => {
-      if (!cappedResourceIds.has(resourceId)) {
-        issues.push({
-          path: `archetypes[${index}].caps.${resourceId}`,
-          message: `Resource '${resourceId}' is not capped; unexpected cap entry`,
-        });
-      }
-    });
-
-    capabilityIds.forEach(capabilityId => {
-      if (!(capabilityId in archetype.capabilities)) {
-        issues.push({
-          path: `archetypes[${index}].capabilities.${capabilityId}`,
-          message: `Missing capability '${capabilityId}'`,
-        });
-      }
-    });
-    Object.keys(archetype.capabilities).forEach(capabilityId => {
-      if (!capabilityIds.has(capabilityId)) {
-        issues.push({
-          path: `archetypes[${index}].capabilities.${capabilityId}`,
-          message: `Unknown capability id '${capabilityId}'`,
         });
       }
     });
@@ -222,14 +261,13 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
         message: 'requiredScore must be a positive integer',
       });
     }
-    Object.keys(rule.grants).forEach(resourceId => {
-      if (!resourceIds.has(resourceId)) {
-        issues.push({
-          path: `categoryBonuses[${index}].grants.${resourceId}`,
-          message: `Unknown resource id '${resourceId}'`,
-        });
-      }
-    });
+    issues.push(
+      ...validateAttributeDeltas(
+        rule.grants.attributeDeltas,
+        ruleset.attributes,
+        `categoryBonuses[${index}].grants.attributeDeltas`
+      )
+    );
   });
 
   ruleset.archetypeRules?.forEach((rule, index) => {
@@ -268,5 +306,21 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
 
   checkSerializable(ruleset, '', issues);
 
+  return { valid: issues.length === 0, issues };
+}
+
+/**
+ * Validates a character's own attribute values against the ruleset. Separate
+ * from `validateRuleset` because it checks *data*, not the ruleset itself —
+ * and because an unknown attribute id on one character should not invalidate
+ * the whole ruleset.
+ */
+export function validateCharacterAttributes(
+  attributes: RulesetDefinition['archetypes'][number]['attributes'] | undefined,
+  ruleset: RulesetDefinition,
+  path = 'character.attributes'
+): ValidationResult {
+  const perCharacter = ruleset.attributes.filter(d => d.perCharacter !== false);
+  const issues = validateAttributeBag(attributes, perCharacter, path);
   return { valid: issues.length === 0, issues };
 }

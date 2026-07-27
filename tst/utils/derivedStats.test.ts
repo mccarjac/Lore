@@ -100,8 +100,8 @@ describe('derivedStats', () => {
           {
             name: 'Super Health Modification',
             description: 'Adds lots of health',
-            resourceModifiers: {
-              values: {
+            modifier: {
+              attributeDeltas: {
                 health: 100, // Way over cap
               },
             },
@@ -130,8 +130,8 @@ describe('derivedStats', () => {
           {
             name: 'Super Limit Modification',
             description: 'Adds lots of limit',
-            resourceModifiers: {
-              values: {
+            modifier: {
+              attributeDeltas: {
                 limit: 100, // Way over cap
               },
             },
@@ -160,8 +160,8 @@ describe('derivedStats', () => {
           {
             name: 'Health Boost',
             description: 'Adds 1 health',
-            resourceModifiers: {
-              values: {
+            modifier: {
+              attributeDeltas: {
                 health: 1,
               },
             },
@@ -190,8 +190,8 @@ describe('derivedStats', () => {
           {
             name: 'Limit Boost',
             description: 'Adds 2 limit',
-            resourceModifiers: {
-              values: {
+            modifier: {
+              attributeDeltas: {
                 limit: 2,
               },
             },
@@ -220,8 +220,8 @@ describe('derivedStats', () => {
           {
             name: 'Health Boost',
             description: 'Adds 1 health',
-            resourceModifiers: {
-              values: {
+            modifier: {
+              attributeDeltas: {
                 health: 1,
               },
             },
@@ -229,8 +229,8 @@ describe('derivedStats', () => {
           {
             name: 'Limit Boost',
             description: 'Adds 1 limit',
-            resourceModifiers: {
-              values: {
+            modifier: {
+              attributeDeltas: {
                 limit: 1,
               },
             },
@@ -260,12 +260,10 @@ describe('derivedStats', () => {
           {
             name: 'Cap Increase',
             description: 'Increases health cap',
-            resourceModifiers: {
-              values: {
+            modifier: {
+              attributeDeltas: {
                 health: 10, // Lots of health
-              },
-              caps: {
-                health: 10, // But also increase the cap
+                healthCap: 10, // But also increase the cap
               },
             },
           },
@@ -294,8 +292,8 @@ describe('derivedStats', () => {
           {
             name: 'Agility Boost',
             description: 'Adds to agility',
-            resourceModifiers: {
-              categoryModifiers: {
+            modifier: {
+              categoryDeltas: {
                 [PerkTag.Agility]: 2,
               },
             },

@@ -48,6 +48,8 @@ export const CharacterDetailScreen: React.FC = () => {
   const navigation = useNavigation<CharacterDetailNavigationProp>();
   const label = useLabels();
   const { ruleset } = useRuleset();
+  const attributeLabel = (attributeId: string): string =>
+    ruleset.attributes.find(a => a.id === attributeId)?.label ?? attributeId;
   const { character } = route.params || {};
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
   const [locations, setLocations] = useState<GameLocation[]>([]);
@@ -184,6 +186,7 @@ export const CharacterDetailScreen: React.FC = () => {
     derivedStats = {
       values: {},
       categoryScores: new Map(),
+      attributes: {},
     };
   }
 
@@ -364,48 +367,31 @@ export const CharacterDetailScreen: React.FC = () => {
           <View key={index} style={styles.itemContainer}>
             <Text style={styles.titleText}>{cyber.name}</Text>
             <Text style={styles.descriptionText}>{cyber.description}</Text>
-            {cyber.resourceModifiers && (
+            {cyber.modifier && (
               <View style={styles.cyberwareModifiersContainer}>
                 <Text style={styles.cyberwareModifiersTitle}>
                   Stat Modifiers:
                 </Text>
-                {cyber.resourceModifiers.values?.health !== undefined && (
-                  <Text style={styles.cyberwareModifier}>
-                    • Health:{' '}
-                    {cyber.resourceModifiers.values.health > 0 ? '+' : ''}
-                    {cyber.resourceModifiers.values.health}
-                  </Text>
+                {/* Driven by the ruleset's attribute definitions rather than
+                    a hardcoded health/limit/cap quartet — a ruleset with three
+                    resources renders all three (#22). */}
+                {Object.entries(cyber.modifier.attributeDeltas ?? {}).map(
+                  ([attributeId, delta]) => (
+                    <Text key={attributeId} style={styles.cyberwareModifier}>
+                      • {attributeLabel(attributeId)}: {delta > 0 ? '+' : ''}
+                      {delta}
+                    </Text>
+                  )
                 )}
-                {cyber.resourceModifiers.values?.limit !== undefined && (
-                  <Text style={styles.cyberwareModifier}>
-                    • Limit:{' '}
-                    {cyber.resourceModifiers.values.limit > 0 ? '+' : ''}
-                    {cyber.resourceModifiers.values.limit}
-                  </Text>
+                {Object.entries(cyber.modifier.categoryDeltas ?? {}).map(
+                  ([categoryId, delta]) => (
+                    <Text key={categoryId} style={styles.cyberwareModifier}>
+                      • {categoryId} {label('traitCategory.singular')} Score:{' '}
+                      {delta > 0 ? '+' : ''}
+                      {delta}
+                    </Text>
+                  )
                 )}
-                {cyber.resourceModifiers.caps?.health !== undefined && (
-                  <Text style={styles.cyberwareModifier}>
-                    • Health Cap:{' '}
-                    {cyber.resourceModifiers.caps.health > 0 ? '+' : ''}
-                    {cyber.resourceModifiers.caps.health}
-                  </Text>
-                )}
-                {cyber.resourceModifiers.caps?.limit !== undefined && (
-                  <Text style={styles.cyberwareModifier}>
-                    • Limit Cap:{' '}
-                    {cyber.resourceModifiers.caps.limit > 0 ? '+' : ''}
-                    {cyber.resourceModifiers.caps.limit}
-                  </Text>
-                )}
-                {cyber.resourceModifiers.categoryModifiers &&
-                  Object.entries(cyber.resourceModifiers.categoryModifiers).map(
-                    ([tag, modifier]) => (
-                      <Text key={tag} style={styles.cyberwareModifier}>
-                        • {tag} Tag Score: {modifier > 0 ? '+' : ''}
-                        {modifier}
-                      </Text>
-                    )
-                  )}
               </View>
             )}
           </View>
@@ -520,14 +506,16 @@ export const CharacterDetailScreen: React.FC = () => {
             </View>
           )}
           <View style={styles.statsContainer}>
-            {ruleset.resources.map(resource => (
-              <Text key={resource.id} style={styles.statItem}>
-                Max {resource.label}:{' '}
-                <Text style={styles.statValue}>
-                  {derivedStats.values[resource.id] ?? 0}
+            {ruleset.attributes
+              .filter(attribute => attribute.role === 'resource')
+              .map(attribute => (
+                <Text key={attribute.id} style={styles.statItem}>
+                  Max {attribute.label}:{' '}
+                  <Text style={styles.statValue}>
+                    {derivedStats.values[attribute.id] ?? 0}
+                  </Text>
                 </Text>
-              </Text>
-            ))}
+              ))}
           </View>
         </View>
       </View>

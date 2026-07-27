@@ -40,8 +40,8 @@ src/
   screens/<feature>/    character/ faction/ location/ events/ discord/
   models/               types.ts (all domain types); gameData.ts +
                         speciesTypes.ts are Afterworlds *content* (see #13)
-  ruleset/              pluggable ruleset schema, provider, validator,
-                        terminology, derived stats
+  ruleset/              attribute primitive, pluggable ruleset schema,
+                        provider, validator, terminology, derived stats
   navigation/types.ts   navigator + param-list types
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
   utils/                storage, export/import, discord, git, stats
@@ -75,8 +75,14 @@ Path aliases (tsconfig + babel-plugin-module-resolver): `@/*` → `src/*`, plus
   pure, I/O-free normalizers that accept both the pre- and post-Phase-1
   field names (`species`→`archetypeId`, `perkIds`→`traitIds`,
   `distinctionIds`→`qualityIds`, `cyberware`→`modifications`,
-  `junktownOffice`→`sponsor`, plus a value reshape from flat `StatModifiers`
-  to nested `ResourceModifiers`). One implementation serves the storage
+  `junktownOffice`→`sponsor`).
+  It also reshapes modification modifiers, which have now been through
+  _three_ shapes: flat `statModifiers`, nested `resourceModifiers` (which
+  shipped in #21, so real user data has it), and the current flat
+  `modifier.attributeDeltas`. All three must stay readable. The non-obvious
+  rule there: a cap keyed by a _resource_ id maps onto that resource's
+  `capAttributeId` (`caps.health` → `attributeDeltas.healthCap`).
+  One implementation serves the storage
   migration, file import, and GitHub sync, so they cannot disagree. Each
   normalizer returns the **same object reference** when nothing needed
   rewriting — callers use that to skip a write. `migrateRulesetFields()` in
@@ -102,7 +108,8 @@ This is the seam a genre-neutral fork plugs into. The core model is now
 ruleset-neutral: a character has an `archetypeId`, `traitIds`, `qualityIds`,
 and `modifications`, and a quest has a `sponsor` — all plain strings and ids,
 none of them a closed union. A ruleset supplies the actual archetypes,
-traits, categories, qualities, and resources.
+traits, categories, qualities, and attributes — and since #22 a character may
+also carry its own GM-defined attribute values.
 
 Afterworlds data still lives in `gameData.ts` and `speciesTypes.ts`, and
 `src/ruleset/defaultRuleset.ts` derives a `RulesetDefinition` from it via a
@@ -119,9 +126,23 @@ and so on, which is the only reason the Junktown app still reads the way its
 users expect after the Phase 1 renames. Renaming an engine field must never
 drag those override _values_ along with it.
 
-- `src/ruleset/types.ts` — the `RulesetDefinition` schema (archetypes, traits,
-  trait categories, qualities, resources, category-bonus rules, feature
-  flags, terminology). **Must stay JSON-serializable** — no functions, no
+- `src/ruleset/attributes.ts` — the `AttributeValue` primitive (#22). A
+  tagged union (`{ type, value }`) covering number/text/flag/ref/list/map,
+  plus `AttributeDefinition`, typed accessors, and a generic bag validator.
+  Deliberately **not** DynamoDB's wire encoding: DDB stringifies numbers for
+  cross-SDK precision, which would only add a `parseFloat` at every
+  arithmetic site. `ref` has no DDB counterpart and exists so the validator
+  can check id integrity generically.
+  **Roles (`resource` / `cap` / `capability` / `freeform`) are what keep this
+  from becoming untyped soup** — the union is storage, roles are meaning, and
+  `derived.ts` dispatches on role rather than on hardcoded ids. Which roles a
+  modifier may touch is an _application_ rule in `derived.ts`, never a
+  validity rule: the shipped Afterworlds ruleset declares a trait cap delta
+  the engine ignores, and flagging that as invalid would make
+  `RulesetProvider` throw under `__DEV__`.
+- `src/ruleset/types.ts` — the `RulesetDefinition` schema (attributes,
+  archetypes, traits, trait categories, qualities, category-bonus rules,
+  feature flags, terminology). **Must stay JSON-serializable** — no functions, no
   `ImageSourcePropType`/`require()` results anywhere in the definition. That
   constraint is what keeps the backlogged in-app ruleset editor possible;
   `validate.ts` enforces it at runtime. Bundled images referenced by a
@@ -138,15 +159,21 @@ drag those override _values_ along with it.
   `tst/helpers/ruleset.tsx`'s `renderWithRuleset()` for a test that needs a
   non-default ruleset.
 - `src/ruleset/derived.ts` — `calculateDerivedStats(character, ruleset?)`
-  returns `{ values: Record<resourceId, number>, categoryScores }`, computed
-  from archetype base values → trait modifiers → category-bonus grants →
-  modification modifiers → cap clamp. Two behaviors are preserved
-  deliberately and pinned by the parity suite: **trait `caps` modifiers are
-  not applied** (Afterworlds' `smarts_20` declares one and the engine has
-  never honored it), and **modification `categoryModifiers` do not
-  retroactively unlock category-bonus thresholds**, since they land after
-  grants. Both are arguably bugs; fixing either moves real users' numbers
-  and is a rules change, not a refactor.
+  returns `{ values, categoryScores, attributes }`. Order is load-bearing:
+  archetype base attributes → **character attribute overrides (absolute, not
+  deltas)** → trait deltas (`role: 'resource'` only) → category-bonus grants
+  → modification deltas (`'resource'` and `'cap'`) → clamp each resource to
+  its `capAttributeId`. Three behaviors are preserved deliberately and pinned
+  by the parity suite: **traits cannot raise caps** (Afterworlds' `smarts_20`
+  declares one and the engine has never honored it — now a consequence of the
+  role rule rather than a special case), **modification `categoryDeltas` do
+  not retroactively unlock category-bonus thresholds** since they land after
+  grants, and **only resources with a `capAttributeId` clamp**. All three are
+  arguably bugs; fixing any moves real users' numbers and is a rules change,
+  not a refactor.
+  Note the parity fixture cannot cover the character-attribute layer —
+  Afterworlds declares none, so it is a no-op there. `tst/ruleset/
+characterAttributes.test.ts` is the only proof that step 1b behaves.
 - `src/ruleset/terminology.ts` — `useLabels()` (components) and `getLabel()`
   (non-component code, e.g. `App.tsx` navigator options, or pure utils like
   `factionStats.ts`/`characterStats.ts` that take a `ruleset` parameter

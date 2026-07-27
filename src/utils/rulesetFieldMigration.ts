@@ -16,6 +16,22 @@
  * rewriting, which is what lets callers skip a pointless write).
  */
 import type { GameCharacter, GameQuest } from '@models/types';
+import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import { roleOf } from '@/ruleset/attributes';
+import type { RulesetDefinition } from '@/ruleset/types';
+
+/**
+ * resourceId -> its cap attribute id, read off the ruleset. Defaults to the
+ * Afterworlds ruleset, matching the convention in `derived.ts` and
+ * `factionStats.ts`: pure utils take the ruleset as a parameter rather than
+ * reaching for a provider.
+ */
+const capLookupFor =
+  (ruleset: RulesetDefinition): CapLookup =>
+  (resourceId: string) =>
+    ruleset.attributes.find(
+      d => d.id === resourceId && roleOf(d) === 'resource'
+    )?.capAttributeId;
 
 /** A loosely-typed record, which is all a legacy-shape object can be. */
 type LooseRecord = Record<string, unknown>;
@@ -45,26 +61,74 @@ const PREFERENCE_RENAMES: Record<string, string> = {
 };
 
 /**
- * The one part of Phase 1 that reshapes values rather than renaming keys
- * (#5). A modification's flat `StatModifiers` becomes the ruleset's nested
- * `ResourceModifiers`, keyed by resource id instead of a hardcoded
- * health/limit/healthCap/limitCap quartet:
+ * Modification modifiers are the one part of these migrations that reshapes
+ * *values* rather than renaming keys, and they have now been through two
+ * shapes. Both must still be readable, because #21 shipped the middle one:
  *
- *   { health, limit }         -> values: { health, limit }
- *   { healthCap, limitCap }   -> caps:   { health, limit }
- *   { tagModifiers }          -> categoryModifiers
+ *   pre-#5   statModifiers:     { health, limit, healthCap, limitCap, tagModifiers }
+ *   post-#5  resourceModifiers: { values: {...}, caps: {...}, categoryModifiers }
+ *   post-#22 modifier:          { attributeDeltas: {...}, categoryDeltas }
+ *
+ * The #22 target is flat because a cap is simply another attribute. That
+ * makes the cap mapping the non-obvious part: a cap entry keyed by a
+ * *resource* id becomes a delta keyed by that resource's `capAttributeId`
+ * (`caps.health` -> `attributeDeltas.healthCap`), which is ruleset knowledge,
+ * hence the `capAttributeIdFor` lookup.
  */
-const normalizeModification = (entry: LooseRecord): LooseRecord | null => {
-  const legacy = entry.statModifiers as LooseRecord | undefined;
-  if (legacy === undefined) return null;
+type CapLookup = (resourceId: string) => string | undefined;
 
-  const { statModifiers, ...rest } = entry;
+const buildModifier = (
+  values: LooseRecord,
+  caps: LooseRecord,
+  categoryDeltas: unknown,
+  capAttributeIdFor: CapLookup
+): LooseRecord => {
+  const attributeDeltas: LooseRecord = { ...values };
+
+  Object.entries(caps).forEach(([resourceId, delta]) => {
+    // Fall back to the resource's own id rather than dropping the delta: a
+    // ruleset that declares no cap attribute would otherwise lose data
+    // silently, which is worse than an entry the validator can flag.
+    attributeDeltas[capAttributeIdFor(resourceId) ?? resourceId] = delta;
+  });
+
+  const modifier: LooseRecord = {};
+  if (Object.keys(attributeDeltas).length > 0) {
+    modifier.attributeDeltas = attributeDeltas;
+  }
+  if (categoryDeltas !== undefined) modifier.categoryDeltas = categoryDeltas;
+  return modifier;
+};
+
+const normalizeModification = (
+  entry: LooseRecord,
+  capAttributeIdFor: CapLookup
+): LooseRecord | null => {
+  const flat = entry.statModifiers as LooseRecord | undefined;
+  const nested = entry.resourceModifiers as LooseRecord | undefined;
+  if (flat === undefined && nested === undefined) return null;
+
+  const { statModifiers, resourceModifiers, ...rest } = entry;
   void statModifiers;
+  void resourceModifiers;
 
-  // An already-migrated entry keeps its resourceModifiers; a stale
-  // statModifiers alongside it is simply dropped.
-  if (rest.resourceModifiers !== undefined) return rest;
+  // An already-current entry keeps its modifier; stale predecessors alongside
+  // it are simply dropped.
+  if (rest.modifier !== undefined) return rest;
 
+  if (nested !== undefined) {
+    return {
+      ...rest,
+      modifier: buildModifier(
+        (nested.values as LooseRecord) ?? {},
+        (nested.caps as LooseRecord) ?? {},
+        nested.categoryModifiers,
+        capAttributeIdFor
+      ),
+    };
+  }
+
+  const legacy = flat as LooseRecord;
   const values: LooseRecord = {};
   const caps: LooseRecord = {};
   if (legacy.health !== undefined) values.health = legacy.health;
@@ -72,23 +136,27 @@ const normalizeModification = (entry: LooseRecord): LooseRecord | null => {
   if (legacy.healthCap !== undefined) caps.health = legacy.healthCap;
   if (legacy.limitCap !== undefined) caps.limit = legacy.limitCap;
 
-  const resourceModifiers: LooseRecord = {};
-  if (Object.keys(values).length > 0) resourceModifiers.values = values;
-  if (Object.keys(caps).length > 0) resourceModifiers.caps = caps;
-  if (legacy.tagModifiers !== undefined) {
-    resourceModifiers.categoryModifiers = legacy.tagModifiers;
-  }
-
-  return { ...rest, resourceModifiers };
+  return {
+    ...rest,
+    modifier: buildModifier(
+      values,
+      caps,
+      legacy.tagModifiers,
+      capAttributeIdFor
+    ),
+  };
 };
 
 /** Returns null when no entry in the list needed reshaping. */
-const normalizeModifications = (value: unknown): LooseRecord[] | null => {
+const normalizeModifications = (
+  value: unknown,
+  capAttributeIdFor: CapLookup
+): LooseRecord[] | null => {
   if (!Array.isArray(value)) return null;
 
   let changed = false;
   const normalized = (value as LooseRecord[]).map(entry => {
-    const next = normalizeModification(entry);
+    const next = normalizeModification(entry, capAttributeIdFor);
     if (next) changed = true;
     return next ?? entry;
   });
@@ -127,7 +195,8 @@ const applyRenames = (
  * changed" without a deep compare.
  */
 export const normalizeCharacterRulesetFields = (
-  character: GameCharacter
+  character: GameCharacter,
+  ruleset: RulesetDefinition = afterworldsRuleset
 ): GameCharacter => {
   const source = character as unknown as LooseRecord;
   const renamed = applyRenames(source, CHARACTER_RENAMES);
@@ -135,7 +204,10 @@ export const normalizeCharacterRulesetFields = (
 
   // Reshape modification entries after the key rename, so this sees the
   // list under its current name whichever vintage the record came from.
-  const remodified = normalizeModifications(base.modifications);
+  const remodified = normalizeModifications(
+    base.modifications,
+    capLookupFor(ruleset)
+  );
 
   // A record with neither the old nor the new archetype key still needs one,
   // since `archetypeId` is required.
@@ -187,11 +259,12 @@ export const normalizeQuestRulesetFields = (quest: GameQuest): GameQuest => {
 
 /** Array form; returns the original array when every entry was current. */
 export const normalizeCharactersRulesetFields = (
-  characters: GameCharacter[]
+  characters: GameCharacter[],
+  ruleset: RulesetDefinition = afterworldsRuleset
 ): GameCharacter[] => {
   let changed = false;
   const normalized = characters.map(character => {
-    const next = normalizeCharacterRulesetFields(character);
+    const next = normalizeCharacterRulesetFields(character, ruleset);
     if (next !== character) changed = true;
     return next;
   });
@@ -230,10 +303,11 @@ type RulesetFieldBearingDataset = {
 export const normalizeDatasetRulesetFields = <
   T extends RulesetFieldBearingDataset,
 >(
-  dataset: T
+  dataset: T,
+  ruleset: RulesetDefinition = afterworldsRuleset
 ): T => {
   const characters = dataset.characters
-    ? normalizeCharactersRulesetFields(dataset.characters)
+    ? normalizeCharactersRulesetFields(dataset.characters, ruleset)
     : dataset.characters;
   const quests = dataset.quests
     ? normalizeQuestsRulesetFields(dataset.quests)

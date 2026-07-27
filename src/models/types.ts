@@ -1,5 +1,5 @@
 import { AVAILABLE_DISTINCTIONS } from './gameData';
-import type { ResourceModifiers } from '@/ruleset/types';
+import type { AttributeBag, Modifier } from '@/ruleset/types';
 import type { Species } from './speciesTypes';
 
 export type DistinctionId = (typeof AVAILABLE_DISTINCTIONS)[number]['id'];
@@ -77,7 +77,7 @@ export interface Relationship {
 export interface Modification {
   name: string;
   description: string;
-  resourceModifiers?: ResourceModifiers;
+  modifier?: Modifier;
 }
 
 export interface GameCharacter {
@@ -88,9 +88,17 @@ export interface GameCharacter {
    * `species` union before #3; migrateRulesetFields() rewrites stored data.
    */
   archetypeId: string;
-  /** Ruleset trait ids (RulesetDefinition.traits[].id). Was `traitIds`. */
+  /** Ruleset trait ids (RulesetDefinition.traits[].id). Was `perkIds`. */
   traitIds: string[];
   qualityIds: DistinctionId[];
+  /**
+   * Character-specific attribute values, keyed by
+   * `RulesetDefinition.attributes[].id` (#22). These are *absolute* values
+   * that override the archetype's base — a GM-defined "Corruption" counter,
+   * or a per-character base stat. Deltas are what traits and modifications
+   * are for. Optional: a ruleset need declare no character attributes.
+   */
+  attributes?: AttributeBag;
   factions: Faction[];
   relationships: Relationship[];
   imageUris?: string[];

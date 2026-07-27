@@ -13,12 +13,14 @@ import {
   TAG_SCORE_BONUSES,
   PerkTag,
 } from '@models/gameData';
+import { flag, num, type AttributeDefinition } from './attributes';
 import type {
   RulesetDefinition,
   Archetype,
   Trait,
   Quality,
   CategoryBonusRule,
+  Modifier,
 } from './types';
 
 const GROUP_MEMBERSHIP: Record<string, Species[]> = {
@@ -35,7 +37,7 @@ const groupsFor = (species: Species): string[] =>
 
 /**
  * Today's app grants no category-score bonus to Perfect Mutants from perks
- * restricted to exactly the MUTANT_SPECIES group (derivedStats.ts:29-40).
+ * restricted to exactly the MUTANT_SPECIES group (was derivedStats.ts:29-40).
  * Expressed declaratively so a ruleset with different archetypes/groups can
  * express (or omit) the same carve-out without touching derived-stats logic.
  */
@@ -47,21 +49,107 @@ const PERFECT_MUTANT_RULE: RulesetDefinition['archetypeRules'] = [
   },
 ];
 
+/**
+ * Afterworlds' attribute vocabulary (#22).
+ *
+ * A cap is just another numeric attribute with `role: 'cap'`, linked from the
+ * resource it bounds. That uniformity is what lets `derived.ts` state, rather
+ * than special-case, the rule that traits may not raise caps while
+ * modifications may.
+ */
+const attributes: AttributeDefinition[] = [
+  {
+    id: 'health',
+    label: 'Health',
+    type: 'number',
+    role: 'resource',
+    capAttributeId: 'healthCap',
+  },
+  {
+    id: 'limit',
+    label: 'Limit',
+    type: 'number',
+    role: 'resource',
+    capAttributeId: 'limitCap',
+  },
+  { id: 'healthCap', label: 'Health Cap', type: 'number', role: 'cap' },
+  { id: 'limitCap', label: 'Limit Cap', type: 'number', role: 'cap' },
+  {
+    id: 'cyberware',
+    label: 'Can Use Cyberware',
+    type: 'flag',
+    role: 'capability',
+  },
+  { id: 'chems', label: 'Can Use Chems', type: 'flag', role: 'capability' },
+  {
+    id: 'injuries',
+    label: 'Can Take Injuries',
+    type: 'flag',
+    role: 'capability',
+  },
+  {
+    id: 'malfunctions',
+    label: 'Can Take Malfunctions',
+    type: 'flag',
+    role: 'capability',
+  },
+];
+
 const archetypes: Archetype[] = Object.entries(SPECIES_BASE_STATS).map(
   ([id, stats]) => ({
     id,
     label: id,
     groups: groupsFor(id as Species),
-    baseValues: { health: stats.baseHealth, limit: stats.baseLimit },
-    caps: { health: stats.healthCap, limit: stats.limitCap },
-    capabilities: {
-      cyberware: stats.canUseCyberware,
-      chems: stats.canUseChems,
-      injuries: stats.canTakeInjuries,
-      malfunctions: stats.canTakeMalfunctions,
+    attributes: {
+      health: num(stats.baseHealth),
+      limit: num(stats.baseLimit),
+      healthCap: num(stats.healthCap),
+      limitCap: num(stats.limitCap),
+      cyberware: flag(stats.canUseCyberware),
+      chems: flag(stats.canUseChems),
+      injuries: flag(stats.canTakeInjuries),
+      malfunctions: flag(stats.canTakeMalfunctions),
     },
   })
 );
+
+/**
+ * Flat StatModifiers -> Modifier. Cap entries map onto the *cap attribute*
+ * (`healthCap`), not the resource it bounds.
+ *
+ * This faithfully carries a trait's cap delta even though `derived.ts` does
+ * not apply trait cap deltas — the transform says what the source data says,
+ * and the engine states separately what it honors. Dropping it here would
+ * quietly discard real data from `gameData.ts`.
+ */
+const toModifier = (statModifiers: {
+  health?: number;
+  limit?: number;
+  healthCap?: number;
+  limitCap?: number;
+  tagModifiers?: Partial<Record<PerkTag, number>>;
+}): Modifier => {
+  const attributeDeltas: Record<string, number> = {};
+  if (statModifiers.health !== undefined) {
+    attributeDeltas.health = statModifiers.health;
+  }
+  if (statModifiers.limit !== undefined) {
+    attributeDeltas.limit = statModifiers.limit;
+  }
+  if (statModifiers.healthCap !== undefined) {
+    attributeDeltas.healthCap = statModifiers.healthCap;
+  }
+  if (statModifiers.limitCap !== undefined) {
+    attributeDeltas.limitCap = statModifiers.limitCap;
+  }
+
+  return {
+    ...(Object.keys(attributeDeltas).length > 0 && { attributeDeltas }),
+    ...(statModifiers.tagModifiers && {
+      categoryDeltas: statModifiers.tagModifiers as Record<string, number>,
+    }),
+  };
+};
 
 const traits: Trait[] = AVAILABLE_PERKS.map(perk => ({
   id: perk.id,
@@ -70,27 +158,7 @@ const traits: Trait[] = AVAILABLE_PERKS.map(perk => ({
   categoryId: perk.tag,
   allowedArchetypeIds: perk.allowedSpecies,
   recipeIds: perk.recipeIds,
-  resourceModifiers: perk.statModifiers
-    ? {
-        values: {
-          ...(perk.statModifiers.health !== undefined && {
-            health: perk.statModifiers.health,
-          }),
-          ...(perk.statModifiers.limit !== undefined && {
-            limit: perk.statModifiers.limit,
-          }),
-        },
-        caps: {
-          ...(perk.statModifiers.healthCap !== undefined && {
-            health: perk.statModifiers.healthCap,
-          }),
-          ...(perk.statModifiers.limitCap !== undefined && {
-            limit: perk.statModifiers.limitCap,
-          }),
-        },
-        categoryModifiers: perk.statModifiers.tagModifiers,
-      }
-    : undefined,
+  modifier: perk.statModifiers ? toModifier(perk.statModifiers) : undefined,
 }));
 
 const qualities: Quality[] = AVAILABLE_DISTINCTIONS.map(distinction => ({
@@ -106,10 +174,7 @@ const categoryBonuses: CategoryBonusRule[] = Object.entries(
   bonuses.map(bonus => ({
     categoryId,
     requiredScore: bonus.requiredScore,
-    grants: {
-      ...(bonus.health !== undefined && { health: bonus.health }),
-      ...(bonus.limit !== undefined && { limit: bonus.limit }),
-    },
+    grants: toModifier(bonus),
   }))
 );
 
@@ -136,21 +201,12 @@ export const afterworldsRuleset: RulesetDefinition = {
     'questSponsor.plural': 'Junktown Offices',
     'map.label': 'Junktown Map',
   },
-  resources: [
-    { id: 'health', label: 'Health', capped: true },
-    { id: 'limit', label: 'Limit', capped: true },
-  ],
+  attributes,
   groups: [
     { id: 'organic', label: 'Organic' },
     { id: 'robotic', label: 'Robotic' },
     { id: 'mutant', label: 'Mutant' },
     { id: 'android', label: 'Android' },
-  ],
-  capabilities: [
-    { id: 'cyberware', label: 'Can Use Cyberware' },
-    { id: 'chems', label: 'Can Use Chems' },
-    { id: 'injuries', label: 'Can Take Injuries' },
-    { id: 'malfunctions', label: 'Can Take Malfunctions' },
   ],
   archetypes,
   traitCategories: Object.values(PerkTag).map(tag => ({

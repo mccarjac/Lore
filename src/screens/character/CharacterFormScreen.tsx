@@ -46,45 +46,43 @@ import { BaseFormScreen } from '@/components';
 import { useLabels, useRuleset } from '@/ruleset';
 
 /**
- * Modification resource modifiers are nested under `values`/`caps` keyed by
- * resource id since #5, so a flat `{ ...cyber.statModifiers, health: n }`
- * spread no longer works. These keep the per-input update readable without
- * restructuring the editor — #8 replaces this whole section with a loop over
- * `ruleset.resources`.
+ * A modification's numeric deltas are a flat attribute-id -> delta map since
+ * #22 (a cap is simply another attribute), so these keep the per-input update
+ * readable. #8 replaces this whole section with a loop over the ruleset's
+ * attribute definitions.
  */
-const setResourceModifier = (
+const setAttributeDelta = (
   modification: Modification,
-  group: 'values' | 'caps',
-  resourceId: string,
+  attributeId: string,
   numValue: number | undefined
 ): Modification => {
-  const existing = modification.resourceModifiers ?? {};
-  const groupValues = { ...(existing[group] ?? {}) };
+  const existing = modification.modifier ?? {};
+  const deltas = { ...(existing.attributeDeltas ?? {}) };
 
   if (numValue === undefined) {
-    delete groupValues[resourceId];
+    delete deltas[attributeId];
   } else {
-    groupValues[resourceId] = numValue;
+    deltas[attributeId] = numValue;
   }
 
   return {
     ...modification,
-    resourceModifiers: {
+    modifier: {
       ...existing,
-      [group]: Object.keys(groupValues).length > 0 ? groupValues : undefined,
+      attributeDeltas: Object.keys(deltas).length > 0 ? deltas : undefined,
     },
   };
 };
 
 const setCategoryModifiers = (
   modification: Modification,
-  categoryModifiers: Record<string, number>
+  categoryDeltas: Record<string, number>
 ): Modification => ({
   ...modification,
-  resourceModifiers: {
-    ...(modification.resourceModifiers ?? {}),
-    categoryModifiers:
-      Object.keys(categoryModifiers).length > 0 ? categoryModifiers : undefined,
+  modifier: {
+    ...(modification.modifier ?? {}),
+    categoryDeltas:
+      Object.keys(categoryDeltas).length > 0 ? categoryDeltas : undefined,
   },
 });
 
@@ -591,16 +589,15 @@ export const CharacterFormScreen: React.FC = () => {
                     <TextInput
                       style={styles.modifierField}
                       value={
-                        cyber.resourceModifiers?.values?.health?.toString() ||
+                        cyber.modifier?.attributeDeltas?.health?.toString() ||
                         ''
                       }
                       onChangeText={value => {
                         const newCyberware = [...(form.modifications || [])];
                         const numValue =
                           value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = setResourceModifier(
+                        newCyberware[index] = setAttributeDelta(
                           cyber,
-                          'values',
                           'health',
                           numValue
                         );
@@ -615,15 +612,14 @@ export const CharacterFormScreen: React.FC = () => {
                     <TextInput
                       style={styles.modifierField}
                       value={
-                        cyber.resourceModifiers?.values?.limit?.toString() || ''
+                        cyber.modifier?.attributeDeltas?.limit?.toString() || ''
                       }
                       onChangeText={value => {
                         const newCyberware = [...(form.modifications || [])];
                         const numValue =
                           value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = setResourceModifier(
+                        newCyberware[index] = setAttributeDelta(
                           cyber,
-                          'values',
                           'limit',
                           numValue
                         );
@@ -640,16 +636,16 @@ export const CharacterFormScreen: React.FC = () => {
                     <TextInput
                       style={styles.modifierField}
                       value={
-                        cyber.resourceModifiers?.caps?.health?.toString() || ''
+                        cyber.modifier?.attributeDeltas?.healthCap?.toString() ||
+                        ''
                       }
                       onChangeText={value => {
                         const newCyberware = [...(form.modifications || [])];
                         const numValue =
                           value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = setResourceModifier(
+                        newCyberware[index] = setAttributeDelta(
                           cyber,
-                          'caps',
-                          'health',
+                          'healthCap',
                           numValue
                         );
                         handleChange('modifications', newCyberware);
@@ -663,16 +659,16 @@ export const CharacterFormScreen: React.FC = () => {
                     <TextInput
                       style={styles.modifierField}
                       value={
-                        cyber.resourceModifiers?.caps?.limit?.toString() || ''
+                        cyber.modifier?.attributeDeltas?.limitCap?.toString() ||
+                        ''
                       }
                       onChangeText={value => {
                         const newCyberware = [...(form.modifications || [])];
                         const numValue =
                           value === '' ? undefined : parseInt(value) || 0;
-                        newCyberware[index] = setResourceModifier(
+                        newCyberware[index] = setAttributeDelta(
                           cyber,
-                          'caps',
-                          'limit',
+                          'limitCap',
                           numValue
                         );
                         handleChange('modifications', newCyberware);
@@ -690,11 +686,8 @@ export const CharacterFormScreen: React.FC = () => {
                   <View style={styles.tagModifiersList}>
                     {Object.values(PerkTag).map(tag => {
                       const currentValue =
-                        cyber.resourceModifiers?.categoryModifiers?.[tag];
-                      if (
-                        currentValue === undefined &&
-                        !cyber.resourceModifiers
-                      )
+                        cyber.modifier?.categoryDeltas?.[tag];
+                      if (currentValue === undefined && !cyber.modifier)
                         return null;
 
                       return (
@@ -711,8 +704,7 @@ export const CharacterFormScreen: React.FC = () => {
                                 value === '' ? undefined : parseInt(value) || 0;
 
                               const currentTagModifiers = {
-                                ...(cyber.resourceModifiers
-                                  ?.categoryModifiers || {}),
+                                ...(cyber.modifier?.categoryDeltas || {}),
                               };
 
                               if (numValue === undefined) {
@@ -738,8 +730,7 @@ export const CharacterFormScreen: React.FC = () => {
                                   ...(form.modifications || []),
                                 ];
                                 const currentTagModifiers = {
-                                  ...(cyber.resourceModifiers
-                                    ?.categoryModifiers || {}),
+                                  ...(cyber.modifier?.categoryDeltas || {}),
                                 };
                                 delete currentTagModifiers[tag];
 
@@ -764,7 +755,7 @@ export const CharacterFormScreen: React.FC = () => {
                     onPress={() => {
                       // Find first tag that doesn't have a modifier
                       const currentTagModifiers =
-                        cyber.resourceModifiers?.categoryModifiers || {};
+                        cyber.modifier?.categoryDeltas || {};
                       const availableTags = Object.values(PerkTag).filter(
                         tag => !(tag in currentTagModifiers)
                       );
