@@ -29,6 +29,7 @@ import {
   CertaintyLevel,
 } from '@models/types';
 import { BaseFormScreen } from '@/components';
+import { useFeature } from '@/ruleset';
 
 type EventsFormNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -54,6 +55,7 @@ interface EventFormData {
 export const EventsFormScreen: React.FC = () => {
   const navigation = useNavigation<EventsFormNavigationProp>();
   const route = useRoute<EventsFormRouteProp>();
+  const questsEnabled = useFeature('quests');
   const { event } = route.params || {};
 
   // Calculate default date (30 years in the future)
@@ -430,44 +432,48 @@ export const EventsFormScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Quests */}
-      <View style={styles.section}>
-        <Text style={styles.label}>Related Quests</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue=""
-            onValueChange={addQuest}
-            style={styles.picker}
-            dropdownIconColor={themeColors.text.secondary}
-          >
-            <Picker.Item label="Select quest to add..." value="" />
-            {quests
-              .filter(q => !formData.questIds.includes(q.id))
-              .map(quest => (
-                <Picker.Item
-                  key={quest.id}
-                  label={quest.name}
-                  value={quest.id}
-                />
-              ))}
-          </Picker>
+      {/* Quests. Gated with the detail screen's quest section — existing
+          questIds are retained on save either way, so turning the flag back
+          on restores the links. */}
+      {questsEnabled && (
+        <View style={styles.section}>
+          <Text style={styles.label}>Related Quests</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue=""
+              onValueChange={addQuest}
+              style={styles.picker}
+              dropdownIconColor={themeColors.text.secondary}
+            >
+              <Picker.Item label="Select quest to add..." value="" />
+              {quests
+                .filter(q => !formData.questIds.includes(q.id))
+                .map(quest => (
+                  <Picker.Item
+                    key={quest.id}
+                    label={quest.name}
+                    value={quest.id}
+                  />
+                ))}
+            </Picker>
+          </View>
+          <View style={styles.selectedList}>
+            {formData.questIds.map(questId => {
+              const quest = quests.find(q => q.id === questId);
+              return (
+                <View key={questId} style={styles.selectedChip}>
+                  <Text style={styles.selectedChipText}>
+                    {quest?.name ?? 'Unknown'}
+                  </Text>
+                  <TouchableOpacity onPress={() => removeQuest(questId)}>
+                    <Text style={styles.removeButton}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
         </View>
-        <View style={styles.selectedList}>
-          {formData.questIds.map(questId => {
-            const quest = quests.find(q => q.id === questId);
-            return (
-              <View key={questId} style={styles.selectedChip}>
-                <Text style={styles.selectedChipText}>
-                  {quest?.name ?? 'Unknown'}
-                </Text>
-                <TouchableOpacity onPress={() => removeQuest(questId)}>
-                  <Text style={styles.removeButton}>×</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </View>
-      </View>
+      )}
 
       {/* Notes */}
       <View style={styles.section}>

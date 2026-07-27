@@ -16,6 +16,7 @@ import {
   GameQuest,
 } from '@models/types';
 import type { StoredFaction } from './characterStorage';
+import type { RulesetDefinition } from '@/ruleset/types';
 
 export type SearchDomain =
   | 'character'
@@ -270,17 +271,21 @@ const searchQuests = (
  */
 export const searchAllDomains = (
   data: GlobalSearchData,
-  query: string
+  query: string,
+  ruleset?: RulesetDefinition
 ): GlobalSearchResult[] => {
   const normalized = query.trim().toLowerCase();
   if (normalized.length < MIN_QUERY_LENGTH) {
     return [];
   }
+  // Optional so the eleven positional callers stay valid; omitting it searches
+  // every domain, which is what a caller with no ruleset in hand wants.
+  const questsEnabled = ruleset ? ruleset.features.quests : true;
   return [
     ...searchCharacters(data.characters, normalized),
     ...searchFactions(data.factions, normalized),
     ...searchLocations(data.locations, normalized),
     ...searchEvents(data.events, normalized),
-    ...searchQuests(data.quests, normalized),
+    ...(questsEnabled ? searchQuests(data.quests, normalized) : []),
   ];
 };

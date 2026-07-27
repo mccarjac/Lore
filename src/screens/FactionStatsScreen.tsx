@@ -18,9 +18,9 @@ import {
 } from '@/utils/factionStats';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
-import { PerkTag } from '@/models/gameData';
 import { CollapsibleSection, InfoButton } from '@/components';
 import { useLabels, useRuleset } from '@/ruleset';
+import { colorForIndex } from '@/styles/chartPalette';
 
 type FactionStatsNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -33,6 +33,23 @@ export const FactionStatsScreen: React.FC = () => {
   const [combinedAnalysis, setCombinedAnalysis] =
     useState<CombinedFactionAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
+
+  /**
+   * Built once per ruleset rather than per bar. A category may declare its own
+   * `color`; anything that doesn't gets a cycled palette entry, so a ruleset
+   * with more categories than the old twelve-entry map still renders them all
+   * distinctly instead of collapsing onto one accent color.
+   */
+  const categoryColors = React.useMemo(
+    () =>
+      new Map(
+        ruleset.traitCategories.map((category, index) => [
+          category.id,
+          category.color ?? colorForIndex(index),
+        ])
+      ),
+    [ruleset]
+  );
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -115,14 +132,14 @@ export const FactionStatsScreen: React.FC = () => {
 
     return (
       <View key={tag} style={styles.perkTagRow}>
-        <Text style={styles.perkTagLabel}>{tag}</Text>
+        <Text style={styles.perkTagLabel}>{categoryLabel(tag)}</Text>
         <View style={styles.perkTagBarContainer}>
           <View
             style={[
               styles.perkTagBar,
               {
                 width: widthPercentage,
-                backgroundColor: getPerkTagColor(tag),
+                backgroundColor: getCategoryColor(tag),
               },
             ]}
           >
@@ -133,27 +150,12 @@ export const FactionStatsScreen: React.FC = () => {
     );
   };
 
-  // Still a hardcoded Afterworlds palette; #9 replaces this by reading
-  // `color` off the ruleset's TraitCategory. Widened to `string` here only
-  // so a ruleset-defined category id type-checks, with the existing
-  // fallback covering any id the map does not know.
-  const getPerkTagColor = (tag: string): string => {
-    const colorMap: Record<string, string> = {
-      [PerkTag.Agility]: '#3498DB',
-      [PerkTag.Charisma]: '#E91E63',
-      [PerkTag.Crafting]: '#FF9800',
-      [PerkTag.Defense]: '#9C27B0',
-      [PerkTag.Endurance]: '#4CAF50',
-      [PerkTag.Finesse]: '#00BCD4',
-      [PerkTag.Grit]: '#795548',
-      [PerkTag.Medical]: '#F44336',
-      [PerkTag.Smarts]: '#2196F3',
-      [PerkTag.Strength]: '#E74C3C',
-      [PerkTag.Teamwork]: '#009688',
-      [PerkTag.Technical]: '#607D8B',
-    };
-    return colorMap[tag] || themeColors.accent.primary;
-  };
+  const getCategoryColor = (categoryId: string): string =>
+    categoryColors.get(categoryId) ?? themeColors.accent.primary;
+
+  const categoryLabel = (categoryId: string): string =>
+    ruleset.traitCategories.find(category => category.id === categoryId)
+      ?.label ?? categoryId;
 
   const renderFactionCard = (stats: FactionStats) => {
     const isSelected = selectedFaction === stats.factionName;
@@ -300,9 +302,9 @@ export const FactionStatsScreen: React.FC = () => {
               title={`${label('archetype.plural')} Distribution`}
               defaultCollapsed={true}
             >
-              {Object.keys(stats.speciesDistribution).length > 0 ? (
+              {Object.keys(stats.archetypeDistribution).length > 0 ? (
                 <View style={styles.listContainer}>
-                  {Object.entries(stats.speciesDistribution)
+                  {Object.entries(stats.archetypeDistribution)
                     .sort((a, b) => b[1] - a[1])
                     .map(([species, count]) => (
                       <View key={species} style={styles.listItem}>
@@ -455,11 +457,7 @@ export const FactionStatsScreen: React.FC = () => {
                       .map(([tag, count], index, array) => {
                         // Use the highest count from the sorted array, or default to 1
                         const maxCount = array.length > 0 ? array[0][1] : 1;
-                        return renderPerkTagBar(
-                          tag as PerkTag,
-                          count,
-                          maxCount
-                        );
+                        return renderPerkTagBar(tag, count, maxCount);
                       })}
                   </View>
                 </View>

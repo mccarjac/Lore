@@ -1,5 +1,7 @@
 import { GameCharacter, GameQuest, QuestStatus } from '@models/types';
 import { calculateDerivedStats } from '@/ruleset/derived';
+import { afterworldsRuleset } from '@/ruleset/defaultRuleset';
+import type { RulesetDefinition } from '@/ruleset/types';
 
 export interface QuestProposal {
   questId: string;
@@ -25,9 +27,10 @@ const DISTINCTION_WEIGHT = 3;
  */
 export const scoreCharacterForQuest = (
   character: GameCharacter,
-  quest: GameQuest
+  quest: GameQuest,
+  ruleset: RulesetDefinition = afterworldsRuleset
 ): number => {
-  const { categoryScores } = calculateDerivedStats(character);
+  const { categoryScores } = calculateDerivedStats(character, ruleset);
   const desirable = quest.desirable;
   const undesirable = quest.undesirable;
   let score = 0;
@@ -100,7 +103,8 @@ const getTeamSize = (quest: GameQuest): number => {
  */
 export const generateQuestProposals = (
   quests: GameQuest[],
-  characters: GameCharacter[]
+  characters: GameCharacter[],
+  ruleset: RulesetDefinition = afterworldsRuleset
 ): QuestProposal[] => {
   const targetQuests = getProposalTargetQuests(quests);
   const availableCharacters = getAvailableCharacters(characters);
@@ -122,7 +126,7 @@ export const generateQuestProposals = (
       new Map(
         availableCharacters.map(character => [
           character.id,
-          scoreCharacterForQuest(character, quest),
+          scoreCharacterForQuest(character, quest, ruleset),
         ])
       ),
     ])

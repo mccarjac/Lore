@@ -35,6 +35,37 @@ describe('afterworldsRuleset', () => {
     expect(afterworldsRuleset.categoryBonuses).toHaveLength(36);
   });
 
+  it('gives every trait category a color, so charts need no fallback', () => {
+    afterworldsRuleset.traitCategories.forEach(category => {
+      expect(category.color).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    });
+  });
+
+  it('preserves the palette FactionStatsScreen used to hardcode', () => {
+    const colorOf = (id: string) =>
+      afterworldsRuleset.traitCategories.find(c => c.id === id)?.color;
+
+    expect(colorOf('Agility')).toBe('#3498DB');
+    expect(colorOf('Medical')).toBe('#F44336');
+    expect(colorOf('Technical')).toBe('#607D8B');
+  });
+
+  it('defaults new characters to Human, as the form screen used to', () => {
+    expect(afterworldsRuleset.defaultArchetypeId).toBe('Human');
+    expect(
+      afterworldsRuleset.archetypes.some(
+        a => a.id === afterworldsRuleset.defaultArchetypeId
+      )
+    ).toBe(true);
+  });
+
+  it('enables every feature — Junktown uses all of them', () => {
+    expect(Object.values(afterworldsRuleset.features)).toHaveLength(8);
+    Object.values(afterworldsRuleset.features).forEach(enabled => {
+      expect(enabled).toBe(true);
+    });
+  });
+
   it.each([
     ['Human', 2, 2, 5, 5],
     ['Unturned', 0, 3, 0, 10],

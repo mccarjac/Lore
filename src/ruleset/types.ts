@@ -147,6 +147,12 @@ export interface RulesetDefinition {
   attributes: AttributeDefinition[];
   groups: ArchetypeGroup[];
   archetypes: Archetype[];
+  /**
+   * Archetype a newly created character starts on. Without it the character
+   * form would have to fall back to `archetypes[0]`, which is declaration
+   * order rather than an authored choice.
+   */
+  defaultArchetypeId?: string;
   traitCategories: TraitCategory[];
   traits: Trait[];
   qualities: Quality[];
@@ -155,8 +161,12 @@ export interface RulesetDefinition {
   archetypeRules?: ArchetypeRule[];
   features: FeatureFlags;
   limits?: RulesetLimits;
-  /** Asset key resolved through RulesetAssets — never a require() result. */
-  map?: { imageKey: string; label: string };
+  /**
+   * Asset key resolved through RulesetAssets — never a require() result.
+   * The map's display name is `terminology['map.label']`, not a field here:
+   * two sources for one string only drift.
+   */
+  map?: { imageKey: string };
   branding: {
     appName: string;
     iconKey?: string;

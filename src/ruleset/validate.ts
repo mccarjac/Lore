@@ -5,6 +5,7 @@ import {
   type AttributeDefinition,
   type RefCollection,
 } from './attributes';
+import { FEATURE_KEYS } from './features';
 import type { RulesetDefinition } from './types';
 
 export interface ValidationIssue {
@@ -281,6 +282,27 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
       issues.push({
         path: `archetypeRules[${index}].groupId`,
         message: `Unknown group id '${rule.groupId}'`,
+      });
+    }
+  });
+
+  if (
+    ruleset.defaultArchetypeId !== undefined &&
+    !archetypeIds.has(ruleset.defaultArchetypeId)
+  ) {
+    issues.push({
+      path: 'defaultArchetypeId',
+      message: `Unknown archetype id '${ruleset.defaultArchetypeId}'`,
+    });
+  }
+
+  // Flags gate navigation registration (#10), so a missing one would silently
+  // hide a whole subsystem rather than fail loudly.
+  FEATURE_KEYS.forEach(key => {
+    if (typeof ruleset.features?.[key] !== 'boolean') {
+      issues.push({
+        path: `features.${key}`,
+        message: `features.${key} must be a boolean`,
       });
     }
   });

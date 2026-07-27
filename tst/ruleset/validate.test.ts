@@ -96,7 +96,7 @@ const baseRuleset = (): RulesetDefinition => ({
     relationshipGraph: true,
   },
   limits: { maxQualities: 3 },
-  map: { imageKey: 'map', label: 'Map' },
+  map: { imageKey: 'map' },
   branding: { appName: 'Fixture App' },
 });
 
@@ -343,9 +343,35 @@ describe('validateRuleset', () => {
     });
   });
 
+  it('flags a defaultArchetypeId that resolves to nothing', () => {
+    const ruleset = baseRuleset();
+    ruleset.defaultArchetypeId = 'nonexistent';
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'defaultArchetypeId',
+      message: "Unknown archetype id 'nonexistent'",
+    });
+  });
+
+  it('accepts an omitted defaultArchetypeId', () => {
+    const ruleset = baseRuleset();
+    delete ruleset.defaultArchetypeId;
+    expect(validateRuleset(ruleset).valid).toBe(true);
+  });
+
+  it('flags a missing feature flag rather than gating the feature off', () => {
+    const ruleset = baseRuleset();
+    delete (ruleset.features as Partial<typeof ruleset.features>).quests;
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'features.quests',
+      message: 'features.quests must be a boolean',
+    });
+  });
+
   it('flags an empty map.imageKey when map is present', () => {
     const ruleset = baseRuleset();
-    ruleset.map = { imageKey: '', label: 'Map' };
+    ruleset.map = { imageKey: '' };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
       path: 'map.imageKey',

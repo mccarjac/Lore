@@ -59,7 +59,7 @@ describe('characterStats', () => {
     it('should calculate species distribution', () => {
       const stats = calculateCharacterStats(mockCharacters);
 
-      expect(stats.speciesDistribution).toEqual({
+      expect(stats.archetypeDistribution).toEqual({
         Human: 2,
         Mutant: 1,
       });
@@ -131,7 +131,7 @@ describe('characterStats', () => {
       const stats = calculateCharacterStats(characters);
 
       expect(stats.totalCharacters).toBe(1);
-      expect(stats.speciesDistribution).toEqual({ Android: 1 });
+      expect(stats.archetypeDistribution).toEqual({ Android: 1 });
       expect(stats.factionDistribution).toEqual({ Machines: 1 });
     });
 
@@ -213,7 +213,7 @@ describe('characterStats', () => {
 
       const stats = calculateCharacterStats(characters);
 
-      expect(stats.speciesDistribution).toEqual({
+      expect(stats.archetypeDistribution).toEqual({
         Human: 2,
         Mutant: 1,
         Android: 1,

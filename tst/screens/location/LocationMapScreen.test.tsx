@@ -9,6 +9,8 @@ import {
   installNavigationMock,
   resetNavigationMocks,
 } from '../../helpers/navigation';
+import { renderWithRuleset } from '../../helpers/ruleset';
+import { genericRuleset } from '../../fixtures/genericRuleset';
 
 jest.mock('@utils/characterStorage');
 
@@ -161,5 +163,49 @@ describe('LocationMapScreen', () => {
     await waitFor(() => {
       expect(loadCallsBeforePlacement()).toBeGreaterThan(callsBeforePlacement);
     });
+  });
+});
+
+describe('LocationMapScreen — the map is a ruleset asset', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    primeStorageDefaults();
+  });
+
+  afterEach(() => {
+    resetNavigationMocks();
+  });
+
+  it('renders the image the active ruleset points at', async () => {
+    const resolve = jest.spyOn(Image, 'resolveAssetSource').mockReturnValue({
+      width: IMAGE_SIZE.width,
+      height: IMAGE_SIZE.height,
+      uri: 'swapped-map-uri',
+      scale: 1,
+    } as never);
+
+    const swappedAsset = { uri: 'swapped-map-uri' };
+    const { queryByText } = renderWithRuleset(<LocationMapScreen />, {
+      ruleset: {
+        ...genericRuleset,
+        map: { imageKey: 'realm' },
+      },
+      assets: { realm: swappedAsset },
+    });
+
+    await waitFor(() => expect(queryByText('Loading map...')).toBeNull());
+    // The screen resolved *this* ruleset's asset, not the bundled Junktown one.
+    expect(resolve).toHaveBeenCalledWith(swappedAsset);
+  });
+
+  it('says so when the ruleset declares no map, rather than spinning', () => {
+    // genericRuleset has no `map` at all, so resolveAsset returns undefined.
+    const { getByText, queryByText } = renderWithRuleset(
+      <LocationMapScreen />,
+      { ruleset: genericRuleset }
+    );
+
+    expect(getByText('This ruleset has no map to show.')).toBeTruthy();
+    expect(queryByText('Loading map...')).toBeNull();
   });
 });

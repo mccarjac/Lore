@@ -20,7 +20,7 @@ describe('factionStats', () => {
         topPerkTags: [],
         commonPerks: [],
         commonDistinctions: [],
-        speciesDistribution: {},
+        archetypeDistribution: {},
         relationships: [],
         alliedFactions: [],
         enemyFactions: [],
@@ -136,7 +136,7 @@ describe('factionStats', () => {
           }),
         ])
       );
-      expect(stats.speciesDistribution).toEqual({ Human: 2, Mutant: 1 });
+      expect(stats.archetypeDistribution).toEqual({ Human: 2, Mutant: 1 });
     });
 
     it('falls back to Unknown Perk/Distinction names for unrecognized ids', () => {

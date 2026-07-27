@@ -10,60 +10,64 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import {
-  AVAILABLE_PERKS,
-  AVAILABLE_DISTINCTIONS,
-  AVAILABLE_RECIPES,
-  PerkTag,
-  RecipeId,
-} from '@/models/gameData';
-import {
-  GameCharacter,
-  DistinctionId,
-  RelationshipStanding,
-} from '@/models/types';
+import { GameCharacter, RelationshipStanding } from '@/models/types';
 import { RootStackParamList } from '@/navigation/types';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
-import { useLabels } from '@/ruleset';
+import {
+  useLabels,
+  useRuleset,
+  useFeature,
+  type RulesetDefinition,
+} from '@/ruleset';
+import { loadCharacters } from '@/utils/characterStorage';
 
 type SearchScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-// Get all unique tags from the PerkTag type
-const getAllTags = (): PerkTag[] => {
-  const tagSet = new Set(AVAILABLE_PERKS.map(perk => perk.tag));
-  return Array.from(tagSet);
-};
-import { loadCharacters } from '@/utils/characterStorage';
-
+/**
+ * Every id here is a plain ruleset id rather than a closed union derived from
+ * the Afterworlds tables — the filters are populated from whichever ruleset is
+ * active, so the criteria cannot be typed against one flavor's data.
+ */
 interface SearchCriteria {
   perkId?: string;
-  distinctionId?: DistinctionId;
-  tag?: PerkTag;
+  distinctionId?: string;
+  tag?: string;
   minTagScore?: number;
   factionStanding?: RelationshipStanding;
-  recipeId?: RecipeId;
+  recipeId?: string;
   presentStatus?: 'present' | 'absent' | 'any';
   retiredStatus?: 'active' | 'retired' | 'any';
 }
 
+/**
+ * How many of a character's traits fall in one category. Module-level and
+ * ruleset-parameterized rather than a closure, so the search callback's
+ * dependency list stays honest.
+ */
+const calculateTagScore = (
+  character: GameCharacter,
+  categoryId: string,
+  ruleset: RulesetDefinition
+): number =>
+  ruleset.traits.filter(
+    trait =>
+      character.traitIds.includes(trait.id) && trait.categoryId === categoryId
+  ).length;
+
 export const CharacterSearchScreen: React.FC = () => {
   const navigation = useNavigation<SearchScreenNavigationProp>();
   const label = useLabels();
+  const { ruleset } = useRuleset();
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({
     presentStatus: 'any',
     retiredStatus: 'active', // Default to searching only active (non-retired) characters
   });
   const [searchResults, setSearchResults] = useState<GameCharacter[]>([]);
 
-  const calculateTagScore = (
-    character: GameCharacter,
-    tag: PerkTag
-  ): number => {
-    return AVAILABLE_PERKS.filter(
-      perk => character.traitIds.includes(perk.id) && perk.tag === tag
-    ).length;
-  };
+  const recipesEnabled = useFeature('recipes');
+  const archetypeLabel = (id: string): string =>
+    ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
 
   const handleSearch = useCallback(async () => {
     const characters = await loadCharacters();
@@ -86,12 +90,12 @@ export const CharacterSearchScreen: React.FC = () => {
 
       // Check recipes
       if (searchCriteria.recipeId) {
-        const characterPerks = AVAILABLE_PERKS.filter(
-          perk => character.traitIds.includes(perk.id) && perk.recipeIds
+        const characterTraits = ruleset.traits.filter(
+          trait => character.traitIds.includes(trait.id) && trait.recipeIds
         );
 
-        const hasMatchingRecipe = characterPerks.some(perk =>
-          perk.recipeIds?.includes(searchCriteria.recipeId!)
+        const hasMatchingRecipe = characterTraits.some(trait =>
+          trait.recipeIds?.includes(searchCriteria.recipeId!)
         );
 
         if (!hasMatchingRecipe) {
@@ -101,7 +105,11 @@ export const CharacterSearchScreen: React.FC = () => {
 
       // Check tag score
       if (searchCriteria.tag && searchCriteria.minTagScore) {
-        const tagScore = calculateTagScore(character, searchCriteria.tag);
+        const tagScore = calculateTagScore(
+          character,
+          searchCriteria.tag,
+          ruleset
+        );
         if (tagScore < searchCriteria.minTagScore) {
           return false;
         }
@@ -139,7 +147,7 @@ export const CharacterSearchScreen: React.FC = () => {
     });
 
     setSearchResults(results);
-  }, [searchCriteria]);
+  }, [searchCriteria, ruleset]);
 
   return (
     <ScrollView style={styles.container}>
@@ -159,8 +167,8 @@ export const CharacterSearchScreen: React.FC = () => {
             }
           >
             <Picker.Item label={`Any ${label('trait.singular')}`} value="" />
-            {AVAILABLE_PERKS.map(perk => (
-              <Picker.Item key={perk.id} label={perk.name} value={perk.id} />
+            {ruleset.traits.map(trait => (
+              <Picker.Item key={trait.id} label={trait.name} value={trait.id} />
             ))}
           </Picker>
         </View>
@@ -178,11 +186,11 @@ export const CharacterSearchScreen: React.FC = () => {
             }
           >
             <Picker.Item label={`Any ${label('quality.singular')}`} value="" />
-            {AVAILABLE_DISTINCTIONS.map(distinction => (
+            {ruleset.qualities.map(quality => (
               <Picker.Item
-                key={distinction.id}
-                label={distinction.name}
-                value={distinction.id}
+                key={quality.id}
+                label={quality.name}
+                value={quality.id}
               />
             ))}
           </Picker>
@@ -196,7 +204,7 @@ export const CharacterSearchScreen: React.FC = () => {
             <Picker
               selectedValue={searchCriteria.tag}
               style={[styles.picker, { flex: 2 }]}
-              onValueChange={(value: PerkTag | '') =>
+              onValueChange={(value: string) =>
                 setSearchCriteria(prev => ({
                   ...prev,
                   tag: value || undefined,
@@ -207,8 +215,12 @@ export const CharacterSearchScreen: React.FC = () => {
                 label={`Any ${label('traitCategory.singular')}`}
                 value=""
               />
-              {getAllTags().map(tag => (
-                <Picker.Item key={tag} label={tag} value={tag} />
+              {ruleset.traitCategories.map(category => (
+                <Picker.Item
+                  key={category.id}
+                  label={category.label}
+                  value={category.id}
+                />
               ))}
             </Picker>
             <TextInput
@@ -226,28 +238,30 @@ export const CharacterSearchScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={styles.criteriaItem}>
-          <Text style={styles.label}>Recipe</Text>
-          <Picker
-            selectedValue={searchCriteria.recipeId}
-            style={styles.picker}
-            onValueChange={value =>
-              setSearchCriteria(prev => ({
-                ...prev,
-                recipeId: value || undefined,
-              }))
-            }
-          >
-            <Picker.Item label="Any Recipe" value="" />
-            {AVAILABLE_RECIPES.map(recipe => (
-              <Picker.Item
-                key={recipe.id}
-                label={recipe.name}
-                value={recipe.id}
-              />
-            ))}
-          </Picker>
-        </View>
+        {recipesEnabled && (
+          <View style={styles.criteriaItem}>
+            <Text style={styles.label}>{label('recipe.singular')}</Text>
+            <Picker
+              selectedValue={searchCriteria.recipeId}
+              style={styles.picker}
+              onValueChange={value =>
+                setSearchCriteria(prev => ({
+                  ...prev,
+                  recipeId: value || undefined,
+                }))
+              }
+            >
+              <Picker.Item label={`Any ${label('recipe.singular')}`} value="" />
+              {(ruleset.recipes ?? []).map(recipe => (
+                <Picker.Item
+                  key={recipe.id}
+                  label={recipe.name}
+                  value={recipe.id}
+                />
+              ))}
+            </Picker>
+          </View>
+        )}
 
         <View style={styles.criteriaItem}>
           <Text style={styles.label}>Present Status</Text>
@@ -306,7 +320,7 @@ export const CharacterSearchScreen: React.FC = () => {
               <Text style={styles.characterName}>{character.name}</Text>
               <View style={styles.characterInfo}>
                 <Text style={styles.characterSpecies}>
-                  {character.archetypeId}
+                  {archetypeLabel(character.archetypeId)}
                 </Text>
                 {character.retired && (
                   <View

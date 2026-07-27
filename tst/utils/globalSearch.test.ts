@@ -11,6 +11,8 @@ import {
   makeEvent,
   makeQuest,
 } from '../helpers/factories';
+import { afterworldsRuleset } from '@/ruleset';
+import { genericRuleset } from '../fixtures/genericRuleset';
 
 const makeData = (
   overrides: Partial<GlobalSearchData> = {}
@@ -247,5 +249,32 @@ describe('globalSearch', () => {
         'Abel',
       ]);
     });
+  });
+});
+
+describe('searchAllDomains — feature gating', () => {
+  const gatingData = () =>
+    makeData({
+      characters: [makeCharacter({ id: 'c1', name: 'Quest Alice' })],
+      quests: [makeQuest({ id: 'q1', name: 'Quest for the Cargo' })],
+    });
+
+  it('searches every domain when given no ruleset', () => {
+    const results = searchAllDomains(gatingData(), 'quest');
+    expect(results.some(result => result.domain === 'quest')).toBe(true);
+  });
+
+  it('searches every domain when the ruleset enables quests', () => {
+    const results = searchAllDomains(gatingData(), 'quest', afterworldsRuleset);
+    expect(results.some(result => result.domain === 'quest')).toBe(true);
+  });
+
+  it('skips the quest domain when the ruleset disables quests', () => {
+    // QuestsDetail is unregistered under such a ruleset, so a quest result
+    // would be a row whose tap throws.
+    const results = searchAllDomains(gatingData(), 'quest', genericRuleset);
+    expect(results.some(result => result.domain === 'quest')).toBe(false);
+    // Every other domain still searches.
+    expect(results.some(result => result.domain === 'character')).toBe(true);
   });
 });

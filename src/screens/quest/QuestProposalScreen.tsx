@@ -17,6 +17,7 @@ import {
   generateQuestProposals,
   scoreCharacterForQuest,
 } from '@utils/questProposal';
+import { useRuleset } from '@/ruleset';
 
 type QuestProposalsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -25,6 +26,7 @@ type QuestProposalsNavigationProp = StackNavigationProp<
 
 export const QuestProposalScreen: React.FC = () => {
   const navigation = useNavigation<QuestProposalsNavigationProp>();
+  const { ruleset } = useRuleset();
 
   const [loading, setLoading] = useState(true);
   const [quests, setQuests] = useState<GameQuest[]>([]);
@@ -44,7 +46,7 @@ export const QuestProposalScreen: React.FC = () => {
       ]);
       setQuests(questsData);
       setCharacters(charactersData);
-      setProposals(generateQuestProposals(questsData, charactersData));
+      setProposals(generateQuestProposals(questsData, charactersData, ruleset));
       setSavedQuestIds(new Set());
     } finally {
       setLoading(false);
@@ -151,7 +153,11 @@ export const QuestProposalScreen: React.FC = () => {
                   {proposal.proposedCharacterIds.map(characterId => {
                     const character = characterMap.get(characterId);
                     if (!character) return null;
-                    const score = scoreCharacterForQuest(character, quest);
+                    const score = scoreCharacterForQuest(
+                      character,
+                      quest,
+                      ruleset
+                    );
                     return (
                       <View key={characterId} style={styles.characterRow}>
                         <Text style={styles.characterName}>
