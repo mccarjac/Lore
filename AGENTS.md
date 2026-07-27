@@ -138,6 +138,13 @@ none of them a closed union. A ruleset supplies the actual archetypes,
 traits, categories, qualities, and attributes — and since #22 a character may
 also carry its own GM-defined attribute values.
 
+`qualityIds` was the last of those to be stated as `string`. It used to read
+`DistinctionId[]`, an alias derived from the Afterworlds distinction table —
+which is what forced `models/types.ts` to import a content _value_ and made
+`types.ts ↔ gameData.ts` circular. Note the alias already _denoted_ `string`
+(the `AVAILABLE_DISTINCTIONS: Distinction[]` annotation defeats its
+`as const`), so removing it changed no stored bytes and needed no migration.
+
 Afterworlds data still lives in `gameData.ts` and `speciesTypes.ts`, and
 `src/ruleset/defaultRuleset.ts` derives a `RulesetDefinition` from it via a
 transform rather than a hand-written literal, so the two cannot drift.

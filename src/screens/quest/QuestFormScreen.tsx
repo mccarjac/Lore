@@ -28,7 +28,6 @@ import {
   GameEvent,
   QuestStatus,
   QuestMaterial,
-  DistinctionId,
 } from '@models/types';
 import {
   PerkTag,
@@ -57,7 +56,7 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
 interface PreferenceLists {
   traitCategoryIds: string[];
   archetypeIds: string[];
-  qualityIds: DistinctionId[];
+  qualityIds: string[];
   traitIds: string[];
 }
 
@@ -190,9 +189,9 @@ const PERK_OPTIONS: Option<string>[] = AVAILABLE_PERKS.map(perk => ({
   label: `${perk.name} (${perk.tag})`,
 }));
 
-const DISTINCTION_OPTIONS: Option<DistinctionId>[] = AVAILABLE_DISTINCTIONS.map(
+const DISTINCTION_OPTIONS: Option<string>[] = AVAILABLE_DISTINCTIONS.map(
   distinction => ({
-    value: distinction.id as DistinctionId,
+    value: distinction.id,
     label: distinction.name,
   })
 );
