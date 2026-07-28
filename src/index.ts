@@ -86,6 +86,9 @@ export type {
   GameEvent,
   GameLocation,
   GameQuest,
+  // A character's modifications — the flavor's own content transforms into
+  // these, so a ruleset module needs the type even though the engine owns it.
+  Modification,
   Relationship,
   RelationshipStanding,
   QuestStatus,

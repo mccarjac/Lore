@@ -158,7 +158,6 @@ src/
   models/               types.ts — the domain types
   ruleset/              THE ENGINE: attribute primitive, schema, provider,
                         validator, terminology, features, derived stats
-  rulesets/<flavor>/    a ruleset's content — consumer-owned
   navigation/           navigator types and the whole navigation tree
   styles/               theme and shared styles
   utils/                storage, export/import, discord, git sync, stats
@@ -168,8 +167,9 @@ tst/                    Jest tests, mirroring src/
 docs/                   the documentation below
 ```
 
-Note the singular/plural distinction: **`ruleset/` is the engine, `rulesets/` is
-content.** Engine code never imports from `rulesets/`.
+A flavor's content is not here — it lives in the app that depends on this
+package and arrives through `configureLore()`. See
+[docs/consuming-lore.md](docs/consuming-lore.md).
 
 ## Documentation
 
