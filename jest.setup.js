@@ -114,6 +114,9 @@ jest.mock('react-native-gesture-handler', () => {
       Tap: jest.fn(createGestureStub),
       LongPress: jest.fn(createGestureStub),
       Simultaneous: jest.fn((...gestures) => gestures),
+      // The graph canvas composes its single-tap with the double-tap zoom via
+      // Gesture.Exclusive so the tap waits for the double-tap to fail.
+      Exclusive: jest.fn((...gestures) => gestures),
     },
     TouchableOpacity: 'TouchableOpacity',
     ScrollView: 'ScrollView',

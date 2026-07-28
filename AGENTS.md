@@ -386,7 +386,36 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   only backfills factions that had a non-empty embedded description. This
   screen is the first direct `react-native-svg` consumer in `src/`; it
   renders under Jest without any mock (`Circle`/`G` support `onPress` and
-  `accessibilityLabel` directly).
+  `accessibilityLabel` directly). Layout (`computeGraphLayout`) runs d3-force
+  forces through a manual synchronous tick loop — deliberately NOT
+  `forceSimulation()`, whose constructor auto-starts an async d3-timer
+  stepper that leaks a frame callback into Jest teardown. Determinism is a
+  documented, tested contract: circle-seeded positions in stable (type, id)
+  order plus a seeded PRNG passed to each force's `initialize`. Edge rest
+  distances are standing-aware (`standingDistanceFactor`: Ally/Friend
+  shorter, Hostile/Enemy longer; the worse side of a disputed relationship
+  wins). The layout is an infinite canvas: positions are never clamped —
+  `computeGraphLayout` returns `{ nodes, size }` where `size` is the natural
+  content extent, and `GraphCanvas` pans/zooms it (`contentSize` vs
+  `containerSize` — content must stay centered for `clampTranslation`'s
+  symmetric bounds to hold). Tapping a node navigates straight to its detail
+  screen; long-press opens the info card (Focus / View details). Node taps
+  are detected by canvas-level RNGH Tap/LongPress gestures that invert the
+  pan/zoom transform (`containerPointToNormalized`) and hit-test node
+  centers — SVG-element `onPress` does not fire reliably on-device inside a
+  `GestureDetector`; the marker handlers remain only as a deduplicated
+  fallback (and for tests/accessibility). User-tunable spacing plus the
+  persisted Retired / Hide-isolated filter toggles live in
+  `src/utils/graphPreferences.ts` (key `gameCharacterManager_graph_prefs`);
+  sliders in `GraphSettingsPanel` (`@react-native-community/slider`). Note
+  `getGraphPreferences` is deliberately **not** wrapped in `runExclusive` —
+  it is a read, and wrapping it would queue behind a pending write it does
+  not need to wait for; the two mutators are wrapped. The d3 packages and
+  `@react-native-community` are allow-listed in `jest.config.js`'s
+  `transformIgnorePatterns` (ESM-only, like `uuid`), and the gesture-handler
+  mock in `jest.setup.js` needs `Gesture.Exclusive` — without it the screen
+  throws during render and every test reports the unmount rather than the
+  cause.
 
 ## Testing
 

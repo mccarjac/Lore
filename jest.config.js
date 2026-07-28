@@ -11,8 +11,9 @@ module.exports = {
   transformIgnorePatterns: [
     // `gifted-charts-core` is react-native-gifted-charts' ESM dependency, so
     // allow-listing the wrapper alone is not enough — same trap as `expo-.*`
-    // and `@octokit`.
-    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-.*|@expo|@unimodules|@octokit|react-native-.*|gifted-charts-core|uuid)/)',
+    // and `@octokit`. d3-force pulls in d3-quadtree/d3-dispatch/d3-timer, all
+    // ESM-only, and each has to be named for the same reason.
+    'node_modules/(?!(react-native|@react-native|@react-native-community|@react-navigation|expo|expo-.*|@expo|@unimodules|@octokit|react-native-.*|gifted-charts-core|uuid|d3-force|d3-quadtree|d3-dispatch|d3-timer)/)',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
