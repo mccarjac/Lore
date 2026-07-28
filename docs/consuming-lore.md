@@ -55,15 +55,23 @@ be installed by the app. Your `package.json` needs all of these:
 | `react-native-get-random-values`            | `~1.11.0`  |
 | `react-native-gifted-charts`                | `^1.4.64`  |
 | `react-native-markdown-display`             | `^7.0.2`   |
-| `react-native-reanimated`                   | `~4.1.3`   |
+| `react-native-reanimated`                   | `4.1.3`    |
 | `react-native-safe-area-context`            | `~5.6.0`   |
 | `react-native-screens`                      | `~4.16.0`  |
 | `react-native-svg`                          | `15.12.1`  |
+| `react-native-worklets`                     | `0.5.1`    |
+| `react-native-worklets-core`                | `1.6.2`    |
 | `react-native-zip-archive`                  | `^7.0.2`   |
 | `uuid`                                      | `^13.0.0`  |
 
 `@octokit/rest` and `react-native-zip-archive` are optional — omit them if you
 disable the `gitSync` feature and never export a `.zip`.
+
+**Some of these are pinned to an exact version, not a range.** Anything whose
+JS half has to match a _native_ half compiled into the app binary is exact:
+React Native itself, `react-native-svg`, and the reanimated/worklets trio. A
+range there is not flexibility, it is a crash waiting for a patch release —
+see [Worklets](#the-app-crashes-on-launch-with-installturbomodule) below.
 
 **Install them with `npx expo install <pkg>`, not `npm install`.** Expo picks
 the version its SDK actually ships. This matters more than it sounds: the
@@ -153,6 +161,39 @@ computation, or to the peer set — those are the three that can require work on
 your side. A peer-range change is treated as breaking.
 
 ## Troubleshooting
+
+### The app crashes on launch with `installTurboModule`
+
+```
+[runtime not ready]: Error: Exception in HostFunction: TurboModule method
+"installTurboModule" called with 1 arguments (expected argument count: 0).
+stack: NativeWorklets@…
+```
+
+The JS `react-native-worklets` does not match the native worklets compiled
+into the binary you are running (Expo Go, or a dev client). `installTurboModule`
+gained a parameter between 0.5 and 0.8, so the JS side calls it with an
+argument the native side does not accept.
+
+Almost always this means reanimated floated up a patch version:
+`react-native-reanimated@4.1.7` **depends on** `react-native-worklets@0.8.x`,
+while SDK 54's native side is built against `0.5.1`. Reanimated 4.1.3 does not
+declare worklets at all, which is why the app has to pin it.
+
+Fix by pinning all three exactly, as in the table above:
+
+```json
+"react-native-reanimated": "4.1.3",
+"react-native-worklets": "0.5.1",
+"react-native-worklets-core": "1.6.2"
+```
+
+then `rm -rf node_modules package-lock.json && npm install`. Confirm with
+`npm ls react-native-worklets` that exactly one copy at 0.5.1 is installed.
+
+**`npx expo install --check` catches this class of problem** before you launch,
+by validating every native package against what the SDK actually ships. Run it
+after any dependency change.
 
 **`ERESOLVE` on install** — a native module resolved to a version whose React
 Native peer excludes your SDK's. Use `npx expo install` for the package it
