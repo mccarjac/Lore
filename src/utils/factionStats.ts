@@ -1,7 +1,7 @@
 import { GameCharacter, RelationshipStanding } from '../models/types';
 import { FactionRelationship } from './characterStorage';
 import { getLabel, type RulesetDefinition } from '../ruleset';
-import { activeRuleset } from '@/activeRuleset';
+import { getActiveRuleset } from '@/activeRuleset';
 
 export interface FactionStats {
   factionName: string;
@@ -48,7 +48,7 @@ export const calculateFactionStats = (
   factionName: string,
   allCharacters: GameCharacter[],
   factionRelationships: FactionRelationship[] = [],
-  ruleset: RulesetDefinition = activeRuleset
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): FactionStats => {
   // Get faction members (only positive relationships count as members)
   const members = allCharacters.filter(char => {
@@ -195,7 +195,7 @@ export const calculateCombinedFactionStats = (
   factionName: string,
   allCharacters: GameCharacter[],
   allFactionRelationships: Map<string, FactionRelationship[]>,
-  ruleset: RulesetDefinition = activeRuleset
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): CombinedFactionAnalysis => {
   // Get base stats for the main faction
   const mainFactionRelationships =
@@ -257,7 +257,7 @@ export const calculateCombinedFactionStats = (
 export const getAllFactionStats = (
   allCharacters: GameCharacter[],
   allFactionRelationships: Map<string, FactionRelationship[]>,
-  ruleset: RulesetDefinition = activeRuleset
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): FactionStats[] => {
   const factionNames = Array.from(allFactionRelationships.keys());
 

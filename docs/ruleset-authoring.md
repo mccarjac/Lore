@@ -92,13 +92,17 @@ export const myFlavorRuleset: RulesetDefinition = {
 ```
 
 ```ts
-// src/activeRuleset.ts
+// index.ts — before registerRootComponent, and before any storage call
+import { configureLore } from '@/activeRuleset';
 import { myFlavorRuleset } from '@/rulesets/myflavor';
-export const activeRuleset: RulesetDefinition = myFlavorRuleset;
-export const activeAssets: RulesetAssets = {};
+
+configureLore({ ruleset: myFlavorRuleset });
 ```
 
 `npm run web` and the app is running your game.
+
+(Consuming Lore as a package? The call is identical, imported from `lore`
+rather than `@/activeRuleset` — see [consuming-lore.md](./consuming-lore.md).)
 
 `src/ruleset/exampleRuleset.ts` is the same thing, slightly larger, and is what
 the engine boots on out of the box. Read it — it is deliberately small enough
@@ -278,21 +282,29 @@ players would notice if they changed are pinned.
 
 ## Tracking upstream
 
-Point your fork at the engine and merge:
+**Depend on the engine rather than forking it.** A flavor is a small app that
+installs `lore`, registers its ruleset, and renders `LoreApp`:
 
 ```bash
-git remote add lore https://github.com/mccarjac/lore.git
-git fetch lore && git merge lore/main
-npm run check-all
+npm install github:mccarjac/lore#main
 ```
 
-Because the fork-owned surface is exactly the four items at the top of this
-page, a merge should only ever conflict inside them. If upstream changes keep
-colliding with your work somewhere else, that is the signal that something
-flavor-specific has leaked into engine-owned code.
+```tsx
+configureLore({ ruleset: myRuleset, assets: myAssets });
+```
 
-Set your identity in `.env` rather than editing `src/branding.ts` — that is one
-fewer file to resolve on every merge.
+Picking up engine work is then a version bump — no merge, no conflicts, no
+second copy of the screens. [consuming-lore.md](./consuming-lore.md) covers the
+peer dependencies, the entry-file wiring, and what the package exports.
+
+Two things change if you take that route. Your ruleset lives in your own
+repository rather than under `src/rulesets/`, and it reaches the engine through
+`configureLore()` instead of `src/activeRuleset.ts` — a package cannot import
+its consumer's module, so the seam pushes rather than pulls.
+
+The in-tree layout this page describes still works, and is what the engine's own
+dev app uses. It is the right choice while you are experimenting with a ruleset
+inside a clone of Lore; move to the dependency once the flavor is real.
 
 ---
 

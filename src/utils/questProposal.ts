@@ -1,6 +1,6 @@
 import { GameCharacter, GameQuest, QuestStatus } from '@models/types';
 import { calculateDerivedStats } from '@/ruleset/derived';
-import { activeRuleset } from '@/activeRuleset';
+import { getActiveRuleset } from '@/activeRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 export interface QuestProposal {
@@ -28,7 +28,7 @@ const DISTINCTION_WEIGHT = 3;
 export const scoreCharacterForQuest = (
   character: GameCharacter,
   quest: GameQuest,
-  ruleset: RulesetDefinition = activeRuleset
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): number => {
   const { categoryScores } = calculateDerivedStats(character, ruleset);
   const desirable = quest.desirable;
@@ -104,7 +104,7 @@ const getTeamSize = (quest: GameQuest): number => {
 export const generateQuestProposals = (
   quests: GameQuest[],
   characters: GameCharacter[],
-  ruleset: RulesetDefinition = activeRuleset
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): QuestProposal[] => {
   const targetQuests = getProposalTargetQuests(quests);
   const availableCharacters = getAvailableCharacters(characters);

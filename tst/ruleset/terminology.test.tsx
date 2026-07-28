@@ -6,7 +6,7 @@ import {
   DEFAULT_TERMINOLOGY,
 } from '@/ruleset/terminology';
 import { RulesetProvider } from '@/ruleset/context';
-import { activeRuleset } from '@/activeRuleset';
+import { getActiveRuleset } from '@/activeRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
 import { genericRuleset } from '../fixtures/genericRuleset';
 
@@ -63,7 +63,7 @@ describe('useLabels', () => {
     // call its traits.
     const { result } = renderHook(() => useLabels());
     expect(result.current('trait.plural')).toBe(
-      getLabel(activeRuleset, 'trait.plural')
+      getLabel(getActiveRuleset(), 'trait.plural')
     );
   });
 });

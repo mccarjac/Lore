@@ -136,6 +136,8 @@ module.exports = [
   {
     ignores: [
       'node_modules/',
+      // The library build output — generated from src/, never hand-edited.
+      'lib/',
       'dist/',
       'build/',
       'coverage/',

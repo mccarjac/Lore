@@ -11,7 +11,7 @@ locations, events, plus Discord message ingestion and GitHub-backed data
 sync. All data lives locally in AsyncStorage; there is no backend.
 
 The rules and vocabulary of any particular game come from a **ruleset**, not
-from the code — see "Ruleset layer" and "Engine vs fork" below. Junktown
+from the code — see "Ruleset layer" and "Engine vs consumer" below. Junktown
 Intelligence (the Afterworlds setting) is one such ruleset and ships in this
 tree under `src/rulesets/afterworlds/`; the app itself boots on a generic
 example ruleset.
@@ -49,12 +49,12 @@ src/
   models/               types.ts — all domain types, and nothing else
   ruleset/              THE ENGINE: attribute primitive, ruleset schema,
                         provider, validator, terminology, derived stats
-  rulesets/<flavor>/    A ruleset's content — fork-owned. See below.
+  rulesets/<flavor>/    A ruleset's content — consumer-owned. See below.
   navigation/           types.ts (navigator + param-list types) and
                         AppNavigator.tsx (the whole navigation tree)
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
   utils/                storage, export/import, discord, git, stats
-  activeRuleset.ts      which ruleset this build runs on (fork-owned)
+  activeRuleset.ts      the registry a consumer configures (configureLore)
   branding.ts           app identity, resolved from env (see "Branding")
 tst/                    Jest tests, mirroring src/
 docs/                   user- and operator-facing documentation
@@ -73,28 +73,41 @@ deliberately gets no alias of its own: `@/rulesets/…` already resolves, and a
 sixth alias would be a fourth thing to keep in sync. `@models/*` now points at
 a directory holding one file and is a candidate for retirement.
 
-## Engine vs fork
+## Engine vs consumer
 
-Lore is the engine; Junktown Intelligence is a flavor of it (#19). The
-fork-owned surface is exactly:
+**Lore is a package.** A flavor is a separate app that installs it, calls
+`configureLore({ ruleset, assets })`, and renders `LoreApp` — see
+`docs/consuming-lore.md`. That replaces the fork model #16 originally proposed:
+engine work reaches a flavor through a version bump instead of a merge, and
+there is one copy of the screens rather than two.
+
+What a consumer owns:
 
 ```
-.env                        app identity, and the sync data repo (untracked)
-src/activeRuleset.ts        which ruleset this build runs on
-src/rulesets/<flavor>/**    the ruleset itself: content, terminology,
-                            categories, and its bundled images
-assets/{icon,adaptive-icon,splash-icon,favicon}.png
+package.json                the `lore` dependency, and every peer
+.env / app.config.ts        its own app identity
+index.ts                    configureLore(...) before registerRootComponent
+its ruleset module          content, terminology, categories, bundled images
+assets/*.png                icon, adaptive icon, splash, favicon
 ```
 
-Everything else is engine-owned and merges cleanly from upstream. When you
-add something Afterworlds-specific, it belongs in that list or it is a bug.
-`src/branding.ts` used to be on that list; since identity reads from the
-environment, a fork overrides it without touching tracked source — one fewer
-file to resolve on every merge.
+**The public API is `src/index.ts` and nothing else.** `package.json`'s
+`exports` map publishes only `.`, so a deep import (`lore/lib/utils/…`) does
+not resolve — deliberately. Anything re-exported from `src/index.ts` is a
+supported surface whose shape is a breaking change; everything else is internal
+and free to move. Adding an export is a decision, which is why that file uses
+named re-exports rather than `export *`.
 
-The user-facing version of this, plus the schema walkthrough and the exact
-procedure for extracting a flavor into its own repo, is
-`docs/ruleset-authoring.md`. Keep the two in agreement.
+The build is `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json`,
+run by `prepare` so a git dependency compiles on install. **`tsc-alias` is not
+optional**: 78 of ~100 source files import through `@/…`, and inside a
+consumer's `node_modules` those would resolve against _their_ `src`.
+`src/rulesets/**` is excluded from the build and from `files` — the engine
+package ships the engine, not somebody's campaign.
+
+In-tree flavors still work and are what the dev app uses;
+`docs/ruleset-authoring.md` covers writing one either way. Keep it in agreement
+with this section.
 
 `src/rulesets/afterworlds/` is laid out as `index.ts` (the
 `RulesetDefinition`), `terminology.ts`, `categories.ts`, `assets.ts` +
@@ -234,16 +247,31 @@ so on, which is the only reason the Junktown app still reads the way its
 users expect after the Phase 1 renames. Renaming an engine field must never
 drag those override _values_ along with it.
 
-- `src/activeRuleset.ts` — **the one file that says which ruleset this build
-  runs on.** Fork-owned; `RulesetProvider`'s defaults and every
-  `ruleset: RulesetDefinition = …` default parameter resolve through it.
-  **It is deliberately a module and not a provider prop.** Non-component code
-  needs the active ruleset too — `characterStorage.migrateRulesetFields()`
-  calls `normalizeCharactersRulesetFields(characters)` with no ruleset
-  argument, and that default is what maps a legacy `caps.health` onto
-  `attributeDeltas.healthCap`. A storage module can never read a React
-  context, so folding this back into `RulesetProvider` would silently degrade
-  that migration for every ruleset but the built-in one.
+- `src/activeRuleset.ts` — **the registry that says which ruleset this build
+  runs on.** `configureLore({ ruleset, assets })` writes it;
+  `getActiveRuleset()` / `getActiveAssets()` read it. `RulesetProvider`'s
+  defaults and every `ruleset: RulesetDefinition = getActiveRuleset()` default
+  parameter resolve through it.
+  It **used to export a constant**, which only worked while the engine and the
+  flavor shared a tree. As a package the seam had to invert: a library cannot
+  import its consumer's module, so the consumer pushes its ruleset in.
+  **It is deliberately a module-level registry and not a provider prop.**
+  Non-component code needs the active ruleset too —
+  `characterStorage.migrateRulesetFields()` calls
+  `normalizeCharactersRulesetFields(characters)` with no ruleset argument, and
+  that default is what maps a legacy `caps.health` onto
+  `attributeDeltas.healthCap`. A storage module can never read a React context,
+  so folding this into `RulesetProvider` would silently degrade that migration
+  for every ruleset but the built-in one.
+  **Two consequences of it being mutable state.** Anything that captures the
+  ruleset at _module load_ now captures the pre-configuration default —
+  `context.tsx` therefore seeds its context with `undefined` and substitutes
+  the registry inside `useRuleset()`, and `RulesetProvider` reads it in a
+  default parameter (evaluated per render). And a migration that runs before
+  `configureLore` normalizes real data against the example ruleset's attribute
+  table, so `migrateRulesetFields` calls `warnIfUnconfigured()` to make that
+  loud under `__DEV__`. Tests use `resetLoreConfig()` so one suite's ruleset
+  cannot leak into the next.
   **Cycle rule:** this file, and anything under `src/rulesets/`, imports
   `@/ruleset/types` / `@/ruleset/attributes` / etc. **directly, never the
   `@/ruleset` barrel** — the barrel re-exports `context.tsx`, which imports
@@ -579,8 +607,9 @@ value, never an edit here.
 
 **Documentation lives in two places, deliberately.** This file is for whoever
 is changing the code; `docs/` is for whoever is using or deploying it. A fact
-that belongs in both (the fork-owned surface, the derived-stat pipeline order)
+that belongs in both (the consumer-owned surface, the derived-stat pipeline order)
 should be stated once and referenced from the other — `docs/ruleset-authoring.md`
-is the user-facing counterpart to "Engine vs fork" and "Ruleset layer".
+is the user-facing counterpart to "Engine vs consumer" and "Ruleset layer";
+`docs/consuming-lore.md` is the counterpart for depending on the package.
 
 Always leave `npm run check-all` green.

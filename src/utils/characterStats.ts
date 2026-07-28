@@ -1,6 +1,6 @@
 import { GameCharacter } from '../models/types';
 import { getLabel, type RulesetDefinition } from '../ruleset';
-import { activeRuleset } from '@/activeRuleset';
+import { getActiveRuleset } from '@/activeRuleset';
 
 export interface CharacterStats {
   totalCharacters: number;
@@ -17,7 +17,7 @@ export interface CharacterStats {
  */
 export const calculateCharacterStats = (
   characters: GameCharacter[],
-  ruleset: RulesetDefinition = activeRuleset
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): CharacterStats => {
   if (!characters.length) {
     throw new Error('No characters available for statistics calculation');
