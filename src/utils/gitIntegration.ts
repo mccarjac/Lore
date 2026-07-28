@@ -5,7 +5,7 @@ import { Buffer } from 'buffer';
 import { exportDataset, applyMergedDataset } from './characterStorage';
 import { normalizeDatasetRulesetFields } from './rulesetFieldMigration';
 import { type RulesetDefinition } from '@/ruleset';
-import { activeRuleset } from '@/activeRuleset';
+import { getActiveRuleset } from '@/activeRuleset';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { classifySyncError, SyncError, SyncErrorKind } from './syncErrors';
 import {
@@ -566,7 +566,7 @@ export const exportToGitHub = async (
       title: `Data export by ${user.login}`,
       head: branchName,
       base: DATA_REPO_BRANCH,
-      body: `Automated data export from ${(options.ruleset ?? activeRuleset).branding.appName}.
+      body: `Automated data export from ${(options.ruleset ?? getActiveRuleset()).branding.appName}.
 
 **Export Details:**
 - User: ${user.login}

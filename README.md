@@ -111,16 +111,23 @@ Writing a ruleset is the point of the whole engine:
 schema, the attribute/role model, how derived stats are computed, the rules
 that bite, and how to track upstream once you have a flavor of your own.
 
-The short version — a flavor owns exactly four things:
+Lore ships as a package, so a flavor is a small app of its own rather than a
+fork:
 
-```
-.env                        app identity
-src/activeRuleset.ts        which ruleset this build runs on
-src/rulesets/<flavor>/**    the ruleset itself, and its images
-assets/*.png                icon, adaptive icon, splash, favicon
+```bash
+npm install github:mccarjac/lore#main
 ```
 
-Everything else is engine-owned and merges cleanly from upstream.
+```tsx
+configureLore({ ruleset: myRuleset, assets: myAssets });
+
+export default () => <LoreApp />;
+```
+
+That is the whole app — screens, navigation, storage and sync all come from the
+package, and engine work arrives as a version bump.
+**[docs/consuming-lore.md](docs/consuming-lore.md)** covers the peer
+dependencies and the entry-file wiring.
 
 ## Scripts
 
@@ -151,11 +158,11 @@ src/
   models/               types.ts — the domain types
   ruleset/              THE ENGINE: attribute primitive, schema, provider,
                         validator, terminology, features, derived stats
-  rulesets/<flavor>/    a ruleset's content — fork-owned
+  rulesets/<flavor>/    a ruleset's content — consumer-owned
   navigation/           navigator types and the whole navigation tree
   styles/               theme and shared styles
   utils/                storage, export/import, discord, git sync, stats
-  activeRuleset.ts      which ruleset this build runs on (fork-owned)
+  activeRuleset.ts      the ruleset registry (configureLore)
   branding.ts           app identity (env-driven)
 tst/                    Jest tests, mirroring src/
 docs/                   the documentation below
@@ -169,7 +176,9 @@ content.** Engine code never imports from `rulesets/`.
 - **[AGENTS.md](AGENTS.md)** — architecture, conventions, and the rules that
   matter when changing the code. Start here.
 - **[docs/ruleset-authoring.md](docs/ruleset-authoring.md)** — build your own
-  flavor; forking and tracking upstream
+  flavor: the schema, attributes and roles, derived stats
+- **[docs/consuming-lore.md](docs/consuming-lore.md)** — depend on Lore as a
+  package: install, peers, `configureLore`
 - **[docs/testing.md](docs/testing.md)** — test layout, fixtures, coverage
 - **[docs/android-build.md](docs/android-build.md)** — EAS and local builds
 - **[docs/github-actions.md](docs/github-actions.md)** — CI workflows and APK builds

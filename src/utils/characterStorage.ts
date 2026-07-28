@@ -15,6 +15,7 @@ import { SafeAsyncStorageJSONParser } from './safeAsyncStorageJSONParser';
 import { exportDiscordDataset, importDiscordDataset } from './discordStorage';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { runExclusive } from './storageQueue';
+import { warnIfUnconfigured } from '@/activeRuleset';
 import {
   normalizeCharactersRulesetFields,
   normalizeDatasetRulesetFields,
@@ -1875,6 +1876,10 @@ export const reconcileQuestEventLinks = async (): Promise<void> => {
  * writes.
  */
 export const migrateRulesetFields = async (): Promise<void> => {
+  // The one place where running against the wrong ruleset silently corrupts
+  // data rather than merely displaying it oddly: this rewrites stored fields
+  // using the ruleset's attribute table.
+  warnIfUnconfigured('migrateRulesetFields');
   try {
     await runExclusive(STORAGE_KEY, async () => {
       const dataset =

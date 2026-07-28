@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { RulesetProvider, useRuleset } from '@/ruleset/context';
 import { genericRuleset } from '../fixtures/genericRuleset';
-import { activeRuleset } from '@/activeRuleset';
+import { getActiveRuleset } from '@/activeRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const Probe: React.FC = () => {
@@ -16,7 +16,7 @@ describe('useRuleset', () => {
     // Whichever ruleset the build selects — the assertion is about the
     // fallback existing, not about which flavor this repo ships.
     render(<Probe />);
-    expect(screen.getByText(activeRuleset.id)).toBeTruthy();
+    expect(screen.getByText(getActiveRuleset().id)).toBeTruthy();
   });
 
   it('provides the ruleset passed to RulesetProvider', () => {

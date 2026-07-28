@@ -30,7 +30,7 @@
  *   `capAttributeId` is unbounded.
  */
 import type { GameCharacter } from '@models/types';
-import { activeRuleset } from '@/activeRuleset';
+import { getActiveRuleset } from '@/activeRuleset';
 import {
   getNumber,
   roleOf,
@@ -126,7 +126,7 @@ const applyCategoryDeltas = (
 
 export const calculateDerivedStats = (
   character: GameCharacter,
-  ruleset: RulesetDefinition = activeRuleset
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): DerivedStats => {
   const definitionsById = new Map(ruleset.attributes.map(d => [d.id, d]));
   const archetype = ruleset.archetypes.find(

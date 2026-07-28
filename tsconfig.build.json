@@ -1,0 +1,36 @@
+{
+  // Library build. `tsc` emits JS + declarations, then `tsc-alias` rewrites the
+  // `@/…` paths in the output to relative ones — inside a consumer's
+  // node_modules those aliases would otherwise resolve against *their* src.
+  //
+  // Only `src/` is compiled: the app shell (App.tsx, index.ts, app.config.ts)
+  // is Lore's own dev loop, not part of what consumers import.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "lib",
+    "rootDir": "src",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    // The app-shell-only escape hatch in tsconfig.json; an emitting build
+    // cannot use it, and `src/` has no `.ts`-extension imports anyway.
+    "allowImportingTsExtensions": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  // `src/rulesets/**` is deliberately excluded: the engine package ships the
+  // engine, and a flavor is content belonging to whoever consumes it. It also
+  // sidesteps an asset problem — a ruleset `require()`s bundled images, and
+  // `tsc` copies no PNGs, so a shipped flavor would reference files that are
+  // not in the package.
+  "exclude": [
+    "node_modules",
+    "tst",
+    "src/rulesets/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}
