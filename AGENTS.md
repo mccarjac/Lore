@@ -11,10 +11,10 @@ locations, events, plus Discord message ingestion and GitHub-backed data
 sync. All data lives locally in AsyncStorage; there is no backend.
 
 The rules and vocabulary of any particular game come from a **ruleset**, not
-from the code — see "Ruleset layer" and "Engine vs consumer" below. Junktown
-Intelligence (the Afterworlds setting) is one such ruleset and ships in this
-tree under `src/rulesets/afterworlds/`; the app itself boots on a generic
-example ruleset.
+from the code — see "Ruleset layer" and "Engine vs consumer" below. No flavor
+ships here any more: the app boots on `src/ruleset/exampleRuleset.ts`, and
+[Junktown Intelligence](https://github.com/mccarjac/JunktownIntelligence) — the
+Afterworlds setting — is a separate app that depends on this package.
 
 Stack: React Native 0.81 · Expo 54 · React Navigation 7 (drawer + stack) ·
 AsyncStorage · Jest + @testing-library/react-native.
@@ -49,7 +49,6 @@ src/
   models/               types.ts — all domain types, and nothing else
   ruleset/              THE ENGINE: attribute primitive, ruleset schema,
                         provider, validator, terminology, derived stats
-  rulesets/<flavor>/    A ruleset's content — consumer-owned. See below.
   navigation/           types.ts (navigator + param-list types) and
                         AppNavigator.tsx (the whole navigation tree)
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
@@ -61,17 +60,17 @@ docs/                   user- and operator-facing documentation
 .env.example            every environment variable, with its default
 ```
 
-Note the singular/plural distinction, which is easy to misread: **`ruleset/`
-is the engine, `rulesets/` is content.** Nothing under `rulesets/` may be
-imported by engine code — only `src/activeRuleset.ts` names a flavor.
+`src/ruleset/` is the engine. There is no `src/rulesets/` any more — a flavor's
+content lives in the app that consumes this package, and reaches the engine
+through `configureLore()`.
 
 Path aliases (tsconfig + babel-plugin-module-resolver): `@/*` → `src/*`, plus
 `@components/*`, `@screens/*`, `@models/*`, `@utils/*`. Use them. All five are
 declared in **three** places that must stay in sync — `tsconfig.json`,
-`babel.config.js`, and `jest.config.js`'s `moduleNameMapper`. `src/rulesets/`
-deliberately gets no alias of its own: `@/rulesets/…` already resolves, and a
-sixth alias would be a fourth thing to keep in sync. `@models/*` now points at
-a directory holding one file and is a candidate for retirement.
+`babel.config.js`, and `jest.config.js`'s `moduleNameMapper`. **They are also
+why the library build runs `tsc-alias`** — see "Engine vs consumer".
+`@models/*` now points at a directory holding one file and is a candidate for
+retirement.
 
 ## Engine vs consumer
 
@@ -102,24 +101,26 @@ The build is `tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json`,
 run by `prepare` so a git dependency compiles on install. **`tsc-alias` is not
 optional**: 78 of ~100 source files import through `@/…`, and inside a
 consumer's `node_modules` those would resolve against _their_ `src`.
-`src/rulesets/**` is excluded from the build and from `files` — the engine
-package ships the engine, not somebody's campaign.
+`tsconfig.build.json` and `files` still exclude `src/rulesets/**` — nothing is
+there now, but the exclusion is what keeps a flavor from being accidentally
+re-bundled into the engine package.
 
-In-tree flavors still work and are what the dev app uses;
-`docs/ruleset-authoring.md` covers writing one either way. Keep it in agreement
-with this section.
+`docs/ruleset-authoring.md` is the user-facing version of this; keep the two in
+agreement.
 
-`src/rulesets/afterworlds/` is laid out as `index.ts` (the
-`RulesetDefinition`), `terminology.ts`, `categories.ts`, `assets.ts` +
-`assets/`, and `content/` — the last holding `gameData.ts`, `speciesTypes.ts`
-and their authoring types. **The content is still authored in the legacy
-Afterworlds vocabulary** (`PerkTag`, `Species`, `Perk`, `StatModifiers`) and
-transformed into ruleset shapes by `index.ts` at module load. Issue #13
-sketched a fuller split (`archetypes.ts` / `traits.ts` / `qualities.ts` /
-`recipes.ts` / `bonuses.ts`); that was deliberately not adopted, because
-regenerating ~2200 lines of literals buys reviewability problems and no
-behavior. Data-entry work (JunktownIntelligence#116) happens against
-`content/gameData.ts`.
+`src/rulesets/` no longer exists here. The one real flavor lives in
+JunktownIntelligence, laid out as `index.ts` (the `RulesetDefinition`),
+`terminology.ts`, `categories.ts`, `assets.ts` + `assets/`, and `content/` —
+the last holding the tables it is authored in. That layout is worth copying:
+content stays in its own vocabulary and a transform derives ruleset shapes at
+module load, so the two cannot drift.
+
+**A consequence of the flavor leaving: this repo can no longer catch a change
+that breaks it.** The derived-stat parity suite — 27 numbers captured from the
+app before it was generalized — moved with it. Changes to `derived.ts` that
+look harmless here can move real players' numbers there, so an engine bump on
+that repo runs those 27 cases. Treat a parity failure as a rules change, not a
+test to update.
 
 ## Branding
 
@@ -235,13 +236,11 @@ which is what forced `models/types.ts` to import a content _value_ and made
 (the `AVAILABLE_DISTINCTIONS: Distinction[]` annotation defeats its
 `as const`), so removing it changed no stored bytes and needed no migration.
 
-Afterworlds data lives entirely under `src/rulesets/afterworlds/`, whose
-`index.ts` derives a `RulesetDefinition` from the tables in `content/` via a
-transform rather than a hand-written literal, so the two cannot drift.
-**Treat everything under `content/` as content, not code.**
+A flavor's data lives in its own repository, deriving its `RulesetDefinition`
+from authored tables via a transform rather than a hand-written literal, so the
+two cannot drift. **Treat a ruleset's content as content, not code.**
 
-Ruleset _terminology overrides are also content_
-(`rulesets/afterworlds/terminology.ts`). That ruleset maps
+Ruleset _terminology overrides are also content_. The Afterworlds ruleset maps
 `modification.singular` to "Cyberware", `archetype.plural` to "Species", and
 so on, which is the only reason the Junktown app still reads the way its
 users expect after the Phase 1 renames. Renaming an engine field must never
@@ -272,10 +271,9 @@ drag those override _values_ along with it.
   table, so `migrateRulesetFields` calls `warnIfUnconfigured()` to make that
   loud under `__DEV__`. Tests use `resetLoreConfig()` so one suite's ruleset
   cannot leak into the next.
-  **Cycle rule:** this file, and anything under `src/rulesets/`, imports
-  `@/ruleset/types` / `@/ruleset/attributes` / etc. **directly, never the
-  `@/ruleset` barrel** — the barrel re-exports `context.tsx`, which imports
-  the seam.
+  **Cycle rule:** this file imports `@/ruleset/types` / `@/ruleset/attributes`
+  / etc. **directly, never the `@/ruleset` barrel** — the barrel re-exports
+  `context.tsx`, which imports the seam.
 - `src/ruleset/exampleRuleset.ts` — what the engine ships as its default: a
   small, complete, generic ruleset. Two things about it are deliberate.
   It **overrides no terminology**, so every noun comes from
@@ -473,21 +471,15 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
     `archetypeRules` carve-out whose group membership exactly matches a
     trait's `allowedArchetypeIds`, a trait declaring a cap delta the engine
     must ignore, and a resource with no cap.
-  - **`@/rulesets/afterworlds` — the fork regression guard.** Asserted in
-    exactly two files: `tst/rulesets/afterworlds.test.ts` (the ruleset itself,
-    including the terminology overrides that keep the app reading
-    "Species"/"Perks"/"Junktown Office") and
-    `tst/utils/derivedStats.parity.test.ts` (the 27 pre-generalization
-    numbers). Keep it out of the rest — the suite had drifted to thirteen
-    files before Phase 4 pulled it back, and every one of those was a file
-    that would have had to move when the flavor does.
+    There is deliberately no third option: **no flavor ships here**, so no test
+    can assert on one. That was the point of the cleanup that preceded the
+    extraction — the suite had drifted to thirteen files importing the bundled
+    flavor, and every one would have had to move with it.
 
-  All four — the three above plus `src/ruleset/exampleRuleset.ts` — are proved
-  pairwise id-disjoint in `tst/fixtures/genericRuleset.test.ts`; a shared id is
-  exactly how a test passes while asserting on a value that came from somewhere
-  else. That file's Afterworlds row is the only other place the flavor is
-  named, and dropping it is a one-line edit — see `docs/ruleset-authoring.md` →
-  "Extracting a flavor" for the full list of what moves.
+  All three — the two fixtures plus `src/ruleset/exampleRuleset.ts` — are
+  proved pairwise id-disjoint in `tst/fixtures/genericRuleset.test.ts`; a
+  shared id is exactly how a test passes while asserting on a value that came
+  from somewhere else.
 
 - `Picker.Item` children collapse into an `items` prop on the host
   `RNCPicker` and render **no queryable text** — read option labels off
@@ -520,10 +512,10 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   `@octokit/rest`, and gifted-charts' own core package ship ESM and would
   otherwise fail to parse the moment anything imports them. Allow-listing a
   wrapper is not enough — its ESM dependency needs listing too.
-- Real baseline as of this writing: **~69.6% statements / ~65.4% functions**
-  — flat across the Phase 3 extraction, which is the point: `src/rulesets/**`
-  joined `collectCoverageFrom` in the same change that moved a well-covered
-  file into it, so the denominator moved and the ratio did not. (Was
+- Real baseline as of this writing: **~69.8% statements / ~65.9% functions**,
+  measured after the flavor was extracted. It barely moved (from ~69.6/~65.4):
+  the flavor was well-covered, so removing it took roughly proportional numbers
+  out of both halves of the ratio. (Was
   ~66%/~61% before the Phase 2 UI decoupling added screen tests, ~54%/~51%
   before the Phase 1 migration work; before that ~26%, and previously
   misreported as ~75% because most of `src/screens` and several `src/utils`

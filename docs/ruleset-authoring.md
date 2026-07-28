@@ -12,31 +12,39 @@ flavor.
 
 ## The shape of a flavor
 
-Exactly four things belong to a flavor. Everything else is engine-owned and
-merges cleanly from upstream:
+A flavor is its own small app that depends on `lore`. What belongs to it:
 
 ```
-.env                        app identity (see .env.example)
-src/activeRuleset.ts        which ruleset this build runs on
+package.json                the `lore` dependency, and every peer
+app.config.ts / .env        app identity
+index.ts                    configureLore(...) before registerRootComponent
 src/rulesets/<flavor>/**    the ruleset: content, terminology, categories, images
-assets/{icon,adaptive-icon,splash-icon,favicon}.png
+assets/*.png                icon, adaptive icon, splash, favicon
 ```
 
-If you find yourself adding something flavor-specific outside that list, it is
-a bug — either the engine needs a new seam, or the thing belongs in your
-ruleset.
+Everything else comes from the package. If you find yourself wanting to add a
+screen, a storage module or a navigator, stop — that is engine work, and it
+belongs upstream where every flavor gets it.
 
-The bundled `src/rulesets/afterworlds/` (Junktown Intelligence's setting) is a
-worked example of all of this, and is laid out as `index.ts` (the definition),
-`terminology.ts`, `categories.ts`, `assets.ts` + `assets/`, and `content/` —
-the last holding the tables it was originally authored in.
+[consuming-lore.md](./consuming-lore.md) covers the install and the wiring;
+this page covers what goes _in_ the ruleset.
+
+[Junktown Intelligence](https://github.com/mccarjac/JunktownIntelligence) is a
+worked example of all of this — a real flavor, laid out as `index.ts` (the
+definition), `terminology.ts`, `categories.ts`, `assets.ts` + `assets/`, and
+`content/`, the last holding the tables it is authored in. Read it alongside
+this page.
 
 ### Two minutes to a running flavor
 
 ```ts
-// src/rulesets/myflavor/index.ts
-import { num, flag, type AttributeDefinition } from '@/ruleset/attributes';
-import type { RulesetDefinition } from '@/ruleset/types';
+// src/rulesets/myflavor/index.ts — in your app, not in Lore
+import {
+  num,
+  flag,
+  type AttributeDefinition,
+  type RulesetDefinition,
+} from 'lore/ruleset';
 
 const attributes: AttributeDefinition[] = [
   {
@@ -93,20 +101,25 @@ export const myFlavorRuleset: RulesetDefinition = {
 
 ```ts
 // index.ts — before registerRootComponent, and before any storage call
-import { configureLore } from '@/activeRuleset';
-import { myFlavorRuleset } from '@/rulesets/myflavor';
+import { registerRootComponent } from 'expo';
+import { configureLore } from 'lore';
+import { myFlavorRuleset } from './src/rulesets/myflavor';
+import App from './App';
 
 configureLore({ ruleset: myFlavorRuleset });
+registerRootComponent(App);
 ```
 
 `npm run web` and the app is running your game.
 
-(Consuming Lore as a package? The call is identical, imported from `lore`
-rather than `@/activeRuleset` — see [consuming-lore.md](./consuming-lore.md).)
+**Note the two import paths.** The ruleset module imports `lore/ruleset` — the
+engine without React Native — so it and its tests stay cheap to load. Only the
+entry file and `App.tsx` import `lore` itself, which brings `LoreApp` and the
+whole screen tree with it.
 
-`src/ruleset/exampleRuleset.ts` is the same thing, slightly larger, and is what
-the engine boots on out of the box. Read it — it is deliberately small enough
-to hold in your head.
+Lore's own `src/ruleset/exampleRuleset.ts` is the same thing, slightly larger,
+and is what the engine boots on with nothing configured. Read it — it is
+deliberately small enough to hold in your head.
 
 ---
 
@@ -170,7 +183,8 @@ that is how GM-defined per-character fields work, with no code change.
 Three consequences are deliberate, and the parity suite pins them:
 
 - **Traits cannot raise caps.** A trait may _declare_ a cap delta; the engine
-  ignores it. (Afterworlds' `smarts_20` does exactly this.) It is a consequence
+  ignores it. (Afterworlds' `smarts_20` does exactly this — a real ruleset
+  relies on the engine ignoring it.) It is a consequence
   of the role rule, not a special case — and declaring one is not a validation
   error, because flagging it would make `RulesetProvider` throw for a ruleset
   that has always worked.
@@ -274,9 +288,11 @@ For your own tests: **never assert against whatever ruleset the build ships**.
 Pass one explicitly. See [testing.md](./testing.md) for the three fixtures and
 what each is for, and use `renderWithRuleset()` for screens.
 
-A good first test for a new flavor mirrors `tst/rulesets/afterworlds.test.ts`:
-it validates, it round-trips through JSON, and the handful of numbers your
-players would notice if they changed are pinned.
+A good first test for a new flavor mirrors Junktown Intelligence's: it
+validates, it round-trips through JSON, and the handful of numbers your players
+would notice if they changed are pinned. That last part matters more than it
+sounds — once your flavor is a separate app, **the engine's own suite cannot
+catch a change that moves your numbers.** Yours is the only thing that will.
 
 ---
 

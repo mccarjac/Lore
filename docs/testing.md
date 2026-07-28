@@ -27,7 +27,6 @@ tst/
   components/   common/ and screens/ (the Base*Screen generics)
   screens/      per-feature screen tests
   ruleset/      the engine: attributes, derived stats, validation, terminology
-  rulesets/     the bundled flavor — fork-regression guards only
   navigation/   route registration
   utils/        storage, sync, stats, search, import/export
 ```
@@ -42,11 +41,11 @@ tst/
 - `tst/fixtures/mechanicsRuleset.ts` — proves the **engine computes**. Category
   bonuses at two thresholds, an archetype carve-out, a trait declaring a cap
   delta the engine must ignore, a resource with no cap.
-- `@/rulesets/afterworlds` — the **fork regression guard**, asserted only in
-  `tst/rulesets/afterworlds.test.ts` and `tst/utils/derivedStats.parity.test.ts`.
-  Keep it out of everything else; those two files and the flavor itself are
-  what move when a flavor is extracted (see
-  [ruleset authoring](./ruleset-authoring.md)).
+
+There is no third fixture, and deliberately no bundled flavor: a test that
+asserts on one only proves the app works for that one game. The engine's
+former flavor now lives in its own repository, and takes its derived-stat
+parity suite with it.
 
 All are proved pairwise id-disjoint in `tst/fixtures/genericRuleset.test.ts` —
 a shared id is exactly how a test passes while asserting on a value that came
@@ -103,8 +102,8 @@ and posts a sticky comment scoped to the changed files. **No threshold is
 enforced**, so coverage never blocks a merge — the intent is to add one back
 once the gaps listed in AGENTS.md are closed.
 
-`collectCoverageFrom` covers `src/utils`, `src/components`, `src/screens`,
-`src/ruleset` and `src/rulesets` (index files excluded), and `roots` includes
+`collectCoverageFrom` covers `src/utils`, `src/components`, `src/screens` and
+`src/ruleset` (index files excluded), and `roots` includes
 `<rootDir>/src` so files no test imports still show up as real 0% rows instead
 of vanishing from the report.
 
