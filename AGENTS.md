@@ -90,9 +90,9 @@ its ruleset module          content, terminology, categories, bundled images
 assets/*.png                icon, adaptive icon, splash, favicon
 ```
 
-**The public API is `src/index.ts` and nothing else.** `package.json`'s
-`exports` map publishes only `.`, so a deep import (`lore/lib/utils/…`) does
-not resolve — deliberately. Anything re-exported from `src/index.ts` is a
+**The public API is `src/index.ts` and `src/headless.ts`, and nothing else.**
+`package.json`'s `exports` map publishes only `.` and `./ruleset`, so a deep
+import (`lore/lib/utils/…`) does not resolve — deliberately. Anything re-exported from `src/index.ts` is a
 supported surface whose shape is a breaking change; everything else is internal
 and free to move. Adding an export is a decision, which is why that file uses
 named re-exports rather than `export *`.
@@ -107,6 +107,42 @@ re-bundled into the engine package.
 
 `docs/ruleset-authoring.md` is the user-facing version of this; keep the two in
 agreement.
+
+### The peer set is a contract, and it does not come from reading imports
+
+Three separate launch crashes in consuming apps came from the same mistake:
+deriving `peerDependencies` by scanning `src/` for what it imports. A package
+reaches Lore's code by routes that scan cannot see — a bare side-effect import
+(`react-native-get-random-values`), a transitive dependency of another peer
+(`react-native-worklets`, via reanimated), a `require()` inside a `try`/`catch`
+that Metro treats as optional (`expo-linear-gradient`, via gifted-charts). Each
+one was already sitting in Lore's own `node_modules` as a devDependency, which
+is exactly why Lore ran fine while the consumer died on launch.
+
+Two rules follow, both enforced by `tst/packagePeers.test.ts`:
+
+- **Anything Lore installs that can reach a bundle must be declared a peer, at
+  the same range.** A new runtime dependency fails the suite until it is either
+  declared or explicitly listed as build-time-only, and adding a name to that
+  allowlist is a claim you are making about a consumer's bundle.
+- **Ranges for SDK-managed packages are copied from
+  `expo/bundledNativeModules.json`, never chosen.** That file records what
+  Expo's prebuilt native side was compiled against; for a package with a native
+  half, a `^` or `~` is not flexibility, it is a crash waiting on a patch
+  release. `react-native-reanimated` is the one documented deviation — the
+  SDK's own `~4.1.1` admits 4.1.7, which drags in worklets 0.8.x against a
+  native 0.5.1.
+
+The corollary is that **Lore's devDependencies must not contain a runtime
+package a consumer would not have**. `react-native-linear-gradient` was the
+proof: gifted-charts tries it before `expo-linear-gradient`, so Lore's install
+took a path no consumer could, and the suite passed for a year on a code path
+that did not exist anywhere else. When in doubt, install what the SDK installs
+and nothing more.
+
+The lint and format toolchain is pinned exactly for a related reason: a
+floating formatter or `eslint-plugin-react-hooks` means a clean install can
+fail CI on code nobody touched.
 
 `src/rulesets/` no longer exists here. The one real flavor lives in
 JunktownIntelligence, laid out as `index.ts` (the `RulesetDefinition`),
@@ -442,6 +478,12 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   mock in `jest.setup.js` needs `Gesture.Exclusive` — without it the screen
   throws during render and every test reports the unmount rather than the
   cause.
+- **`expo-linear-gradient` is mocked in `jest.setup.js`** even though nothing
+  imports it. `react-native-gifted-charts` `require()`s a gradient backend, and
+  the Expo one reaches `expo-modules-core`, which has no native half under
+  jest. Without the mock every chart-rendering screen dies on gifted-charts'
+  generic `Gradient package was not found`, which it throws in place of the
+  real error.
 
 ## Testing
 

@@ -45,6 +45,17 @@ jest.mock('expo-image-picker', () => ({
   },
 }));
 
+// Nothing in src/ imports this: `react-native-gifted-charts` require()s a
+// gradient backend at runtime, trying `react-native-linear-gradient` first and
+// falling back to `expo-linear-gradient`. Only the fallback is an SDK 54
+// package, so that is the one Lore installs — and it reaches expo-modules-core,
+// which has no native half under jest. Without this mock every screen that
+// renders a chart dies on the generic "Gradient package was not found" the
+// try/catch throws in place of the real error.
+jest.mock('expo-linear-gradient', () => ({
+  LinearGradient: 'LinearGradient',
+}));
+
 // Mock react-native-zip-archive
 jest.mock('react-native-zip-archive', () => ({
   zip: jest.fn(),
