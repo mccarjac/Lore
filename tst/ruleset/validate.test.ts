@@ -89,7 +89,6 @@ const baseRuleset = (): RulesetDefinition => ({
     recipes: true,
     discord: true,
     map: true,
-    gitSync: true,
     modifications: true,
     influenceReport: true,
     relationshipGraph: true,

@@ -30,6 +30,7 @@ module.exports = {
     'src/screens/**/*.{ts,tsx}',
     'src/ruleset/**/*.{ts,tsx}',
     'src/rulesets/**/*.{ts,tsx}',
+    'src/datastores/**/*.{ts,tsx}',
     '!src/utils/**/*.d.ts',
     '!src/utils/**/index.{ts,tsx}',
     '!src/components/**/index.{ts,tsx}',

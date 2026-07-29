@@ -14,7 +14,6 @@ export const FEATURE_KEYS: readonly FeatureKey[] = [
   'recipes',
   'discord',
   'map',
-  'gitSync',
   'modifications',
   'influenceReport',
   'relationshipGraph',

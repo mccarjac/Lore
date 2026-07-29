@@ -90,7 +90,6 @@ export const myFlavorRuleset: RulesetDefinition = {
     recipes: false,
     discord: false,
     map: false,
-    gitSync: true,
     modifications: true,
     influenceReport: true,
     relationshipGraph: true,
@@ -141,7 +140,7 @@ deliberately small enough to hold in your head.
 | `recipes`               | no       | Craftable things, gated by the `recipes` feature flag.                                                     |
 | `categoryBonuses`       | yes      | "N traits in this category grants X." May be `[]`.                                                         |
 | `archetypeRules`        | no       | Carve-outs — currently one kind, see below.                                                                |
-| `features`              | yes      | Eight booleans gating whole subsystems.                                                                    |
+| `features`              | yes      | Seven booleans gating whole subsystems.                                                                    |
 | `limits`                | no       | Ruleset-level numbers, e.g. `maxQualities`.                                                                |
 | `map`                   | no       | `{ imageKey }` — resolved through `RulesetAssets`, never a `require()`.                                    |
 | `branding`              | yes      | `appName` plus optional `iconKey` / `splashKey`.                                                           |
@@ -227,9 +226,9 @@ after the Phase 1 renames precisely because those values live in the ruleset.
 
 ### Feature flags
 
-Eight booleans — `quests`, `recipes`, `discord`, `map`, `gitSync`,
-`modifications`, `influenceReport`, `relationshipGraph` — gate **route
-registration** in `src/navigation/AppNavigator.tsx`. Turning one off hides the
+Seven booleans — `quests`, `recipes`, `discord`, `map`, `modifications`,
+`influenceReport`, `relationshipGraph` — gate **route registration** in
+`src/navigation/AppNavigator.tsx`. Turning one off hides the
 screens; the data stays, and turning it back on restores everything intact.
 
 Two traps: the drawer's item list and its screen list are maintained

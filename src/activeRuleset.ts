@@ -1,6 +1,7 @@
 import { exampleRuleset } from '@/ruleset/exampleRuleset';
 import type { RulesetAssets } from '@/ruleset/assets';
 import type { RulesetDefinition } from '@/ruleset/types';
+import type { DataStore } from '@/datastores/types';
 
 /**
  * Which ruleset this build runs on — **consumer-owned**.
@@ -39,21 +40,48 @@ export interface LoreConfig {
    * `branding.iconKey`, …). Omit when the ruleset declares no images.
    */
   assets?: RulesetAssets;
+  /**
+   * Which backends the Data Management screen offers (#29) — **omit for the
+   * local JSON store alone**, pass `[]` to offer none, or list the built-ins
+   * and your own in the order they should render:
+   *
+   * ```ts
+   * configureLore({ ruleset, dataStores: [jsonDataStore, githubDataStore] });
+   * ```
+   *
+   * Stored exactly as given; `src/datastores/registry.ts` is what substitutes
+   * the default, so "omitted" and "empty" stay distinguishable.
+   */
+  dataStores?: DataStore[];
 }
 
 let currentRuleset: RulesetDefinition = exampleRuleset;
 let currentAssets: RulesetAssets = {};
+let currentDataStores: DataStore[] | undefined;
 let configured = false;
 
-export const configureLore = ({ ruleset, assets = {} }: LoreConfig): void => {
+export const configureLore = ({
+  ruleset,
+  assets = {},
+  dataStores,
+}: LoreConfig): void => {
   currentRuleset = ruleset;
   currentAssets = assets;
+  currentDataStores = dataStores;
   configured = true;
 };
 
 export const getActiveRuleset = (): RulesetDefinition => currentRuleset;
 
 export const getActiveAssets = (): RulesetAssets => currentAssets;
+
+/**
+ * What the consumer passed, unresolved — `undefined` when they said nothing.
+ * Read `getActiveDataStores()` from `@/datastores/registry` instead unless you
+ * specifically need to tell "omitted" from "empty".
+ */
+export const getConfiguredDataStores = (): DataStore[] | undefined =>
+  currentDataStores;
 
 /** True once `configureLore` has been called. */
 export const isLoreConfigured = (): boolean => configured;
@@ -82,5 +110,6 @@ export const warnIfUnconfigured = (caller: string): void => {
 export const resetLoreConfig = (): void => {
   currentRuleset = exampleRuleset;
   currentAssets = {};
+  currentDataStores = undefined;
   configured = false;
 };

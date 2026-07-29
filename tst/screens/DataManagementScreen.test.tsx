@@ -3,224 +3,209 @@ import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { DataManagementScreen } from '@screens/DataManagementScreen';
 import * as characterStorage from '@utils/characterStorage';
 import * as gitIntegration from '@utils/gitIntegration';
+import { configureLore, resetLoreConfig } from '@/activeRuleset';
+import { jsonDataStore } from '@/datastores/json';
+import { githubDataStore } from '@/datastores/github';
+import type { DataStore } from '@/datastores/types';
 import { spyOnAlert, pressAlertButton } from '../helpers/alertAndPlatform';
-import { makeCharacter } from '../helpers/factories';
 import { renderWithRuleset } from '../helpers/ruleset';
 import { genericRuleset } from '../fixtures/genericRuleset';
 
 jest.mock('@utils/characterStorage');
-jest.mock('@utils/exportImport');
-// Automocking @utils/gitIntegration still loads the real module once to
-// infer the mock shape, which imports the real @octokit/rest — whose
+// githubDataStore reaches gitIntegration → the real @octokit/rest, whose
 // transitive `universal-user-agent` dependency ships ESM outside
-// transformIgnorePatterns. Stub it out so that load never happens for real.
+// transformIgnorePatterns.
 jest.mock('@octokit/rest', () => ({ Octokit: jest.fn() }));
 jest.mock('@utils/gitIntegration');
 jest.mock('@utils/discordStorage');
 
 const storage = jest.mocked(characterStorage);
-const git = jest.mocked(gitIntegration);
 
-const emptyDataset = () => ({
-  characters: [],
-  factions: [],
-  locations: [],
-  events: [],
-  quests: [],
-});
-
+/**
+ * The screen is a host for registered stores now, so these tests are about
+ * *which* stores render and how a generic one is driven — the GitHub flow has
+ * its own suite (`tst/datastores/GitHubSection.test.tsx`).
+ */
 describe('DataManagementScreen', () => {
   let alertSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
     alertSpy = spyOnAlert();
-    git.getGitHubConfig.mockResolvedValue({ token: 'abc123' });
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
+    // A registry left configured would leak into the next suite, same rule as
+    // the ruleset itself.
+    resetLoreConfig();
   });
 
-  it('shows the "Set Up GitHub Token" button when no token is configured', async () => {
-    git.getGitHubConfig.mockResolvedValue({});
+  it('renders the JSON store alone when nothing is registered', () => {
+    const { getByText, queryByText } = render(<DataManagementScreen />);
+
+    expect(getByText('JSON Data Management')).toBeTruthy();
+    expect(getByText('Export Game Data')).toBeTruthy();
+    expect(getByText('Import & Replace')).toBeTruthy();
+    expect(getByText('Merge Data')).toBeTruthy();
+    expect(queryByText('GitHub Repository Sync')).toBeNull();
+  });
+
+  it('renders a registered store that supplies its own Section', async () => {
+    jest.mocked(gitIntegration).getGitHubConfig.mockResolvedValue({});
+    configureLore({
+      ruleset: genericRuleset,
+      dataStores: [jsonDataStore, githubDataStore],
+    });
+
+    const { getByText } = render(<DataManagementScreen />);
+
+    await waitFor(() => {
+      expect(getByText('JSON Data Management')).toBeTruthy();
+      expect(getByText('GitHub Repository Sync')).toBeTruthy();
+    });
+  });
+
+  it('leaves only the Danger Zone when a consumer disables every store', () => {
+    configureLore({ ruleset: genericRuleset, dataStores: [] });
 
     const { getByText, queryByText } = render(<DataManagementScreen />);
 
-    await waitFor(() => {
-      expect(getByText('Set Up GitHub Token')).toBeTruthy();
-    });
-    expect(queryByText('Sync from GitHub (Merge)')).toBeNull();
+    expect(queryByText('JSON Data Management')).toBeNull();
+    expect(queryByText('GitHub Repository Sync')).toBeNull();
+    // Clearing data is the engine's, not a store's.
+    expect(getByText('Danger Zone')).toBeTruthy();
   });
 
-  it('shows sync actions and last-sync status once configured', async () => {
-    git.getGitHubConfig.mockResolvedValue({
-      token: 'abc123',
-      sync: { pulledAt: '2026-01-01T00:00:00.000Z' },
-    });
-
-    const { getByText } = render(<DataManagementScreen />);
-
-    await waitFor(() => {
-      expect(getByText('Sync from GitHub (Merge)')).toBeTruthy();
-      expect(getByText('Export to GitHub (Create PR)')).toBeTruthy();
-      expect(getByText('Import from GitHub (Replace)')).toBeTruthy();
-      expect(getByText(/Last synced:/)).toBeTruthy();
-    });
-  });
-
-  it('confirms before replacing local data, then imports on confirmation', async () => {
-    git.importFromGitHub.mockResolvedValue({
-      success: true,
-      data: JSON.stringify(emptyDataset()),
-    });
-    (storage.importDataset as jest.Mock).mockResolvedValue(true);
-
-    const { getByText } = render(<DataManagementScreen />);
-    await waitFor(() => getByText('Import from GitHub (Replace)'));
-
-    fireEvent.press(getByText('Import from GitHub (Replace)'));
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Replace Local Data?',
-      expect.stringContaining('overwrites your local'),
-      expect.any(Array)
-    );
-
-    await pressAlertButton(alertSpy, 'Replace');
-
-    await waitFor(() => {
-      expect(git.importFromGitHub).toHaveBeenCalled();
-      expect(storage.importDataset).toHaveBeenCalledWith(
-        JSON.stringify(emptyDataset())
-      );
-    });
-  });
-
-  it('auto-applies a merge sync with no conflicts, without showing the conflict modal', async () => {
-    git.computeGitHubSyncPlan.mockResolvedValue({
-      success: true,
-      remoteCommitSha: 'remote-sha',
-      plan: {
-        merged: emptyDataset(),
-        conflicts: [],
-        stats: {
-          characters: { added: 0, updated: 0, removed: 0, conflicted: 0 },
-          factions: { added: 0, updated: 0, removed: 0, conflicted: 0 },
-          locations: { added: 0, updated: 0, removed: 0, conflicted: 0 },
-          events: { added: 0, updated: 0, removed: 0, conflicted: 0 },
-          quests: { added: 0, updated: 0, removed: 0, conflicted: 0 },
+  it('renders a consumer-authored store from its declaration alone', async () => {
+    const run = jest
+      .fn()
+      .mockResolvedValue({ success: true, message: 'Pushed to the vault.' });
+    const customStore: DataStore = {
+      id: 'vault',
+      label: 'Vault Backend',
+      description: 'A backend the engine knows nothing about.',
+      actions: [
+        {
+          id: 'push',
+          label: 'Push to Vault',
+          progressMessage: 'Pushing...',
+          run,
         },
-      },
-    });
-    git.applyGitHubSyncPlan.mockResolvedValue({ success: true });
-
-    const { getByText, queryByText } = render(<DataManagementScreen />);
-    await waitFor(() => getByText('Sync from GitHub (Merge)'));
-
-    fireEvent.press(getByText('Sync from GitHub (Merge)'));
-
-    await waitFor(() => {
-      expect(git.applyGitHubSyncPlan).toHaveBeenCalledWith(
-        expect.any(Object),
-        {},
-        'remote-sha'
-      );
-    });
-    expect(queryByText('Resolve Sync Conflicts')).toBeNull();
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Sync Successful',
-      expect.any(String),
-      expect.any(Array)
-    );
-  });
-
-  it('shows the conflict modal when the merge plan has conflicts, and applies the chosen resolution', async () => {
-    const local = makeCharacter({ id: 'c1', name: 'Alice', notes: 'mine' });
-    const remote = { ...local, notes: 'theirs' };
-    git.computeGitHubSyncPlan.mockResolvedValue({
-      success: true,
-      remoteCommitSha: 'remote-sha',
-      plan: {
-        merged: { ...emptyDataset(), characters: [local] },
-        conflicts: [
-          {
-            collection: 'characters',
-            key: 'c1',
-            label: 'Alice',
-            fields: ['notes'],
-            local,
-            remote,
-          },
-        ],
-        stats: {
-          characters: { added: 0, updated: 0, removed: 0, conflicted: 1 },
-          factions: { added: 0, updated: 0, removed: 0, conflicted: 0 },
-          locations: { added: 0, updated: 0, removed: 0, conflicted: 0 },
-          events: { added: 0, updated: 0, removed: 0, conflicted: 0 },
-          quests: { added: 0, updated: 0, removed: 0, conflicted: 0 },
-        },
-      },
-    });
-    git.applyGitHubSyncPlan.mockResolvedValue({ success: true });
+      ],
+    };
+    configureLore({ ruleset: genericRuleset, dataStores: [customStore] });
 
     const { getByText } = render(<DataManagementScreen />);
-    await waitFor(() => getByText('Sync from GitHub (Merge)'));
 
-    fireEvent.press(getByText('Sync from GitHub (Merge)'));
+    expect(getByText('Vault Backend')).toBeTruthy();
+    expect(getByText('A backend the engine knows nothing about.')).toBeTruthy();
 
-    await waitFor(() => {
-      expect(getByText('Resolve Sync Conflicts')).toBeTruthy();
-      expect(getByText('Character: Alice')).toBeTruthy();
-    });
-    expect(git.applyGitHubSyncPlan).not.toHaveBeenCalled();
-
-    fireEvent.press(getByText('Apply'));
+    fireEvent.press(getByText('Push to Vault'));
 
     await waitFor(() => {
-      expect(git.applyGitHubSyncPlan).toHaveBeenCalledWith(
-        expect.any(Object),
-        { 'characters:c1': 'local' },
-        'remote-sha'
+      expect(run).toHaveBeenCalledWith(
+        expect.objectContaining({ ruleset: genericRuleset })
+      );
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Success',
+        'Pushed to the vault.',
+        expect.any(Array)
       );
     });
   });
 
-  it('offers to sync first or export anyway when the remote has moved', async () => {
-    git.exportToGitHub.mockResolvedValueOnce({
-      success: false,
-      remoteMoved: true,
-      errorKind: 'conflict',
-      error: 'The repository has changed since your last sync.',
+  it('stays quiet when an action reports it handled its own UI', async () => {
+    const customStore: DataStore = {
+      id: 'quiet',
+      label: 'Quiet Backend',
+      actions: [
+        {
+          id: 'pick',
+          label: 'Pick a File',
+          progressMessage: 'Picking...',
+          run: jest.fn().mockResolvedValue({ success: false, handled: true }),
+        },
+      ],
+    };
+    configureLore({ ruleset: genericRuleset, dataStores: [customStore] });
+
+    const { getByText } = render(<DataManagementScreen />);
+    fireEvent.press(getByText('Pick a File'));
+
+    // A cancelled picker is not an error, and must not raise an alert.
+    await waitFor(() => expect(alertSpy).not.toHaveBeenCalled());
+  });
+
+  it('surfaces an action failure as an alert', async () => {
+    const customStore: DataStore = {
+      id: 'broken',
+      label: 'Broken Backend',
+      actions: [
+        {
+          id: 'push',
+          label: 'Push',
+          progressMessage: 'Pushing...',
+          run: jest
+            .fn()
+            .mockResolvedValue({ success: false, error: 'The vault is shut.' }),
+        },
+      ],
+    };
+    configureLore({ ruleset: genericRuleset, dataStores: [customStore] });
+
+    const { getByText } = render(<DataManagementScreen />);
+    fireEvent.press(getByText('Push'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Failed',
+        'The vault is shut.',
+        expect.any(Array)
+      );
     });
-    git.exportToGitHub.mockResolvedValueOnce({
-      success: true,
-      prUrl: 'https://github.com/mccarjac/AWInvestigationsDataLibrary/pull/2',
+  });
+
+  it('hands each action the ruleset from the provider', async () => {
+    const run = jest.fn().mockResolvedValue({ success: true });
+    configureLore({
+      ruleset: genericRuleset,
+      dataStores: [
+        {
+          id: 'probe',
+          label: 'Probe',
+          actions: [
+            {
+              id: 'go',
+              label: 'Go',
+              progressMessage: 'Going...',
+              run,
+            },
+          ],
+        },
+      ],
     });
 
     const { getByText } = renderWithRuleset(<DataManagementScreen />, {
       ruleset: genericRuleset,
     });
-    await waitFor(() => getByText('Export to GitHub (Create PR)'));
-
-    fireEvent.press(getByText('Export to GitHub (Create PR)'));
+    fireEvent.press(getByText('Go'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Repository Has Changed',
-        expect.any(String),
-        expect.any(Array)
+      expect(run).toHaveBeenCalledWith(
+        expect.objectContaining({ ruleset: genericRuleset })
       );
     });
+  });
 
-    await pressAlertButton(alertSpy, 'Export Anyway');
+  it('clears all game data after confirmation', async () => {
+    const { getByText } = render(<DataManagementScreen />);
 
-    // The ruleset comes from the provider, not a module-level singleton — the
-    // PR body names the ruleset the data was exported from.
+    fireEvent.press(getByText('Clear All Data'));
+    await pressAlertButton(alertSpy, 'Delete All');
+
     await waitFor(() => {
-      expect(git.exportToGitHub).toHaveBeenLastCalledWith({
-        force: true,
-        ruleset: genericRuleset,
-      });
+      expect(storage.clearStorage).toHaveBeenCalled();
     });
   });
 });

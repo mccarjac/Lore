@@ -156,7 +156,6 @@ export const exampleRuleset: RulesetDefinition = {
     recipes: true,
     discord: true,
     map: false,
-    gitSync: true,
     modifications: true,
     influenceReport: true,
     relationshipGraph: true,

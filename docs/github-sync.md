@@ -5,7 +5,9 @@ Campaign data can be shared through a GitHub repository: the app pushes a
 down. Git provides the version history, and the PR is where a human decides
 what actually lands.
 
-The feature is gated by the ruleset's `gitSync` flag.
+The feature is **opt-in**: register `githubDataStore` through
+`configureLore({ dataStores })` to offer it. It replaced the ruleset's
+`gitSync` flag — see [consuming-lore.md](./consuming-lore.md#data-stores).
 
 ## Which repository
 
@@ -114,8 +116,8 @@ actually changed instead of a re-ordering of the whole file:
   so adding one member does not reshuffle a list.
 
 It is applied in `exportDataset()` (`characterStorage.ts`), `exportToGitHub()`
-(`gitIntegration.ts`) and `exportCharacterDataNative()` (`exportImport.ts`) —
-all three, so file exports and PRs agree. Sorting is O(n log n) per entity type
+(`gitIntegration.ts`) and the JSON data store's export
+(`src/datastores/json/index.ts`) — all three, so file exports and PRs agree. Sorting is O(n log n) per entity type
 and runs only on export. Adding an entity type or a nested array means adding
 it here and to `tst/utils/datasetSorting.test.ts`.
 

@@ -20,8 +20,8 @@ jest.mock('expo-file-system/legacy', () => ({
   readAsStringAsync: jest.fn(),
   deleteAsync: jest.fn(),
   // Needed by gitIntegration.ts's image-download path (getInfoAsync for the
-  // local cache-hit check, makeDirectoryAsync for the images/ tree). Not
-  // needed by exportImport.ts today, but harmless there.
+  // local cache-hit check, makeDirectoryAsync for the images/ tree) and by
+  // the JSON data store's archive staging/restore.
   getInfoAsync: jest.fn(),
   makeDirectoryAsync: jest.fn(),
   readDirectoryAsync: jest.fn(),
@@ -31,6 +31,9 @@ jest.mock('expo-file-system/legacy', () => ({
 
 jest.mock('expo-sharing', () => ({
   shareAsync: jest.fn(),
+  // The JSON data store branches on this before sharing its .zip; without it
+  // the export path throws instead of taking either branch.
+  isAvailableAsync: jest.fn(async () => true),
 }));
 
 jest.mock('expo-document-picker', () => ({
