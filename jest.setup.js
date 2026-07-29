@@ -40,9 +40,6 @@ jest.mock('expo-document-picker', () => ({
 jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(),
   requestMediaLibraryPermissionsAsync: jest.fn(),
-  MediaTypeOptions: {
-    Images: 'Images',
-  },
 }));
 
 // Nothing in src/ imports this: `react-native-gifted-charts` require()s a
