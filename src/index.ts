@@ -19,8 +19,26 @@ export {
   configureLore,
   getActiveRuleset,
   getActiveAssets,
+  getConfiguredDataStores,
   type LoreConfig,
 } from './activeRuleset';
+
+// --- Data stores ------------------------------------------------------------
+// Which backends this build can read and write its dataset through (#29).
+// Omit `dataStores` from configureLore for `jsonDataStore` alone.
+
+export {
+  type DataStore,
+  type DataStoreAction,
+  type DataStoreActionResult,
+  type DataStoreActionVariant,
+  type DataStoreContext,
+  type DataStoreSectionProps,
+} from './datastores/types';
+export { jsonDataStore } from './datastores/json';
+export { githubDataStore } from './datastores/github';
+export { getActiveDataStores } from './datastores/registry';
+export { createDataStoreContext } from './datastores/context';
 
 // --- The ruleset layer ------------------------------------------------------
 

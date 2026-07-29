@@ -67,10 +67,23 @@ export {
   configureLore,
   getActiveRuleset,
   getActiveAssets,
+  getConfiguredDataStores,
   isLoreConfigured,
   resetLoreConfig,
   type LoreConfig,
 } from './activeRuleset';
+
+// `LoreConfig` names `DataStore`, so the type has to be reachable from here.
+// Types only — the store *implementations* import React Native, which is
+// exactly what this entry point exists to keep out.
+export type {
+  DataStore,
+  DataStoreAction,
+  DataStoreActionResult,
+  DataStoreActionVariant,
+  DataStoreContext,
+  DataStoreSectionProps,
+} from './datastores/types';
 
 // --- Domain types -----------------------------------------------------------
 

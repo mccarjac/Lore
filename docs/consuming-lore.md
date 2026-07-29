@@ -69,9 +69,11 @@ be installed by the app. Your `package.json` needs all of these:
 | `readable-stream`                           | `^4.7.0`   |
 | `uuid`                                      | `^13.0.0`  |
 
-`@octokit/rest` and `react-native-zip-archive` are optional — omit them if you
-disable the `gitSync` feature and never export a `.zip`. So are `react-dom` and
-`react-native-web`, needed only if you build for web.
+Which of these you actually need depends on the [data stores](#data-stores) you
+register. `@octokit/rest` is only reached by `githubDataStore`, which is
+opt-in. `react-native-zip-archive` is reached by the default `jsonDataStore` —
+its export is a `.zip` — so omit it only if you disable that store too.
+`react-dom` and `react-native-web` are needed only if you build for web.
 
 **Every range above that Expo manages is copied verbatim from the SDK**, not
 chosen. `node_modules/expo/bundledNativeModules.json` lists the versions Expo's
@@ -138,12 +140,98 @@ Lore warns about exactly this in development (`[lore] migrateRulesetFields ran
 before configureLore()`). Treat that message as a bug in your entry file, not
 as noise.
 
+## Data stores
+
+A **data store** is a backend the Data Management screen can write your dataset
+to and read it back from. Which ones a build offers is yours to choose:
+
+```ts
+import { configureLore, jsonDataStore, githubDataStore } from 'lore';
+
+configureLore({
+  ruleset: myRuleset,
+  dataStores: [jsonDataStore, githubDataStore],
+});
+```
+
+| `dataStores`     | What the screen offers              |
+| ---------------- | ----------------------------------- |
+| omitted          | `jsonDataStore` alone — the default |
+| `[]`             | nothing but the Danger Zone         |
+| an explicit list | exactly those, in that order        |
+
+Two ship with the engine:
+
+- **`jsonDataStore`** — local file export, import and merge. An export is a
+  `.zip` holding `data.json` plus an `images/` tree; an import accepts that
+  archive or a bare `.json`. On by default.
+- **`githubDataStore`** — repository-backed sync with pull requests and
+  three-way conflict resolution. Opt-in; see
+  [github-sync.md](./github-sync.md). This replaced the ruleset's `gitSync`
+  feature flag, which no longer exists — **drop it from your `features` block**
+  or TypeScript will reject the literal.
+
+### Writing your own
+
+A store is a plain object. Declare `actions` and the engine renders a button
+per action in its own styling; nothing else is required.
+
+```ts
+import type { DataStore } from 'lore';
+
+export const s3DataStore: DataStore = {
+  id: 's3',
+  label: 'S3 Backup',
+  description: 'Push a snapshot to your own bucket.',
+  actions: [
+    {
+      id: 'push',
+      label: 'Back Up to S3',
+      progressMessage: 'Uploading...',
+      run: async ctx => {
+        await uploadToBucket(await ctx.exportDataset());
+        return { success: true, message: 'Backup uploaded.' };
+      },
+    },
+    {
+      id: 'pull',
+      label: 'Restore from S3',
+      progressMessage: 'Downloading...',
+      run: async ctx => {
+        const ok = await ctx.importDataset(await downloadFromBucket());
+        return ok
+          ? { success: true, message: 'Data restored.' }
+          : { success: false, error: 'That snapshot is not a Lore dataset.' };
+      },
+    },
+  ],
+};
+```
+
+Everything a store needs to touch local data arrives on `ctx` —
+`exportDataset`, `importDataset`, `mergeDataset`, and the active `ruleset`.
+**Do not reach for storage directly:** those entry points serialize their
+read-modify-write per storage key, and bypassing them reintroduces lost
+updates on concurrent writes.
+
+Return `{ handled: true }` when your action already showed its own UI — a
+cancelled file picker is `{ success: false, handled: true }`, not an error, and
+the screen stays quiet.
+
+If a row of buttons is not enough, supply a `Section` component instead: it
+receives `{ ctx, showProgress, hideProgress }` and owns its whole section. The
+built-in GitHub store does this, because a token dialog and a conflict modal do
+not reduce to buttons.
+
 ## What you can import
 
 `lore` exports two entry points, and those are the supported surface. The main
 one, `lore`, is the app:
 
 - `LoreApp`, `configureLore`, `getActiveRuleset`, `getActiveAssets`
+- the data-store layer — the `DataStore` contract and its member types,
+  `jsonDataStore`, `githubDataStore`, `getActiveDataStores`,
+  `createDataStoreContext`
 - the ruleset layer — `RulesetDefinition` and its member types, the attribute
   primitive (`num`/`text`/`flag`/`ref`, `roleOf`, the typed getters),
   `RulesetProvider`, `useRuleset`, `useLabels`, `getLabel`, `useFeature`,
@@ -260,3 +348,10 @@ above `registerRootComponent`.
 
 **A screen you expect is missing** — feature flags gate route registration.
 Check the `features` block of your ruleset.
+
+**`Object literal may only specify known properties, and 'gitSync' does not
+exist`** — the flag was removed when data stores became configurable. Delete it
+from `features` and register `githubDataStore` instead.
+
+**The GitHub section vanished from Data Management** — same cause. It is opt-in
+now: `configureLore({ ruleset, dataStores: [jsonDataStore, githubDataStore] })`.

@@ -182,7 +182,6 @@ export const mechanicsRuleset: RulesetDefinition = {
     recipes: true,
     discord: false,
     map: false,
-    gitSync: false,
     modifications: true,
     influenceReport: true,
     relationshipGraph: false,

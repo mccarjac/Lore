@@ -120,7 +120,6 @@ export const genericRuleset: RulesetDefinition = {
     recipes: false,
     discord: false,
     map: false,
-    gitSync: true,
     modifications: true,
     influenceReport: false,
     relationshipGraph: true,

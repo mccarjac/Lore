@@ -45,6 +45,8 @@ bypassable.
 src/
   components/common/    reusable UI (Card, Section, Header*Button, ...)
   components/screens/   Base{List,Form,Detail}Screen — generic screen scaffolds
+  datastores/           THE BACKEND SEAM: the DataStore contract, the registry
+                        a consumer configures, and the json/ and github/ built-ins
   screens/<feature>/    character/ faction/ location/ events/ discord/
   models/               types.ts — all domain types, and nothing else
   ruleset/              THE ENGINE: attribute primitive, ruleset schema,
@@ -52,7 +54,7 @@ src/
   navigation/           types.ts (navigator + param-list types) and
                         AppNavigator.tsx (the whole navigation tree)
   styles/               theme.ts (colors/spacing/typography), commonStyles.ts
-  utils/                storage, export/import, discord, git, stats
+  utils/                storage, discord, git, stats
   activeRuleset.ts      the registry a consumer configures (configureLore)
   branding.ts           app identity, resolved from env (see "Branding")
 tst/                    Jest tests, mirroring src/
@@ -239,6 +241,33 @@ the images, and changes no tracked source at all.
   **Sync normalizes all three sides** (base, local, remote) before
   `computeSyncPlan` diffs them; normalizing only the written side would
   report every character as conflicting on the first sync after upgrade.
+- **Data stores are a plugin seam, not a fixed list (#29).** `src/datastores/`
+  holds the `DataStore` contract, a registry, and the two built-ins. A store
+  declares `actions` (the engine renders a button per action via
+  `components/common/DataStoreSection.tsx`) or supplies its own `Section`
+  component when a row of buttons will not do — GitHub needs a token dialog,
+  a configured/unconfigured split and a conflict modal, which is the whole
+  reason the escape hatch exists. `DataManagementScreen` is a host: it knows
+  about neither zip files nor GitHub, only the registry and the Danger Zone.
+  Four rules:
+  - **A store never touches AsyncStorage.** Everything it may read or write
+    arrives on `DataStoreContext` (`exportDataset`/`importDataset`/
+    `mergeDataset`), whose entry points are the `runExclusive`-wrapped
+    mutators. A store reaching past that reintroduces the lost-update bug.
+  - **The default lives in `registry.ts`, never in `activeRuleset.ts`.**
+    `characterStorage` → `rulesetFieldMigration` → `activeRuleset` is a real
+    chain; naming `jsonDataStore` in `activeRuleset` to supply its own default
+    closes the cycle. `activeRuleset` stores what the consumer passed, raw —
+    which is also what keeps `undefined` ("default on") distinguishable from
+    `[]` ("nothing").
+  - **`activeRuleset.ts` imports `DataStore` as a _type_.** `LoreConfig` is
+    re-exported from `src/headless.ts`, the entry that deliberately reaches no
+    React Native; a value import would drag the store implementations in.
+    `datastores/types.ts` imports React type-only for the same reason.
+  - **`features.gitSync` is gone.** Registering `githubDataStore` is what
+    enables sync. A ruleset that still declares the flag fails to type-check;
+    that is deliberate, since silently ignoring it would leave a consumer
+    thinking sync was on.
 - **Which repository sync talks to is env-driven**, not hardcoded:
   `DATA_REPO_OWNER` / `DATA_REPO_NAME` / `DATA_REPO_BRANCH` in
   `gitIntegration.ts` read `EXPO_PUBLIC_DATA_REPO_*` and default to the data
@@ -568,20 +597,22 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
 Ranked by value if you're looking for where to add tests next (highest
 blast-radius / lowest-effort first):
 
-1. **`src/utils/exportImport.ts`** (~11% covered) — the plain-JSON path of
-   `importCharacterData`/`mergeCharacterData` is now tested (see
-   `tst/utils/exportImport.test.ts`; note `jest.setup.js` mocks
-   `expo-file-system/legacy`, the specifier this file actually imports, not
-   bare `expo-file-system`). Still untested: `exportCharacterData` and the
-   `.zip` branches of import/merge — all need `react-native-zip-archive` +
-   directory-walking (`makeDirectoryAsync`/`copyAsync`/`getInfoAsync`/
-   `readDirectoryAsync`) + `expo-sharing` mocked.
-2. **`src/utils/discordApi.ts`** and **`src/utils/discordCharacterExtraction.ts`**
+1. **`src/utils/discordApi.ts`** and **`src/utils/discordCharacterExtraction.ts`**
    (untested) — parsing/ingesting external Discord data; boundary-parsing
    bugs are likely here.
 
 Done since the list above was last written:
 
+- ~~`src/utils/exportImport.ts`~~ (was ~11%, the biggest gap) — the module is
+  gone, reshaped into `src/datastores/json/` (#29). Its three copies of the
+  image handling collapsed into `json/fileArchive.ts`, which is where the new
+  coverage went: `tst/datastores/fileArchive.test.ts` for staging/restore,
+  `tst/datastores/json.test.ts` for the three actions including the `.zip`
+  export and import branches that were never exercised before. Two mocking
+  notes carried over: `jest.setup.js` mocks `expo-file-system/legacy`, the
+  specifier these files actually import, not bare `expo-file-system`; and
+  `expo-sharing`'s mock needs `isAvailableAsync`, or the export path throws
+  instead of taking either branch.
 - ~~`src/screens/FactionStatsScreen.tsx`~~, ~~`CharacterStatsScreen.tsx`~~,
   ~~`CharacterSearchScreen.tsx`~~ and ~~navigation registration~~ — added in
   Phase 2, all rendered against `tst/fixtures/genericRuleset.ts` so they

@@ -127,7 +127,6 @@ export interface FeatureFlags {
   recipes: boolean;
   discord: boolean;
   map: boolean;
-  gitSync: boolean;
   modifications: boolean;
   influenceReport: boolean;
   relationshipGraph: boolean;
