@@ -25,7 +25,7 @@ export {
 
 // --- Data stores ------------------------------------------------------------
 // Which backends this build can read and write its dataset through (#29).
-// Omit `dataStores` from configureLore for `jsonDataStore` alone.
+// Omit `dataStores` from configureLore for `jsonDataStore` and `pdfDataStore`.
 
 export {
   type DataStore,
@@ -36,6 +36,7 @@ export {
   type DataStoreSectionProps,
 } from './datastores/types';
 export { jsonDataStore } from './datastores/json';
+export { pdfDataStore } from './datastores/pdf';
 export { githubDataStore } from './datastores/github';
 export { getActiveDataStores } from './datastores/registry';
 export { createDataStoreContext } from './datastores/context';

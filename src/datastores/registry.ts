@@ -18,13 +18,18 @@
 
 import { getConfiguredDataStores } from '@/activeRuleset';
 import { jsonDataStore } from './json';
+import { pdfDataStore } from './pdf';
 import type { DataStore } from './types';
 
 /**
  * The stores this build offers, in the order they render.
  *
- * Omitting `dataStores` from `configureLore` yields the local JSON store
- * alone; GitHub and any consumer-authored store are opt-in registrations.
+ * Omitting `dataStores` from `configureLore` yields the two stores that need no
+ * configuration of any kind: the local JSON archive and the PDF campaign wiki
+ * (#28). Backup comes before the readable copy because that is the order they
+ * matter in when something has gone wrong. GitHub needs a token and a
+ * repository, so it — like any consumer-authored store — is an opt-in
+ * registration.
  */
 export const getActiveDataStores = (): DataStore[] =>
-  getConfiguredDataStores() ?? [jsonDataStore];
+  getConfiguredDataStores() ?? [jsonDataStore, pdfDataStore];
