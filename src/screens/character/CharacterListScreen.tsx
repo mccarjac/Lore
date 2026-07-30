@@ -28,8 +28,11 @@ import {
   BaseListScreen,
   HeaderAddButton,
   HeaderStatsButton,
+  ActiveFiltersBar,
+  useEntitySearch,
 } from '@/components';
 import { useLabels } from '@/ruleset';
+import { useCharacterFilterFields } from './characterFilterFields';
 
 type NavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'CharacterList'>,
@@ -39,10 +42,10 @@ type NavigationProp = CompositeNavigationProp<
 export const CharacterListScreen: React.FC = () => {
   const [characters, setCharacters] = React.useState<GameCharacter[]>([]);
   const [showOnlyPresent, setShowOnlyPresent] = React.useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = React.useState<string>('');
   const navigation = useNavigation<NavigationProp>();
   const label = useLabels();
   const commonStyles = useCommonStyles();
+  const filterFields = useCharacterFilterFields();
   const styles = React.useMemo(
     () =>
       StyleSheet.create({
@@ -89,14 +92,6 @@ export const CharacterListScreen: React.FC = () => {
         headerRight: {
           flexDirection: 'row',
           gap: 8,
-        },
-        headerSearchButton: {
-          ...commonStyles.headerButton.add,
-          marginRight: 4,
-        },
-        headerSearchButtonText: {
-          ...commonStyles.headerButton.addText,
-          fontSize: 20,
         },
       }),
     [commonStyles]
@@ -155,33 +150,34 @@ export const CharacterListScreen: React.FC = () => {
     }
   }, [loadData, label]);
 
+  const {
+    searchQuery,
+    setSearchQuery,
+    filterValues,
+    setFilterValues,
+    activeFilterCount,
+    results,
+  } = useEntitySearch(characters, {
+    searchableText: item => [item.name],
+    filterFields,
+    initialFilterValues: { retiredStatus: 'active' },
+  });
+
   const handleSearchPress = useCallback(() => {
-    navigation.navigate('CharacterSearch');
-  }, [navigation]);
+    navigation.navigate('AdvancedSearch', {
+      title: `Search ${label('character.plural')}`,
+      fields: filterFields,
+      initialValues: filterValues,
+      onApply: setFilterValues,
+    });
+  }, [navigation, label, filterFields, filterValues, setFilterValues]);
 
-  const getFilteredCharacters = React.useCallback(() => {
-    // First filter out retired characters
-    let filtered = characters.filter(c => !c.retired);
-
-    // Filter by search query if provided
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(c => c.name.toLowerCase().includes(query));
-    }
-
-    // Filter by present status if enabled
-    if (showOnlyPresent) {
-      filtered = filtered.filter(c => c.present === true);
-    }
-
-    // Sort alphabetically
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [characters, searchQuery, showOnlyPresent]);
-
-  const filteredCharacters = React.useMemo(
-    () => getFilteredCharacters(),
-    [getFilteredCharacters]
-  );
+  const filteredCharacters = React.useMemo(() => {
+    const filtered = showOnlyPresent
+      ? results.filter(c => c.present === true)
+      : results;
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  }, [results, showOnlyPresent]);
 
   const renderItem = (item: GameCharacter) => (
     <TouchableOpacity
@@ -218,35 +214,36 @@ export const CharacterListScreen: React.FC = () => {
   );
 
   const renderHeaderButtons = () => (
-    <View style={styles.headerButtons}>
-      <TouchableOpacity
-        style={[
-          styles.actionButton,
-          showOnlyPresent ? styles.filterButtonActive : styles.filterButton,
-        ]}
-        onPress={() => setShowOnlyPresent(!showOnlyPresent)}
-      >
-        <Text style={styles.buttonText}>
-          {showOnlyPresent ? 'Show All' : 'Present Only'}
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.actionButton, styles.resetButton]}
-        onPress={handleResetAllPresent}
-      >
-        <Text style={styles.buttonText}>Reset Present</Text>
-      </TouchableOpacity>
-    </View>
+    <>
+      <View style={styles.headerButtons}>
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            showOnlyPresent ? styles.filterButtonActive : styles.filterButton,
+          ]}
+          onPress={() => setShowOnlyPresent(!showOnlyPresent)}
+        >
+          <Text style={styles.buttonText}>
+            {showOnlyPresent ? 'Show All' : 'Present Only'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.resetButton]}
+          onPress={handleResetAllPresent}
+        >
+          <Text style={styles.buttonText}>Reset Present</Text>
+        </TouchableOpacity>
+      </View>
+      <ActiveFiltersBar
+        fields={filterFields}
+        values={filterValues}
+        onRemove={key => setFilterValues({ ...filterValues, [key]: undefined })}
+      />
+    </>
   );
 
   const renderHeaderRight = () => (
     <View style={styles.headerRight}>
-      <TouchableOpacity
-        style={styles.headerSearchButton}
-        onPress={handleSearchPress}
-      >
-        <Text style={styles.headerSearchButtonText}>🔍</Text>
-      </TouchableOpacity>
       <HeaderStatsButton
         onPress={() => navigation.navigate('CharacterStats')}
       />
@@ -264,6 +261,8 @@ export const CharacterListScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder={`Search ${label('character.plural', 'lower')} by name...`}
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       ListHeaderComponent={renderHeaderButtons()}
       headerRight={renderHeaderRight()}
       emptyStateTitle={`No ${label('character.plural', 'lower')} found`}

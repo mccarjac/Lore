@@ -26,3 +26,11 @@ export type { GraphFilters } from './graph/GraphFilterBar';
 export { GraphLegend } from './graph/GraphLegend';
 export { GraphInfoCard } from './graph/GraphInfoCard';
 export { GraphSettingsPanel } from './graph/GraphSettingsPanel';
+export { ActiveFiltersBar } from './search/ActiveFiltersBar';
+export { useEntitySearch } from './search/useEntitySearch';
+export type {
+  FilterFieldConfig,
+  FilterValues,
+  SelectFilterField,
+  NumberFilterField,
+} from './search/filterFieldTypes';

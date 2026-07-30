@@ -16,8 +16,13 @@ import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
-import { Picker } from '@react-native-picker/picker';
-import { BaseListScreen, HeaderAddButton } from '@/components';
+import {
+  BaseListScreen,
+  HeaderAddButton,
+  ActiveFiltersBar,
+  useEntitySearch,
+  type FilterFieldConfig,
+} from '@/components';
 import { formatEventDateShort } from '@utils/dateUtils';
 import { useLabels } from '@/ruleset';
 
@@ -52,10 +57,21 @@ const materialsProgress = (quest: GameQuest): string | null => {
   return `${complete}/${materials.length} materials`;
 };
 
+const questFilterFields: FilterFieldConfig[] = [
+  {
+    key: 'status',
+    type: 'select',
+    label: 'Status',
+    options: Object.values(QuestStatus).map(status => ({
+      value: status,
+      label: STATUS_LABELS[status],
+    })),
+    matches: (item, value) => (item as GameQuest).status === value,
+  },
+];
+
 export const QuestListScreen: React.FC = () => {
   const [quests, setQuests] = useState<GameQuest[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
   const navigation = useNavigation<QuestListNavigationProp>();
   const label = useLabels();
 
@@ -75,24 +91,17 @@ export const QuestListScreen: React.FC = () => {
     }, [loadData])
   );
 
-  const filteredQuests = React.useMemo(() => {
-    let filtered = quests;
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        quest =>
-          quest.name.toLowerCase().includes(query) ||
-          (quest.details && quest.details.toLowerCase().includes(query))
-      );
-    }
-
-    if (filterStatus) {
-      filtered = filtered.filter(quest => quest.status === filterStatus);
-    }
-
-    return filtered;
-  }, [quests, searchQuery, filterStatus]);
+  const {
+    searchQuery,
+    setSearchQuery,
+    filterValues,
+    setFilterValues,
+    activeFilterCount,
+    results: filteredQuests,
+  } = useEntitySearch(quests, {
+    searchableText: item => [item.name, item.details ?? ''],
+    filterFields: questFilterFields,
+  });
 
   const handleQuestSelect = (quest: GameQuest) => {
     navigation.navigate('QuestsDetail', { questId: quest.id });
@@ -106,27 +115,14 @@ export const QuestListScreen: React.FC = () => {
     navigation.navigate('QuestProposals');
   };
 
-  const renderFilters = () => (
-    <View style={styles.filterContainer}>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={filterStatus}
-          onValueChange={setFilterStatus}
-          style={styles.picker}
-          dropdownIconColor={themeColors.text.secondary}
-        >
-          <Picker.Item label="All statuses" value="" />
-          {Object.values(QuestStatus).map(status => (
-            <Picker.Item
-              key={status}
-              label={STATUS_LABELS[status]}
-              value={status}
-            />
-          ))}
-        </Picker>
-      </View>
-    </View>
-  );
+  const handleSearchPress = useCallback(() => {
+    navigation.navigate('AdvancedSearch', {
+      title: `Search ${label('quest.plural')}`,
+      fields: questFilterFields,
+      initialValues: filterValues,
+      onApply: setFilterValues,
+    });
+  }, [navigation, label, filterValues, setFilterValues]);
 
   const renderQuestItem = (quest: GameQuest) => {
     const materials = materialsProgress(quest);
@@ -187,10 +183,20 @@ export const QuestListScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder={`Search ${label('quest.plural', 'lower')} by name...`}
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       emptyStateTitle={`No ${label('quest.plural', 'lower')} found`}
       emptyStateSubtitle={`Create a ${label('quest.singular', 'lower')} to get started`}
       headerRight={renderHeaderRight()}
-      ListHeaderComponent={renderFilters()}
+      ListHeaderComponent={
+        <ActiveFiltersBar
+          fields={questFilterFields}
+          values={filterValues}
+          onRemove={key =>
+            setFilterValues({ ...filterValues, [key]: undefined })
+          }
+        />
+      }
     />
   );
 };
@@ -221,20 +227,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   questMeta: commonStyles.text.caption,
-  filterContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  pickerContainer: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  picker: {
-    color: themeColors.text.primary,
-  },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',

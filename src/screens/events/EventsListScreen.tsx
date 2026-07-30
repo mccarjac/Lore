@@ -17,8 +17,12 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
 import { useTheme } from '@/styles/theme';
-import { Picker } from '@react-native-picker/picker';
-import { BaseListScreen } from '@/components';
+import {
+  BaseListScreen,
+  ActiveFiltersBar,
+  useEntitySearch,
+  type FilterFieldConfig,
+} from '@/components';
 import { formatEventDateShort, parseDateString } from '@utils/dateUtils';
 
 type EventsNavigationProp = CompositeNavigationProp<
@@ -33,11 +37,6 @@ interface EventWithDetails extends GameEvent {
 
 export const EventsTimelineScreen: React.FC = () => {
   const [events, setEvents] = useState<EventWithDetails[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterLocation, setFilterLocation] = useState<string>('');
-  const [filterCharacter, setFilterCharacter] = useState<string>('');
-  const [filterFaction, setFilterFaction] = useState<string>('');
-  const [filterCertainty, setFilterCertainty] = useState<string>('');
   const [characters, setCharacters] = useState<{ id: string; name: string }[]>(
     []
   );
@@ -50,24 +49,6 @@ export const EventsTimelineScreen: React.FC = () => {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        filtersContainer: {
-          padding: 16,
-          paddingTop: 8,
-          backgroundColor: themeColors.surface,
-          borderBottomWidth: 1,
-          borderBottomColor: themeColors.border,
-          gap: 8,
-        },
-        pickerContainer: {
-          backgroundColor: themeColors.elevated,
-          borderWidth: 1,
-          borderColor: themeColors.border,
-          borderRadius: 8,
-          overflow: 'hidden',
-        },
-        picker: {
-          color: themeColors.text.primary,
-        },
         eventCard: {
           backgroundColor: themeColors.surface,
           borderWidth: 1,
@@ -210,55 +191,72 @@ export const EventsTimelineScreen: React.FC = () => {
     }, [loadData])
   );
 
-  const getFilteredEvents = useCallback(() => {
-    let filtered = events;
+  const filterFields = useMemo<FilterFieldConfig[]>(
+    () => [
+      {
+        key: 'certainty',
+        type: 'select',
+        label: 'Certainty',
+        options: [
+          { value: 'confirmed', label: 'Confirmed' },
+          { value: 'unconfirmed', label: 'Unconfirmed' },
+          { value: 'disputed', label: 'Disputed' },
+        ],
+        matches: (item, value) =>
+          ((item as EventWithDetails).certaintyLevel || 'confirmed') === value,
+      },
+      {
+        key: 'location',
+        type: 'select',
+        label: 'Location',
+        options: locations.map(location => ({
+          value: location.id,
+          label: location.name,
+        })),
+        matches: (item, value) =>
+          (item as EventWithDetails).locationId === value,
+      },
+      {
+        key: 'character',
+        type: 'select',
+        label: 'Character',
+        options: characters.map(character => ({
+          value: character.id,
+          label: character.name,
+        })),
+        matches: (item, value) =>
+          (item as EventWithDetails).characterIds?.includes(value) ?? false,
+      },
+      {
+        key: 'faction',
+        type: 'select',
+        label: 'Faction',
+        options: factions.map(faction => ({
+          value: faction,
+          label: faction,
+        })),
+        matches: (item, value) =>
+          (item as EventWithDetails).factionNames?.includes(value) ?? false,
+      },
+    ],
+    [locations, characters, factions]
+  );
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        event =>
-          event.title.toLowerCase().includes(query) ||
-          event.description?.toLowerCase().includes(query) ||
-          event.notes?.toLowerCase().includes(query)
-      );
-    }
-
-    // Filter by location ID
-    if (filterLocation) {
-      filtered = filtered.filter(event => event.locationId === filterLocation);
-    }
-
-    // Filter by character ID
-    if (filterCharacter) {
-      filtered = filtered.filter(event =>
-        event.characterIds?.includes(filterCharacter)
-      );
-    }
-
-    // Filter by faction name
-    if (filterFaction) {
-      filtered = filtered.filter(event =>
-        event.factionNames?.includes(filterFaction)
-      );
-    }
-
-    // Filter by certainty level
-    if (filterCertainty) {
-      filtered = filtered.filter(
-        event => (event.certaintyLevel || 'confirmed') === filterCertainty
-      );
-    }
-
-    return filtered;
-  }, [
-    events,
+  const {
     searchQuery,
-    filterLocation,
-    filterCharacter,
-    filterFaction,
-    filterCertainty,
-  ]);
+    setSearchQuery,
+    filterValues,
+    setFilterValues,
+    activeFilterCount,
+    results: filteredEvents,
+  } = useEntitySearch(events, {
+    searchableText: item => [
+      item.title,
+      item.description ?? '',
+      item.notes ?? '',
+    ],
+    filterFields,
+  });
 
   const renderEvent = (item: EventWithDetails) => (
     <TouchableOpacity
@@ -334,75 +332,14 @@ export const EventsTimelineScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  const filteredEvents = getFilteredEvents();
-
-  const renderFilters = () => (
-    <View style={styles.filtersContainer}>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={filterCertainty}
-          onValueChange={setFilterCertainty}
-          style={styles.picker}
-          dropdownIconColor={themeColors.text.secondary}
-        >
-          <Picker.Item label="All Certainty Levels" value="" />
-          <Picker.Item label="Confirmed" value="confirmed" />
-          <Picker.Item label="Unconfirmed" value="unconfirmed" />
-          <Picker.Item label="Disputed" value="disputed" />
-        </Picker>
-      </View>
-
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={filterLocation}
-          onValueChange={setFilterLocation}
-          style={styles.picker}
-          dropdownIconColor={themeColors.text.secondary}
-        >
-          <Picker.Item label="All Locations" value="" />
-          {locations.map(location => (
-            <Picker.Item
-              key={location.id}
-              label={location.name}
-              value={location.id}
-            />
-          ))}
-        </Picker>
-      </View>
-
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={filterCharacter}
-          onValueChange={setFilterCharacter}
-          style={styles.picker}
-          dropdownIconColor={themeColors.text.secondary}
-        >
-          <Picker.Item label="All Characters" value="" />
-          {characters.map(character => (
-            <Picker.Item
-              key={character.id}
-              label={character.name}
-              value={character.id}
-            />
-          ))}
-        </Picker>
-      </View>
-
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={filterFaction}
-          onValueChange={setFilterFaction}
-          style={styles.picker}
-          dropdownIconColor={themeColors.text.secondary}
-        >
-          <Picker.Item label="All Factions" value="" />
-          {factions.map(faction => (
-            <Picker.Item key={faction} label={faction} value={faction} />
-          ))}
-        </Picker>
-      </View>
-    </View>
-  );
+  const handleSearchPress = useCallback(() => {
+    navigation.navigate('AdvancedSearch', {
+      title: 'Search Events',
+      fields: filterFields,
+      initialValues: filterValues,
+      onApply: setFilterValues,
+    });
+  }, [navigation, filterFields, filterValues, setFilterValues]);
 
   return (
     <BaseListScreen
@@ -412,10 +349,20 @@ export const EventsTimelineScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder="Search events..."
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       emptyStateTitle="No events found"
       emptyStateSubtitle="Tap the add button to create your first event"
       onAddPress={() => navigation.navigate('EventsForm', {})}
-      ListHeaderComponent={renderFilters()}
+      ListHeaderComponent={
+        <ActiveFiltersBar
+          fields={filterFields}
+          values={filterValues}
+          onRemove={key =>
+            setFilterValues({ ...filterValues, [key]: undefined })
+          }
+        />
+      }
     />
   );
 };

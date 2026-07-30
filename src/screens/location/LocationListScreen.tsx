@@ -11,7 +11,13 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
 import { useCommonStyles } from '@/styles/commonStyles';
-import { BaseListScreen, HeaderAddButton } from '@/components';
+import {
+  BaseListScreen,
+  HeaderAddButton,
+  ActiveFiltersBar,
+  useEntitySearch,
+  type FilterFieldConfig,
+} from '@/components';
 import { useFeature } from '@/ruleset';
 
 type LocationNavigationProp = CompositeNavigationProp<
@@ -26,9 +32,26 @@ interface LocationInfo {
   presentCount: number;
 }
 
+const locationFilterFields: FilterFieldConfig[] = [
+  {
+    key: 'occupancy',
+    type: 'select',
+    label: 'Occupancy',
+    options: [
+      { value: 'occupied', label: 'Has present characters' },
+      { value: 'empty', label: 'No present characters' },
+    ],
+    matches: (item, value) => {
+      const info = item as LocationInfo;
+      return value === 'occupied'
+        ? info.presentCount > 0
+        : info.presentCount === 0;
+    },
+  },
+];
+
 export const LocationListScreen: React.FC = () => {
   const [locationInfos, setLocationInfos] = useState<LocationInfo[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const navigation = useNavigation<LocationNavigationProp>();
   const mapEnabled = useFeature('map');
   const commonStyles = useCommonStyles();
@@ -127,27 +150,29 @@ export const LocationListScreen: React.FC = () => {
     }, [loadData])
   );
 
-  const getFilteredLocations = useCallback(() => {
-    let filtered = locationInfos;
+  const {
+    searchQuery,
+    setSearchQuery,
+    filterValues,
+    setFilterValues,
+    activeFilterCount,
+    results: filteredLocations,
+  } = useEntitySearch(locationInfos, {
+    searchableText: item => [
+      item.location.name,
+      item.location.description ?? '',
+    ],
+    filterFields: locationFilterFields,
+  });
 
-    // Filter by search query if provided
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        locationInfo =>
-          locationInfo.location.name.toLowerCase().includes(query) ||
-          (locationInfo.location.description &&
-            locationInfo.location.description.toLowerCase().includes(query))
-      );
-    }
-
-    return filtered;
-  }, [locationInfos, searchQuery]);
-
-  const filteredLocations = React.useMemo(
-    () => getFilteredLocations(),
-    [getFilteredLocations]
-  );
+  const handleSearchPress = useCallback(() => {
+    navigation.navigate('AdvancedSearch', {
+      title: 'Search Locations',
+      fields: locationFilterFields,
+      initialValues: filterValues,
+      onApply: setFilterValues,
+    });
+  }, [navigation, filterValues, setFilterValues]);
 
   const handleLocationSelect = (locationInfo: LocationInfo) => {
     navigation.navigate('LocationDetails', {
@@ -214,9 +239,20 @@ export const LocationListScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder="Search locations by name..."
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       emptyStateTitle="No locations found"
       emptyStateSubtitle="Create a location to get started"
       headerRight={renderHeaderRight()}
+      ListHeaderComponent={
+        <ActiveFiltersBar
+          fields={locationFilterFields}
+          values={filterValues}
+          onRemove={key =>
+            setFilterValues({ ...filterValues, [key]: undefined })
+          }
+        />
+      }
     />
   );
 };

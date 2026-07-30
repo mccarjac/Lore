@@ -125,7 +125,7 @@ describe('AppNavigator — a ruleset with every feature enabled', () => {
       'Main',
       'CharacterDetail',
       'CharacterForm',
-      'CharacterSearch',
+      'AdvancedSearch',
       'CharacterStats',
       'FactionStats',
       'FactionDetails',

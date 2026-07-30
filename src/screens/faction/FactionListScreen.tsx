@@ -27,6 +27,9 @@ import {
   BaseListScreen,
   HeaderAddButton,
   HeaderStatsButton,
+  ActiveFiltersBar,
+  useEntitySearch,
+  type FilterFieldConfig,
 } from '@/components';
 import { useLabels } from '@/ruleset';
 
@@ -44,9 +47,22 @@ interface FactionInfo {
   retired?: boolean;
 }
 
+const factionFilterFields: FilterFieldConfig[] = [
+  {
+    key: 'standing',
+    type: 'select',
+    label: 'Standing',
+    options: Object.values(RelationshipStanding).map(standing => ({
+      value: standing,
+      label: standing,
+    })),
+    matches: (item, value) =>
+      ((item as FactionInfo).standingCounts[value] ?? 0) > 0,
+  },
+];
+
 export const FactionListScreen: React.FC = () => {
   const [factionInfos, setFactionInfos] = useState<FactionInfo[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [showRetired, setShowRetired] = useState<boolean>(false);
   const navigation = useNavigation<FactionNavigationProp>();
   const label = useLabels();
@@ -223,37 +239,36 @@ export const FactionListScreen: React.FC = () => {
     }, [loadData])
   );
 
-  const getFilteredFactions = useCallback(() => {
-    let filtered = factionInfos;
+  const {
+    searchQuery,
+    setSearchQuery,
+    filterValues,
+    setFilterValues,
+    activeFilterCount,
+    results,
+  } = useEntitySearch(factionInfos, {
+    searchableText: item => [item.faction.name, item.faction.description ?? ''],
+    filterFields: factionFilterFields,
+  });
 
-    // Filter by retired status
-    if (showRetired) {
-      filtered = filtered.filter(factionInfo => factionInfo.retired === true);
-    } else {
-      filtered = filtered.filter(factionInfo => !factionInfo.retired);
-    }
+  const handleSearchPress = useCallback(() => {
+    navigation.navigate('AdvancedSearch', {
+      title: `Search ${label('faction.plural')}`,
+      fields: factionFilterFields,
+      initialValues: filterValues,
+      onApply: setFilterValues,
+    });
+  }, [navigation, label, filterValues, setFilterValues]);
 
-    // Filter by search query if provided
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        factionInfo =>
-          factionInfo.faction.name.toLowerCase().includes(query) ||
-          (factionInfo.faction.description &&
-            factionInfo.faction.description.toLowerCase().includes(query))
-      );
-    }
+  const filteredFactions = React.useMemo(() => {
+    const filtered = showRetired
+      ? results.filter(factionInfo => factionInfo.retired === true)
+      : results.filter(factionInfo => !factionInfo.retired);
 
-    // Sort alphabetically by faction name
-    return filtered.sort((a, b) =>
+    return [...filtered].sort((a, b) =>
       a.faction.name.localeCompare(b.faction.name)
     );
-  }, [factionInfos, searchQuery, showRetired]);
-
-  const filteredFactions = React.useMemo(
-    () => getFilteredFactions(),
-    [getFilteredFactions]
-  );
+  }, [results, showRetired]);
 
   const handleFactionSelect = (factionInfo: FactionInfo) => {
     navigation.navigate('FactionDetails', {
@@ -362,8 +377,19 @@ export const FactionListScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder={`Search ${label('faction.plural', 'lower')} by name...`}
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       emptyStateTitle={`No ${label('faction.plural', 'lower')} found`}
       headerRight={renderHeaderRight()}
+      ListHeaderComponent={
+        <ActiveFiltersBar
+          fields={factionFilterFields}
+          values={filterValues}
+          onRemove={key =>
+            setFilterValues({ ...filterValues, [key]: undefined })
+          }
+        />
+      }
     />
   );
 };
