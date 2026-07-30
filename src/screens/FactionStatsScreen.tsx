@@ -33,6 +33,7 @@ export const FactionStatsScreen: React.FC = () => {
   const [combinedAnalysis, setCombinedAnalysis] =
     useState<CombinedFactionAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [includeRetired, setIncludeRetired] = useState<boolean>(false);
 
   /**
    * Built once per ruleset rather than per bar. A category may declare its own
@@ -57,9 +58,11 @@ export const FactionStatsScreen: React.FC = () => {
       const characters = await loadCharacters();
       const factions = await loadFactions();
 
-      // Filter out retired characters and factions
-      const activeCharacters = characters.filter(c => !c.retired);
-      const activeFactions = factions.filter(f => !f.retired);
+      // Filter out retired characters and factions, unless included
+      const activeCharacters = characters.filter(
+        c => includeRetired || !c.retired
+      );
+      const activeFactions = factions.filter(f => includeRetired || !f.retired);
 
       // Build faction relationships map
       const relationshipsMap = new Map();
@@ -86,7 +89,7 @@ export const FactionStatsScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [ruleset]);
+  }, [ruleset, includeRetired]);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,8 +108,12 @@ export const FactionStatsScreen: React.FC = () => {
       try {
         const characters = await loadCharacters();
         const factions = await loadFactions();
-        const activeCharacters = characters.filter(c => !c.retired);
-        const activeFactions = factions.filter(f => !f.retired);
+        const activeCharacters = characters.filter(
+          c => includeRetired || !c.retired
+        );
+        const activeFactions = factions.filter(
+          f => includeRetired || !f.retired
+        );
 
         const relationshipsMap = new Map();
         activeFactions.forEach(faction => {
@@ -502,6 +509,25 @@ export const FactionStatsScreen: React.FC = () => {
           {label('faction.singular')} Statistics
         </Text>
 
+        <View style={styles.filterContainer}>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              includeRetired && styles.filterButtonActive,
+            ]}
+            onPress={() => setIncludeRetired(!includeRetired)}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                includeRetired && styles.filterButtonTextActive,
+              ]}
+            >
+              {includeRetired ? 'Include Retired ✓' : 'Include Retired'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {factionStats.length === 0 ? (
           <View style={styles.emptyStateContainer}>
             <Text style={styles.emptyStateText}>
@@ -534,6 +560,41 @@ const styles = StyleSheet.create({
   header: {
     ...commonStyles.text.h1,
     marginBottom: 24,
+  },
+  filterContainer: {
+    marginBottom: 24,
+    alignItems: 'center',
+    backgroundColor: themeColors.surface,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+  },
+  filterButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    backgroundColor: themeColors.elevated,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    shadowColor: themeColors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  filterButtonActive: {
+    backgroundColor: themeColors.accent.success,
+    borderColor: themeColors.accent.success,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: themeColors.text.muted,
+    letterSpacing: 0.3,
+  },
+  filterButtonTextActive: {
+    color: themeColors.text.primary,
   },
   loadingContainer: {
     flex: 1,

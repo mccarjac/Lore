@@ -59,11 +59,24 @@ const factionFilterFields: FilterFieldConfig[] = [
     matches: (item, value) =>
       ((item as FactionInfo).standingCounts[value] ?? 0) > 0,
   },
+  {
+    key: 'retiredStatus',
+    type: 'select',
+    label: 'Retired Status',
+    defaultValue: 'active',
+    options: [
+      { value: 'active', label: 'Active Only' },
+      { value: 'retired', label: 'Retired Only' },
+    ],
+    matches: (item, value) => {
+      const isRetired = (item as FactionInfo).retired === true;
+      return value === 'retired' ? isRetired : !isRetired;
+    },
+  },
 ];
 
 export const FactionListScreen: React.FC = () => {
   const [factionInfos, setFactionInfos] = useState<FactionInfo[]>([]);
-  const [showRetired, setShowRetired] = useState<boolean>(false);
   const navigation = useNavigation<FactionNavigationProp>();
   const label = useLabels();
   const { colors: themeColors } = useTheme();
@@ -75,29 +88,6 @@ export const FactionListScreen: React.FC = () => {
           flexDirection: 'row',
           gap: 8,
           alignItems: 'center',
-        },
-        toggleButton: {
-          paddingHorizontal: 12,
-          paddingVertical: 6,
-          borderRadius: 16,
-          borderWidth: 1,
-          minWidth: 70,
-          alignItems: 'center',
-        },
-        toggleButtonActive: {
-          // Same '#6C5CE7' AppNavigator's drawer highlight used to hardcode
-          // — mapped to accent.primary there, same mapping here.
-          backgroundColor: themeColors.accent.primary,
-          borderColor: themeColors.accent.primary,
-        },
-        toggleButtonInactive: {
-          backgroundColor: 'transparent',
-          borderColor: themeColors.accent.primary,
-        },
-        toggleButtonText: {
-          fontSize: 14,
-          fontWeight: '600',
-          color: themeColors.text.primary,
         },
         factionCard: commonStyles.card.base,
         factionContent: {
@@ -249,6 +239,7 @@ export const FactionListScreen: React.FC = () => {
   } = useEntitySearch(factionInfos, {
     searchableText: item => [item.faction.name, item.faction.description ?? ''],
     filterFields: factionFilterFields,
+    initialFilterValues: { retiredStatus: 'active' },
   });
 
   const handleSearchPress = useCallback(() => {
@@ -259,16 +250,6 @@ export const FactionListScreen: React.FC = () => {
       onApply: setFilterValues,
     });
   }, [navigation, label, filterValues, setFilterValues]);
-
-  const filteredFactions = React.useMemo(() => {
-    const filtered = showRetired
-      ? results.filter(factionInfo => factionInfo.retired === true)
-      : results.filter(factionInfo => !factionInfo.retired);
-
-    return [...filtered].sort((a, b) =>
-      a.faction.name.localeCompare(b.faction.name)
-    );
-  }, [results, showRetired]);
 
   const handleFactionSelect = (factionInfo: FactionInfo) => {
     navigation.navigate('FactionDetails', {
@@ -353,17 +334,6 @@ export const FactionListScreen: React.FC = () => {
 
   const renderHeaderRight = () => (
     <View style={styles.headerRight}>
-      <TouchableOpacity
-        style={[
-          styles.toggleButton,
-          showRetired ? styles.toggleButtonActive : styles.toggleButtonInactive,
-        ]}
-        onPress={() => setShowRetired(!showRetired)}
-      >
-        <Text style={styles.toggleButtonText}>
-          {showRetired ? 'Retired' : 'Active'}
-        </Text>
-      </TouchableOpacity>
       <HeaderStatsButton onPress={() => navigation.navigate('FactionStats')} />
       <HeaderAddButton onPress={() => navigation.navigate('FactionForm', {})} />
     </View>
@@ -371,7 +341,7 @@ export const FactionListScreen: React.FC = () => {
 
   return (
     <BaseListScreen
-      data={filteredFactions}
+      data={results}
       renderItem={renderFactionItem}
       keyExtractor={(item: FactionInfo) => item.faction.name}
       searchQuery={searchQuery}
