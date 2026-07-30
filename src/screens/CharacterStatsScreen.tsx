@@ -25,6 +25,7 @@ export const CharacterStatsScreen = () => {
   const [stats, setStats] = useState<CharacterStats | null>(null);
   const [selectedSlice, setSelectedSlice] = useState<string | null>(null);
   const [showOnlyPresent, setShowOnlyPresent] = useState<boolean>(false);
+  const [includeRetired, setIncludeRetired] = useState<boolean>(false);
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
 
   const calculateStats = useCallback(
@@ -39,7 +40,9 @@ export const CharacterStatsScreen = () => {
     if (allCharacters.length > 0) {
       // Filter out retired characters and optionally filter to only present
       const filteredCharacters = allCharacters.filter(
-        c => !c.retired && (!showOnlyPresent || c.present === true)
+        c =>
+          (includeRetired || !c.retired) &&
+          (!showOnlyPresent || c.present === true)
       );
 
       const newStats =
@@ -48,7 +51,7 @@ export const CharacterStatsScreen = () => {
           : calculateStats(filteredCharacters);
       setStats(newStats);
     }
-  }, [showOnlyPresent, allCharacters, calculateStats]);
+  }, [showOnlyPresent, includeRetired, allCharacters, calculateStats]);
 
   const loadStats = useCallback(async () => {
     const characters = await loadCharacters();
@@ -61,7 +64,9 @@ export const CharacterStatsScreen = () => {
 
     // Filter out retired characters and optionally filter to only present
     const filteredCharacters = characters.filter(
-      c => !c.retired && (!showOnlyPresent || c.present === true)
+      c =>
+        (includeRetired || !c.retired) &&
+        (!showOnlyPresent || c.present === true)
     );
 
     if (filteredCharacters.length === 0) {
@@ -70,7 +75,7 @@ export const CharacterStatsScreen = () => {
       const stats = calculateStats(filteredCharacters);
       setStats(stats);
     }
-  }, [showOnlyPresent, calculateStats]);
+  }, [showOnlyPresent, includeRetired, calculateStats]);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,6 +146,22 @@ export const CharacterStatsScreen = () => {
               ]}
             >
               {showOnlyPresent ? 'Present Only ✓' : 'Show Present Only'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              includeRetired && styles.filterButtonActive,
+            ]}
+            onPress={() => setIncludeRetired(!includeRetired)}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                includeRetired && styles.filterButtonTextActive,
+              ]}
+            >
+              {includeRetired ? 'Include Retired ✓' : 'Include Retired'}
             </Text>
           </TouchableOpacity>
           <Text style={styles.filterInfo}>
