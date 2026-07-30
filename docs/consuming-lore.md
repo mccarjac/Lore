@@ -178,7 +178,11 @@ default; the one that needs a token is not.
   three-way conflict resolution. Opt-in; see
   [github-sync.md](./github-sync.md). This replaced the ruleset's `gitSync`
   feature flag, which no longer exists — **drop it from your `features` block**
-  or TypeScript will reject the literal.
+  or TypeScript will reject the literal. It also declares `autoSync` (#31): a
+  user can turn on a background loop that commits merged changes straight to
+  the branch, skipping the pull request review a manual export goes through.
+  See [github-sync.md](./github-sync.md#automatic-sync-opt-in) and "Opting a
+  store into automatic sync" below.
 
 ### Writing your own
 
@@ -231,6 +235,56 @@ If a row of buttons is not enough, supply a `Section` component instead: it
 receives `{ ctx, showProgress, hideProgress }` and owns its whole section. The
 built-in GitHub store does this, because a token dialog and a conflict modal do
 not reduce to buttons.
+
+### Opting a store into automatic sync (#31)
+
+Declaring `autoSync` on a `DataStore` is what makes the Data Management screen
+render a toggle and status line for it, and what makes the engine poll it in
+the background — the store does not write any scheduling, UI, or persistence
+of its own:
+
+```ts
+import type { DataStore, AutoSyncResult } from 'lore';
+
+export const s3DataStore: DataStore = {
+  id: 's3',
+  label: 'S3 Backup',
+  actions: [
+    /* ... as above ... */
+  ],
+  autoSync: {
+    description: 'Keep this bucket in sync automatically.',
+    defaultIntervalMs: 60_000,
+    run: async (ctx, { localChanged }): Promise<AutoSyncResult> => {
+      if (!localChanged) {
+        return { outcome: 'upToDate' };
+      }
+      await uploadToBucket(await ctx.exportDataset());
+      return { outcome: 'synced', stats: { pulled: 0, pushed: 1 } };
+    },
+  },
+};
+```
+
+Two rules the engine relies on:
+
+- **`run` must never resolve a genuine conflict.** If your backend can detect
+  that both sides changed the same record, return
+  `{ outcome: 'conflicts', conflicts: [...] }` and write nothing — the engine
+  suspends polling for that store and shows the pending count until the user
+  resolves it through your own UI (a manual merge action, in the GitHub
+  store's case).
+- **`run` should be cheap when nothing changed.** The engine calls it on a
+  timer; `options.localChanged` is a hint (computed from a dataset fingerprint,
+  not a network call) that lets you skip your own expensive round trip when
+  neither side has moved. A store with its own cheaper way to tell "is there
+  anything to sync" — the built-in GitHub store checks its own merge-base
+  snapshot rather than trusting the hint — is free to use that instead.
+
+The engine owns everything else: the interval and debounced-after-local-edit
+triggers, pausing while the app is backgrounded, backoff and pausing on
+repeated failures, and persisting/rendering status. `jsonDataStore` and
+`pdfDataStore` simply omit `autoSync` — there is no `autoSync: false`.
 
 ## What you can import
 

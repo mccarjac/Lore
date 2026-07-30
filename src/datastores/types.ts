@@ -23,6 +23,7 @@
 import type React from 'react';
 import type { RulesetDefinition } from '@/ruleset/types';
 import type { MergeResult } from '@utils/characterStorage';
+import type { SyncErrorKind } from '@utils/syncErrors';
 
 /**
  * Everything a store is handed to do its job. Passing these in rather than
@@ -104,4 +105,78 @@ export interface DataStore {
    * store render itself. When present, this replaces `actions` entirely.
    */
   Section?: React.ComponentType<DataStoreSectionProps>;
+  /**
+   * Opt-in background sync (#31). **Absence means the store does not support
+   * it** — there is no `autoSync: false`; `jsonDataStore` and `pdfDataStore`
+   * simply omit the field. Declaring it is what makes the Data Management
+   * screen render a toggle and status row for this store, and what makes the
+   * engine's scheduler poll it.
+   */
+  autoSync?: DataStoreAutoSync;
+}
+
+/** Why an auto-sync run fired. A store may take a cheaper path on a poll. */
+export type AutoSyncReason =
+  | 'interval'
+  | 'localChange'
+  | 'foreground'
+  | 'manual';
+
+export interface AutoSyncRunOptions {
+  reason: AutoSyncReason;
+  /**
+   * The engine's answer to "has local data changed since this store last
+   * synced" — a dataset fingerprint comparison computed by the scheduler, not
+   * a network call. A store should use this to skip its expensive remote
+   * fetch entirely when nothing moved on either side.
+   */
+  localChanged: boolean;
+}
+
+export type AutoSyncOutcome =
+  | 'upToDate'
+  | 'synced'
+  | 'conflicts'
+  | 'skipped'
+  | 'failed';
+
+/** One conflicting record, for the status line. Not the full diff. */
+export interface AutoSyncConflictSummary {
+  /** `${collection}:${key}` — the same shape a resolution map is keyed by. */
+  key: string;
+  label: string;
+}
+
+export interface AutoSyncResult {
+  outcome: AutoSyncOutcome;
+  /** For `'synced'`. Counts, not datasets. */
+  stats?: { pulled: number; pushed: number };
+  /** For `'conflicts'`. */
+  conflicts?: AutoSyncConflictSummary[];
+  /** User-facing prose for `'skipped'` / `'failed'`, or extra `'synced'` detail. */
+  message?: string;
+  /** For `'failed'` — the engine's backoff is keyed on this. */
+  errorKind?: SyncErrorKind;
+  /** True when this run wrote local data, so screens know to reload. */
+  localDataChanged?: boolean;
+}
+
+export interface DataStoreAutoSync {
+  /** Sentence under the toggle. */
+  description?: string;
+  /** Poll interval in milliseconds. The engine clamps it to a sane minimum. */
+  defaultIntervalMs?: number;
+  /**
+   * One sync pass: pull, merge, push. **Must never resolve a genuine
+   * conflict** — return `{ outcome: 'conflicts' }` with nothing written and
+   * let a human resolve it through the store's own UI. Must not throw;
+   * classify the failure and return `{ outcome: 'failed', errorKind }`
+   * instead. The engine owns scheduling, the in-flight guard, backoff and
+   * status persistence — this function only needs to run once and report
+   * what happened.
+   */
+  run: (
+    ctx: DataStoreContext,
+    options: AutoSyncRunOptions
+  ) => Promise<AutoSyncResult>;
 }

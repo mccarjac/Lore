@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components';
 import { RulesetProvider } from '@/ruleset';
 import { AppNavigator } from '@/navigation/AppNavigator';
+import { AutoSyncHost } from '@/datastores/autoSync/AutoSyncHost';
 import type { RulesetDefinition } from '@/ruleset/types';
 import type { RulesetAssets } from '@/ruleset/assets';
 
@@ -56,7 +57,10 @@ export interface LoreAppProps {
  * The navigators deliberately live in `AppNavigator` rather than here, because
  * this component *renders* `RulesetProvider` and therefore sits outside it —
  * nothing in this file can call `useRuleset()`, so feature-flag and
- * terminology reads have to happen a level down.
+ * terminology reads have to happen a level down. `AutoSyncHost` (#31) is the
+ * same story: it needs `useRuleset()` to build the auto-sync scheduler's
+ * `DataStoreContext`, so it sits just inside `RulesetProvider` rather than
+ * being started from here.
  */
 export const LoreApp: React.FC<LoreAppProps> = ({
   ruleset,
@@ -65,13 +69,15 @@ export const LoreApp: React.FC<LoreAppProps> = ({
 }) => (
   <ErrorBoundary>
     <RulesetProvider ruleset={ruleset} assets={assets}>
-      <SafeAreaProvider>
-        <GestureHandlerRootView style={appStyles.root}>
-          <NavigationContainer theme={theme}>
-            <AppNavigator />
-          </NavigationContainer>
-        </GestureHandlerRootView>
-      </SafeAreaProvider>
+      <AutoSyncHost>
+        <SafeAreaProvider>
+          <GestureHandlerRootView style={appStyles.root}>
+            <NavigationContainer theme={theme}>
+              <AppNavigator />
+            </NavigationContainer>
+          </GestureHandlerRootView>
+        </SafeAreaProvider>
+      </AutoSyncHost>
     </RulesetProvider>
   </ErrorBoundary>
 );

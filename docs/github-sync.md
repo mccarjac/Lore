@@ -48,7 +48,52 @@ Revoke the token from that same GitHub page if the device is lost.
    Discord data) and uploads images under `images/<entity type>/`.
 5. Opens a pull request and hands back its URL.
 
-Nothing is merged automatically. `main` only moves when a human merges the PR.
+**On this manual path, nothing is merged automatically** — `main` only moves
+when a human merges the PR. Automatic sync (below) is the one exception: it
+commits straight to `main`, deliberately, and only for a user who opted in.
+
+## Automatic sync (opt-in)
+
+Turning on the **Automatic Sync** toggle under GitHub Repository Sync starts a
+background loop: while the app is in the foreground, it polls roughly every
+60 seconds and also runs a few seconds after you make a local edit. Unlike the
+manual export above, **a successful automatic sync commits the merged dataset
+straight to `main` — no branch, no pull request.** That is the trade a user
+makes by opting in: near-real-time sharing in exchange for skipping review.
+The manual "Export to GitHub (Create PR)" button is completely unaffected and
+always goes through a PR.
+
+A few things are true of this loop by design:
+
+- **It refuses to run until you have completed one manual "Sync from GitHub
+  (Merge)".** Without a merge-base snapshot, a three-way merge degrades to a
+  two-way compare where _every_ difference between local and remote looks like
+  a conflict — auto-sync will not be the thing that discovers that for the
+  first time. The toggle's status line says as much until you do.
+- **It never resolves a genuine conflict.** If both sides changed the same
+  record, the loop stops and the status line says how many changes need your
+  attention; open **Sync from GitHub (Merge)** to resolve them the normal way,
+  same as it always has. Nothing is written until you do.
+- **Idle polls are cheap.** When neither side has changed, one tick costs a
+  single API call (a HEAD check) — no `data.json` fetch, no images. A picture-
+  heavy dataset still re-uploads every image on an actual push, the same as a
+  manual export does.
+- **A push is a compare-and-set.** It commits on top of the branch head it
+  last saw; if someone else pushed in the meantime, the update is rejected as
+  a non-fast-forward and nothing is written — the next tick pulls, merges, and
+  tries again.
+- **It pauses, rather than retries forever, on a rejected token or an
+  unreachable repository.** Update the token (or fix the repository) and
+  re-enable the toggle to resume.
+- **Turning on Danger Zone's "Clear All Data" also turns auto-sync off**, for
+  every store. Otherwise a cleared local dataset looks like "everything was
+  deleted here," and since deletions do propagate, one device's Danger Zone
+  tap would wipe the shared repository for everyone.
+- **An image-only edit does not by itself trigger a push.** Change detection
+  ignores image fields for the same reason merge conflict detection does — a
+  synced image legitimately has a different path locally (`file://…`) than in
+  the repository (`images/…`) — so a picture added or swapped with no other
+  edit rides along with the next real change or a manual export.
 
 ## Importing (pull)
 
@@ -71,6 +116,12 @@ Keep new merge or conflict logic in `syncMerge.ts`, not in `gitIntegration.ts`.
 **Ruleset field migration runs on all three sides** — base, local and remote —
 before the diff. Normalizing only the written side would report every character
 as conflicting on the first sync after an upgrade.
+
+**Two things can advance the merge base** (`@github_sync_base.json` plus
+`sync.baseCommitSha`): a completed manual merge (`applyGitHubSyncPlan`), and a
+successful automatic push (`pushDatasetToBranch`). Both need to, for the same
+reason — whichever one last synchronized local data against a known remote
+state is what the next sync (of either kind) diffs against.
 
 ## Repository layout
 
@@ -146,3 +197,20 @@ the bug is in `migrateRulesetFields` usage, not in your data.
 
 **Diffs are still huge** — the first post-sort export re-orders the file once.
 If it persists, something is regenerating ids or timestamps on every export.
+
+**"Automatic sync never runs"** — check the status line under the toggle. Most
+often it is waiting on one manual "Sync from GitHub (Merge)" to establish a
+merge base, or the app needs to be in the foreground (it does not poll in the
+background).
+
+**"Automatic sync says paused"** — the token was rejected or the repository
+could not be reached. Fix the underlying problem, then toggle automatic sync
+off and back on to resume polling.
+
+**"Automatic sync says changes are pending"** — a genuine conflict was found.
+Run **Sync from GitHub (Merge)** to resolve it through the usual conflict
+modal; automatic sync resumes once that succeeds.
+
+**"My export opened a PR, but a teammate's change just showed up in `main`
+directly"** — expected once automatic sync is on: a manual export always opens
+a PR, but a successful automatic sync commits straight to the branch.

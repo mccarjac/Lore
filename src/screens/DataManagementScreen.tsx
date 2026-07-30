@@ -15,8 +15,11 @@ import { clearDiscordData } from '@/utils/discordStorage';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { DataStoreSection } from '@components/common/DataStoreSection';
+import { AutoSyncToggle } from '@components/common/AutoSyncToggle';
 import { getActiveDataStores } from '@/datastores/registry';
 import { createDataStoreContext } from '@/datastores/context';
+import { autoSyncController } from '@/datastores/autoSync/controller';
+import { setAutoSyncEnabled } from '@utils/autoSyncPreferences';
 import { useRuleset } from '@/ruleset';
 
 /**
@@ -46,40 +49,54 @@ export const DataManagementScreen: React.FC = () => {
   const hideProgress = () => setProgress({ visible: false, message: '' });
 
   const handleClearAll = async () => {
+    const hasAutoSyncStore = stores.some(store => store.autoSync);
+    const confirmMessage = hasAutoSyncStore
+      ? 'Are you sure you want to delete all game data? This action cannot be undone. Automatic sync will be turned off.'
+      : 'Are you sure you want to delete all game data? This action cannot be undone.';
+
     const confirmClear = () => {
       if (Platform.OS === 'web') {
-        return window.confirm(
-          'Are you sure you want to delete all game data? This action cannot be undone.'
-        );
+        return window.confirm(confirmMessage);
       } else {
         return new Promise<boolean>(resolve => {
-          Alert.alert(
-            'Clear All Data',
-            'Are you sure you want to delete all game data? This action cannot be undone.',
-            [
-              {
-                text: 'Cancel',
-                style: 'cancel',
-                onPress: () => resolve(false),
-              },
-              {
-                text: 'Delete All',
-                style: 'destructive',
-                onPress: () => resolve(true),
-              },
-            ]
-          );
+          Alert.alert('Clear All Data', confirmMessage, [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => resolve(false),
+            },
+            {
+              text: 'Delete All',
+              style: 'destructive',
+              onPress: () => resolve(true),
+            },
+          ]);
         });
       }
     };
 
     const shouldClear = await confirmClear();
     if (shouldClear) {
+      // `clearStorage()` does not (and should not) touch a store's own merge
+      // base — the two are unrelated concepts. But that means an auto-sync
+      // store left enabled would see every record as "deleted locally" on
+      // its next tick and, since deletions propagate, push that wipe out to
+      // everyone else. Turn auto-sync off for every capable store first, so
+      // a Danger Zone tap on this device stays local.
+      await Promise.all(
+        stores
+          .filter(store => store.autoSync)
+          .map(store => setAutoSyncEnabled(store.id, false))
+      );
+      await autoSyncController.refreshPreferences();
+
       await clearStorage();
       await clearDiscordData();
-      Alert.alert('Success', 'All game data has been deleted.', [
-        { text: 'OK' },
-      ]);
+      Alert.alert(
+        'Success',
+        'All game data has been deleted. Automatic sync was turned off for safety — re-enable it once you have a data set you want to share again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -95,24 +112,25 @@ export const DataManagementScreen: React.FC = () => {
           Manage your game data with import, export, merge, and backup options.
         </Text>
 
-        {stores.map(store =>
-          store.Section ? (
-            <store.Section
-              key={store.id}
-              ctx={ctx}
-              showProgress={showProgress}
-              hideProgress={hideProgress}
-            />
-          ) : (
-            <DataStoreSection
-              key={store.id}
-              store={store}
-              ctx={ctx}
-              showProgress={showProgress}
-              hideProgress={hideProgress}
-            />
-          )
-        )}
+        {stores.map(store => (
+          <React.Fragment key={store.id}>
+            {store.Section ? (
+              <store.Section
+                ctx={ctx}
+                showProgress={showProgress}
+                hideProgress={hideProgress}
+              />
+            ) : (
+              <DataStoreSection
+                store={store}
+                ctx={ctx}
+                showProgress={showProgress}
+                hideProgress={hideProgress}
+              />
+            )}
+            {store.autoSync && <AutoSyncToggle store={store} ctx={ctx} />}
+          </React.Fragment>
+        ))}
 
         {/* Danger Zone */}
         <View style={[styles.section, styles.dangerSection]}>

@@ -1,6 +1,7 @@
 import {
   applyResolutions,
   computeSyncPlan,
+  hasLocalChanges,
   SyncDataset,
 } from '@/utils/syncMerge';
 import {
@@ -439,5 +440,78 @@ describe('applyResolutions', () => {
     applyResolutions(plan, { [`characters:${base.id}`]: 'remote' });
 
     expect(plan.merged.characters).toEqual([local]);
+  });
+});
+
+describe('hasLocalChanges', () => {
+  it('reports changed when there is no base snapshot yet', () => {
+    expect(hasLocalChanges(null, emptyDataset())).toBe(true);
+  });
+
+  it('reports unchanged when local exactly matches the base snapshot', () => {
+    const record = makeCharacter({ name: 'Alice' });
+    const base = { ...emptyDataset(), characters: [record] };
+    const local = { ...emptyDataset(), characters: [{ ...record }] };
+
+    expect(hasLocalChanges(base, local)).toBe(false);
+  });
+
+  it('reports changed when a record was added locally', () => {
+    const base = emptyDataset();
+    const local = {
+      ...emptyDataset(),
+      characters: [makeCharacter({ name: 'Alice' })],
+    };
+
+    expect(hasLocalChanges(base, local)).toBe(true);
+  });
+
+  it('reports changed when a record was updated locally', () => {
+    const record = makeCharacter({ name: 'Alice', notes: 'base' });
+    const base = { ...emptyDataset(), characters: [record] };
+    const local = {
+      ...emptyDataset(),
+      characters: [{ ...record, notes: 'edited' }],
+    };
+
+    expect(hasLocalChanges(base, local)).toBe(true);
+  });
+
+  it('reports changed when a record was removed locally', () => {
+    const record = makeCharacter({ name: 'Alice' });
+    const base = { ...emptyDataset(), characters: [record] };
+    const local = emptyDataset();
+
+    expect(hasLocalChanges(base, local)).toBe(true);
+  });
+
+  it('does not flag an image-only difference as a local change', () => {
+    const record = makeCharacter({
+      name: 'Alice',
+      imageUris: ['file:///local/alice.jpg'],
+    });
+    const base = {
+      ...emptyDataset(),
+      characters: [{ ...record, imageUris: ['images/characters/alice_0.jpg'] }],
+    };
+    const local = { ...emptyDataset(), characters: [record] };
+
+    expect(hasLocalChanges(base, local)).toBe(false);
+  });
+
+  it('is unaffected by other collections being untouched', () => {
+    const location = makeLocation({ name: 'Camp' });
+    const event = makeEvent({ title: 'Session 1' });
+    const quest = makeQuest({ name: 'Find the artifact' });
+    const faction = makeStoredFaction({ name: 'The Guild' });
+    const dataset: SyncDataset = {
+      characters: [],
+      factions: [faction],
+      locations: [location],
+      events: [event],
+      quests: [quest],
+    };
+
+    expect(hasLocalChanges(dataset, { ...dataset })).toBe(false);
   });
 });

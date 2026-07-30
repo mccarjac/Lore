@@ -15,6 +15,7 @@ import { SafeAsyncStorageJSONParser } from './safeAsyncStorageJSONParser';
 import { exportDiscordDataset, importDiscordDataset } from './discordStorage';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { runExclusive } from './storageQueue';
+import { notifyLocalDataChanged } from './dataChangeSignal';
 import { warnIfUnconfigured } from '@/activeRuleset';
 import {
   normalizeCharactersRulesetFields,
@@ -80,6 +81,20 @@ const LOCATION_STORAGE_KEY = 'gameCharacterManager_locations';
 const EVENT_STORAGE_KEY = 'gameCharacterManager_events';
 const QUEST_STORAGE_KEY = 'gameCharacterManager_quests';
 
+/**
+ * Every dataset write goes through here rather than calling
+ * `SafeAsyncStorageJSONParser.setItem` directly, so auto-sync (#31) has one
+ * place to learn that local data moved. The notification is only a *trigger* —
+ * the scheduler's dataset fingerprint decides whether anything actually needs
+ * pushing, which is why a sync-origin write (a pull writing the merged
+ * dataset back to storage) needs no special casing here. See
+ * `dataChangeSignal.ts`.
+ */
+const writeDataset = async <T>(key: string, dataset: T): Promise<void> => {
+  await SafeAsyncStorageJSONParser.setItem(key, dataset);
+  notifyLocalDataChanged();
+};
+
 export const saveCharacters = async (
   characters: GameCharacter[]
 ): Promise<void> => {
@@ -88,7 +103,7 @@ export const saveCharacters = async (
     version: '1.0',
     lastUpdated: new Date().toISOString(),
   };
-  await SafeAsyncStorageJSONParser.setItem(STORAGE_KEY, dataset);
+  await writeDataset(STORAGE_KEY, dataset);
 };
 
 export const loadCharacters = async (): Promise<GameCharacter[]> => {
@@ -358,7 +373,7 @@ export const importDataset = async (jsonData: string): Promise<boolean> => {
       version: dataset.version || '1.0',
       lastUpdated: dataset.lastUpdated || new Date().toISOString(),
     };
-    await SafeAsyncStorageJSONParser.setItem(STORAGE_KEY, characterDataset);
+    await writeDataset(STORAGE_KEY, characterDataset);
 
     // Handle faction data if present
     if (dataset.factions) {
@@ -367,10 +382,7 @@ export const importDataset = async (jsonData: string): Promise<boolean> => {
         version: dataset.version || '1.0',
         lastUpdated: dataset.lastUpdated || new Date().toISOString(),
       };
-      await SafeAsyncStorageJSONParser.setItem(
-        FACTION_STORAGE_KEY,
-        factionDataset
-      );
+      await writeDataset(FACTION_STORAGE_KEY, factionDataset);
     }
 
     // Handle event data if present
@@ -380,7 +392,7 @@ export const importDataset = async (jsonData: string): Promise<boolean> => {
         version: dataset.version || '1.0',
         lastUpdated: dataset.lastUpdated || new Date().toISOString(),
       };
-      await SafeAsyncStorageJSONParser.setItem(EVENT_STORAGE_KEY, eventDataset);
+      await writeDataset(EVENT_STORAGE_KEY, eventDataset);
     }
 
     // Handle quest data if present
@@ -390,7 +402,7 @@ export const importDataset = async (jsonData: string): Promise<boolean> => {
         version: dataset.version || '1.0',
         lastUpdated: dataset.lastUpdated || new Date().toISOString(),
       };
-      await SafeAsyncStorageJSONParser.setItem(QUEST_STORAGE_KEY, questDataset);
+      await writeDataset(QUEST_STORAGE_KEY, questDataset);
     }
 
     // Import Discord data if present
@@ -795,6 +807,7 @@ export const clearStorage = async (): Promise<void> => {
   await SafeAsyncStorageJSONParser.removeItem(LOCATION_STORAGE_KEY);
   await SafeAsyncStorageJSONParser.removeItem(EVENT_STORAGE_KEY);
   await SafeAsyncStorageJSONParser.removeItem(QUEST_STORAGE_KEY);
+  notifyLocalDataChanged();
 };
 
 // Faction management functions
@@ -806,7 +819,7 @@ export const saveFactions = async (
     version: '1.0',
     lastUpdated: new Date().toISOString(),
   };
-  await SafeAsyncStorageJSONParser.setItem(FACTION_STORAGE_KEY, dataset);
+  await writeDataset(FACTION_STORAGE_KEY, dataset);
 };
 
 export const loadFactions = async (): Promise<StoredFaction[]> => {
@@ -1320,7 +1333,7 @@ export const saveLocations = async (
     version: '1.0',
     lastUpdated: new Date().toISOString(),
   };
-  await SafeAsyncStorageJSONParser.setItem(LOCATION_STORAGE_KEY, dataset);
+  await writeDataset(LOCATION_STORAGE_KEY, dataset);
 };
 
 export const loadLocations = async (): Promise<GameLocation[]> => {
@@ -1458,7 +1471,7 @@ export const saveEvents = async (events: GameEvent[]): Promise<void> => {
     version: '1.0',
     lastUpdated: new Date().toISOString(),
   };
-  await SafeAsyncStorageJSONParser.setItem(EVENT_STORAGE_KEY, dataset);
+  await writeDataset(EVENT_STORAGE_KEY, dataset);
 };
 
 export const loadEvents = async (): Promise<GameEvent[]> => {
@@ -1565,7 +1578,7 @@ export const saveQuests = async (quests: GameQuest[]): Promise<void> => {
     version: '1.0',
     lastUpdated: new Date().toISOString(),
   };
-  await SafeAsyncStorageJSONParser.setItem(QUEST_STORAGE_KEY, dataset);
+  await writeDataset(QUEST_STORAGE_KEY, dataset);
 };
 
 export const loadQuests = async (): Promise<GameQuest[]> => {
