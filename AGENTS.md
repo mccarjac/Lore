@@ -46,7 +46,8 @@ src/
   components/common/    reusable UI (Card, Section, Header*Button, ...)
   components/screens/   Base{List,Form,Detail}Screen — generic screen scaffolds
   datastores/           THE BACKEND SEAM: the DataStore contract, the registry
-                        a consumer configures, and the json/ and github/ built-ins
+                        a consumer configures, and the json/, pdf/ and github/
+                        built-ins
   screens/<feature>/    character/ faction/ location/ events/ discord/
   models/               types.ts — all domain types, and nothing else
   ruleset/              THE ENGINE: attribute primitive, ruleset schema,
@@ -242,7 +243,7 @@ the images, and changes no tracked source at all.
   `computeSyncPlan` diffs them; normalizing only the written side would
   report every character as conflicting on the first sync after upgrade.
 - **Data stores are a plugin seam, not a fixed list (#29).** `src/datastores/`
-  holds the `DataStore` contract, a registry, and the two built-ins. A store
+  holds the `DataStore` contract, a registry, and the three built-ins. A store
   declares `actions` (the engine renders a button per action via
   `components/common/DataStoreSection.tsx`) or supplies its own `Section`
   component when a row of buttons will not do — GitHub needs a token dialog,
@@ -268,6 +269,30 @@ the images, and changes no tracked source at all.
     enables sync. A ruleset that still declares the flag fails to type-check;
     that is deliberate, since silently ignoring it would leave a consumer
     thinking sync was on.
+  - **The default is the stores that need no configuration**, which since #28
+    means two: `jsonDataStore` then `pdfDataStore`. GitHub needs a token and a
+    repository, so it stays an opt-in registration.
+- **A store need not be bidirectional (#28).** `pdfDataStore` declares one
+  `export` action and no import, because nothing reads a PDF back into a
+  dataset — that is what `DataStore`'s optional `actions` buys. Its shape is
+  worth copying for any export-only backend:
+  - `pdf/campaignHtml.ts` is a **pure function** — dataset + ruleset + resolved
+    images to an HTML string, reaching no Expo module. Every interesting
+    behavior (cross-references, terminology, feature gating, escaping) is
+    therefore a plain unit test, and `pdf/index.ts` stays a thin adapter over
+    `expo-print`. `pdf/dataset.ts` exists to keep it that way: the helpers both
+    it and `pdf/images.ts` need live there rather than in a module that imports
+    `expo-file-system`.
+  - **Escape everything interpolated.** The document is executed by a print
+    WebView and its content is user-authored.
+  - **The Discord chapter renders `messages` only.** `discord.config` and
+    `serverConfigs[].botToken` are deliberately unreachable from the renderer:
+    a document made to be shared must not carry a credential. There is a test
+    asserting exactly that, and it should stay.
+  - **Images are inlined as `data:` URIs, under a byte budget.** A `file://`
+    path would resolve against the print WebView rather than the app. The
+    budget is not politeness — the whole document is one string handed to a
+    WebView, and an unbounded one crashes rather than paginating.
 - **Which repository sync talks to is env-driven**, not hardcoded:
   `DATA_REPO_OWNER` / `DATA_REPO_NAME` / `DATA_REPO_BRANCH` in
   `gitIntegration.ts` read `EXPO_PUBLIC_DATA_REPO_*` and default to the data
@@ -612,7 +637,12 @@ Done since the list above was last written:
   notes carried over: `jest.setup.js` mocks `expo-file-system/legacy`, the
   specifier these files actually import, not bare `expo-file-system`; and
   `expo-sharing`'s mock needs `isAvailableAsync`, or the export path throws
-  instead of taking either branch.
+  instead of taking either branch. The PDF store (#28) inherits both, and adds
+  two of its own: `expo-print` is mocked in `jest.setup.js` (`printToFileAsync`
+  must resolve to an object with a `uri`, or the share branch destructures
+  `undefined`), and `downloadAsync` had to join the file-system mock for the
+  remote-image path. `tst/datastores/pdf/campaignHtml.test.ts` mocks nothing at
+  all, which is the point of that module.
 - ~~`src/screens/FactionStatsScreen.tsx`~~, ~~`CharacterStatsScreen.tsx`~~,
   ~~`CharacterSearchScreen.tsx`~~ and ~~navigation registration~~ — added in
   Phase 2, all rendered against `tst/fixtures/genericRuleset.ts` so they

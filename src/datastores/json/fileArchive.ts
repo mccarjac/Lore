@@ -75,10 +75,15 @@ export const extractImageData = (
   return { mimeType, base64Data, extension };
 };
 
-const isLocalFileUri = (uri: string): boolean =>
+/**
+ * Exported because the PDF store classifies the same three URI shapes on its
+ * way to `data:` URIs (#28). One definition of "is this ours to read?" rather
+ * than two that drift.
+ */
+export const isLocalFileUri = (uri: string): boolean =>
   uri.startsWith('file://') || uri.startsWith('/');
 
-const extensionOf = (uri: string): string =>
+export const extensionOf = (uri: string): string =>
   uri.split('.').pop()?.toLowerCase() || 'jpg';
 
 /**

@@ -41,13 +41,17 @@ describe('DataManagementScreen', () => {
     resetLoreConfig();
   });
 
-  it('renders the JSON store alone when nothing is registered', () => {
+  it('renders the default stores when nothing is registered', () => {
     const { getByText, queryByText } = render(<DataManagementScreen />);
 
     expect(getByText('JSON Data Management')).toBeTruthy();
     expect(getByText('Export Game Data')).toBeTruthy();
     expect(getByText('Import & Replace')).toBeTruthy();
     expect(getByText('Merge Data')).toBeTruthy();
+    // The PDF wiki is default-on too (#28), and export-only — one button.
+    expect(getByText('Campaign Wiki')).toBeTruthy();
+    expect(getByText('Export Campaign PDF')).toBeTruthy();
+    // GitHub still needs a token and a repository, so it stays opt-in.
     expect(queryByText('GitHub Repository Sync')).toBeNull();
   });
 
@@ -72,6 +76,7 @@ describe('DataManagementScreen', () => {
     const { getByText, queryByText } = render(<DataManagementScreen />);
 
     expect(queryByText('JSON Data Management')).toBeNull();
+    expect(queryByText('Campaign Wiki')).toBeNull();
     expect(queryByText('GitHub Repository Sync')).toBeNull();
     // Clearing data is the engine's, not a store's.
     expect(getByText('Danger Zone')).toBeTruthy();

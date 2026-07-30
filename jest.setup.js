@@ -26,6 +26,9 @@ jest.mock('expo-file-system/legacy', () => ({
   makeDirectoryAsync: jest.fn(),
   readDirectoryAsync: jest.fn(),
   copyAsync: jest.fn(),
+  // The PDF store's image resolver reaches for a remote Discord attachment the
+  // ingestion never wrote to disk.
+  downloadAsync: jest.fn(),
   EncodingType: { Base64: 'base64', UTF8: 'utf8' },
 }));
 
@@ -34,6 +37,15 @@ jest.mock('expo-sharing', () => ({
   // The JSON data store branches on this before sharing its .zip; without it
   // the export path throws instead of taking either branch.
   isAvailableAsync: jest.fn(async () => true),
+}));
+
+// The PDF data store's only native dependency. `printToFileAsync` resolves to
+// the written file on a device; `printAsync` is the web branch's print dialog.
+jest.mock('expo-print', () => ({
+  printToFileAsync: jest.fn(async () => ({
+    uri: 'file://mock-print/wiki.pdf',
+  })),
+  printAsync: jest.fn(),
 }));
 
 jest.mock('expo-document-picker', () => ({

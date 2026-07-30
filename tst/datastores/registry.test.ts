@@ -1,5 +1,6 @@
 import { getActiveDataStores } from '@/datastores/registry';
 import { jsonDataStore } from '@/datastores/json';
+import { pdfDataStore } from '@/datastores/pdf';
 import { githubDataStore } from '@/datastores/github';
 import type { DataStore } from '@/datastores/types';
 import {
@@ -25,14 +26,16 @@ describe('data store registry', () => {
     resetLoreConfig();
   });
 
-  it('offers the JSON store alone when a consumer registers nothing', () => {
+  it('offers the two zero-configuration stores when a consumer registers nothing', () => {
     configureLore({ ruleset: genericRuleset });
 
-    expect(getActiveDataStores()).toEqual([jsonDataStore]);
+    // Backup first, then the readable copy — the order they matter in when
+    // something has gone wrong.
+    expect(getActiveDataStores()).toEqual([jsonDataStore, pdfDataStore]);
   });
 
-  it('offers the JSON store before configureLore has ever run', () => {
-    expect(getActiveDataStores()).toEqual([jsonDataStore]);
+  it('offers the default stores before configureLore has ever run', () => {
+    expect(getActiveDataStores()).toEqual([jsonDataStore, pdfDataStore]);
   });
 
   it('offers nothing when a consumer registers an empty list', () => {
@@ -70,7 +73,7 @@ describe('data store registry', () => {
     resetLoreConfig();
 
     expect(getConfiguredDataStores()).toBeUndefined();
-    expect(getActiveDataStores()).toEqual([jsonDataStore]);
+    expect(getActiveDataStores()).toEqual([jsonDataStore, pdfDataStore]);
   });
 
   it('keeps GitHub opt-in', () => {

@@ -49,6 +49,7 @@ be installed by the app. Your `package.json` needs all of these:
 | `expo-file-system`                          | `~19.0.23` |
 | `expo-image-picker`                         | `~17.0.11` |
 | `expo-linear-gradient`                      | `~15.0.8`  |
+| `expo-print`                                | `~15.0.8`  |
 | `expo-sharing`                              | `~14.0.8`  |
 | `process`                                   | `^0.11.10` |
 | `react`                                     | `19.1.0`   |
@@ -72,8 +73,9 @@ be installed by the app. Your `package.json` needs all of these:
 Which of these you actually need depends on the [data stores](#data-stores) you
 register. `@octokit/rest` is only reached by `githubDataStore`, which is
 opt-in. `react-native-zip-archive` is reached by the default `jsonDataStore` —
-its export is a `.zip` — so omit it only if you disable that store too.
-`react-dom` and `react-native-web` are needed only if you build for web.
+its export is a `.zip` — and `expo-print` by the default `pdfDataStore`, so omit
+either only if you disable that store too. `react-dom` and `react-native-web`
+are needed only if you build for web.
 
 **Every range above that Expo manages is copied verbatim from the SDK**, not
 chosen. `node_modules/expo/bundledNativeModules.json` lists the versions Expo's
@@ -154,17 +156,24 @@ configureLore({
 });
 ```
 
-| `dataStores`     | What the screen offers              |
-| ---------------- | ----------------------------------- |
-| omitted          | `jsonDataStore` alone — the default |
-| `[]`             | nothing but the Danger Zone         |
-| an explicit list | exactly those, in that order        |
+| `dataStores`     | What the screen offers                           |
+| ---------------- | ------------------------------------------------ |
+| omitted          | `jsonDataStore` and `pdfDataStore` — the default |
+| `[]`             | nothing but the Danger Zone                      |
+| an explicit list | exactly those, in that order                     |
 
-Two ship with the engine:
+Three ship with the engine. The two that need no configuration are on by
+default; the one that needs a token is not.
 
 - **`jsonDataStore`** — local file export, import and merge. An export is a
   `.zip` holding `data.json` plus an `images/` tree; an import accepts that
   archive or a bare `.json`. On by default.
+- **`pdfDataStore`** — a printable campaign wiki: every character, faction,
+  location, event and quest, with their images embedded, cross-referenced by
+  name and titled with your ruleset's own terminology. Discord message logs are
+  included where the `discord` feature is on; Discord _configuration_ never is,
+  because it holds bot tokens. **Export only** — a PDF cannot be read back into
+  a dataset, so the store declares no import action. On by default.
 - **`githubDataStore`** — repository-backed sync with pull requests and
   three-way conflict resolution. Opt-in; see
   [github-sync.md](./github-sync.md). This replaced the ruleset's `gitSync`
