@@ -56,6 +56,15 @@ export function GenericListScreen<T, C = void>({
           gap: 8,
           alignItems: 'center',
         },
+        extraHeaderButton: {
+          ...commonStyles.headerButton.add,
+          width: undefined,
+          paddingHorizontal: 12,
+        },
+        extraHeaderButtonText: {
+          ...commonStyles.headerButton.addText,
+          fontSize: 14,
+        },
         quickActionsRow: {
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -227,12 +236,10 @@ export function GenericListScreen<T, C = void>({
         {extraHeaderButtons.map(button => (
           <TouchableOpacity
             key={button.key}
-            style={commonStyles.headerButton.add}
+            style={styles.extraHeaderButton}
             onPress={button.onPress}
           >
-            <Text style={commonStyles.headerButton.addText}>
-              {button.label}
-            </Text>
+            <Text style={styles.extraHeaderButtonText}>{button.label}</Text>
           </TouchableOpacity>
         ))}
         {menuSections.length > 0 && (
