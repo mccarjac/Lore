@@ -91,8 +91,10 @@ export const myFlavorRuleset: RulesetDefinition = {
     discord: false,
     map: false,
     modifications: true,
-    influenceReport: true,
-    relationshipGraph: true,
+    influenceReport: false,
+    relationshipGraph: false,
+    characterStats: false,
+    factionStats: false,
   },
   branding: { appName: 'My Flavor' },
 };
@@ -287,10 +289,16 @@ screens).
 
 ### Feature flags
 
-Seven booleans — `quests`, `recipes`, `discord`, `map`, `modifications`,
-`influenceReport`, `relationshipGraph` — gate **route registration** in
-`src/navigation/AppNavigator.tsx`. Turning one off hides the
-screens; the data stays, and turning it back on restores everything intact.
+Nine booleans — `quests`, `recipes`, `discord`, `map`, `modifications`,
+`influenceReport`, `relationshipGraph`, `characterStats`, `factionStats` —
+gate **route registration** in `src/navigation/AppNavigator.tsx`. Turning one
+off hides the screens; the data stays, and turning it back on restores
+everything intact.
+
+`influenceReport`, `relationshipGraph`, `characterStats` and `factionStats`
+are opt-in: they default to `false` in `exampleRuleset.ts` because they're
+reporting/analytics screens, not core content. When enabled, each gets its
+own drawer item — there is no header-icon path for them.
 
 Two traps: the drawer's item list and its screen list are maintained
 separately and **both** need gating, and `navigate()` into an unregistered
