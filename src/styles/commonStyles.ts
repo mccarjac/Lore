@@ -438,9 +438,16 @@ const buildBadgeStyles = (colors: ColorPalette) =>
 const buildSearchStyles = (colors: ColorPalette, shadows: Shadows) =>
   StyleSheet.create({
     container: {
-      position: 'relative',
+      flexDirection: 'row',
+      alignItems: 'center',
       margin: spacing.base,
       marginBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+
+    inputWrapper: {
+      flex: 1,
+      position: 'relative',
     },
 
     input: {
@@ -474,20 +481,40 @@ const buildSearchStyles = (colors: ColorPalette, shadows: Shadows) =>
       fontWeight: typography.fontWeight.semibold,
     },
 
-    filtersLink: {
-      marginHorizontal: spacing.base,
-      marginTop: -spacing.xs,
-      marginBottom: spacing.sm,
-      alignSelf: 'flex-start',
+    advancedButton: {
+      position: 'relative',
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...shadows.small,
     },
 
-    filtersLinkText: {
-      color: colors.accent.primary,
-      fontSize: typography.fontSize.sm,
+    advancedButtonText: {
+      fontSize: typography.fontSize.lg,
     },
 
-    filtersLinkTextActive: {
-      fontWeight: typography.fontWeight.semibold,
+    advancedButtonBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      paddingHorizontal: 3,
+      backgroundColor: colors.status.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    advancedButtonBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '700',
     },
   });
 

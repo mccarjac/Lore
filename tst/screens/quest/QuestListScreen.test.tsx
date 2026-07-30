@@ -59,7 +59,7 @@ describe('QuestListScreen — advanced search', () => {
     );
     expect(screen.getByText('Scout the Ruins')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Filters'));
+    fireEvent.press(screen.getByLabelText('Advanced search'));
 
     expect(nav.navigate).toHaveBeenCalledWith(
       'AdvancedSearch',

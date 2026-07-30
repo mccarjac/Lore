@@ -64,12 +64,14 @@ export function BaseListScreen<T>({
         },
         contentContainer: commonStyles.layout.contentContainer,
         searchContainer: commonStyles.search.container,
+        searchInputWrapper: commonStyles.search.inputWrapper,
         searchInput: commonStyles.search.input,
         clearSearchButton: commonStyles.search.clearButton,
         clearSearchText: commonStyles.search.clearText,
-        filtersLink: commonStyles.search.filtersLink,
-        filtersLinkText: commonStyles.search.filtersLinkText,
-        filtersLinkTextActive: commonStyles.search.filtersLinkTextActive,
+        advancedButton: commonStyles.search.advancedButton,
+        advancedButtonText: commonStyles.search.advancedButtonText,
+        advancedButtonBadge: commonStyles.search.advancedButtonBadge,
+        advancedButtonBadgeText: commonStyles.search.advancedButtonBadgeText,
         emptyContainer: {
           flex: 1,
           justifyContent: 'center',
@@ -118,45 +120,46 @@ export function BaseListScreen<T>({
     <View style={styles.container}>
       {showSearch && onSearchChange && (
         <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder={searchPlaceholder}
-            placeholderTextColor={themeColors.text.muted}
-            value={searchQuery}
-            onChangeText={onSearchChange}
-            autoCapitalize="none"
-            autoCorrect={false}
-            blurOnSubmit={false}
-            autoFocus={false}
-          />
-          {searchQuery.length > 0 && (
+          <View style={styles.searchInputWrapper}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={searchPlaceholder}
+              placeholderTextColor={themeColors.text.muted}
+              value={searchQuery}
+              onChangeText={onSearchChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+              blurOnSubmit={false}
+              autoFocus={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearSearchButton}
+                onPress={() => onSearchChange('')}
+              >
+                <Text style={styles.clearSearchText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {onAdvancedSearchPress && (
             <TouchableOpacity
-              style={styles.clearSearchButton}
-              onPress={() => onSearchChange('')}
+              style={styles.advancedButton}
+              onPress={onAdvancedSearchPress}
+              accessibilityRole="button"
+              accessibilityLabel="Advanced search"
             >
-              <Text style={styles.clearSearchText}>✕</Text>
+              <Text style={styles.advancedButtonText}>⚙️</Text>
+              {advancedFilterCount > 0 && (
+                <View style={styles.advancedButtonBadge}>
+                  <Text style={styles.advancedButtonBadgeText}>
+                    {advancedFilterCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           )}
         </View>
-      )}
-
-      {showSearch && onAdvancedSearchPress && (
-        <TouchableOpacity
-          style={styles.filtersLink}
-          onPress={onAdvancedSearchPress}
-          accessibilityRole="button"
-        >
-          <Text
-            style={[
-              styles.filtersLinkText,
-              advancedFilterCount > 0 && styles.filtersLinkTextActive,
-            ]}
-          >
-            {advancedFilterCount > 0
-              ? `Filters (${advancedFilterCount})`
-              : 'Filters'}
-          </Text>
-        </TouchableOpacity>
       )}
 
       <FlatList

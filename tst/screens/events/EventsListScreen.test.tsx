@@ -63,8 +63,10 @@ describe('EventsTimelineScreen — header actions', () => {
     ]);
     const screen = render(<EventsTimelineScreen />);
 
-    await waitFor(() => expect(screen.getByText('Filters')).toBeTruthy());
-    fireEvent.press(screen.getByText('Filters'));
+    await waitFor(() =>
+      expect(screen.getByLabelText('Advanced search')).toBeTruthy()
+    );
+    fireEvent.press(screen.getByLabelText('Advanced search'));
 
     expect(nav.navigate).toHaveBeenCalledWith(
       'AdvancedSearch',
@@ -101,7 +103,7 @@ describe('EventsTimelineScreen — header actions', () => {
     );
     expect(screen.getByText('The Rumored Sighting')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Filters'));
+    fireEvent.press(screen.getByLabelText('Advanced search'));
 
     const onApply = nav.navigate.mock.calls.find(
       call => call[0] === 'AdvancedSearch'
