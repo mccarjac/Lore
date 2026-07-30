@@ -121,6 +121,8 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
   const discord = useFeature('discord');
   const influenceReport = useFeature('influenceReport');
   const relationshipGraph = useFeature('relationshipGraph');
+  const characterStats = useFeature('characterStats');
+  const factionStats = useFeature('factionStats');
 
   const isActive = (routeName: string) => {
     const currentRoute = state.routes[state.index];
@@ -207,6 +209,28 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
           labelStyle={drawerStyles.drawerLabel}
         />
       )}
+      {characterStats && (
+        <DrawerItem
+          label={`${label('character.singular')} Statistics`}
+          onPress={() => navigation.navigate('CharacterStats')}
+          focused={isActive('CharacterStats')}
+          activeTintColor={activeTintColor}
+          inactiveTintColor={inactiveTintColor}
+          activeBackgroundColor={activeBackgroundColor}
+          labelStyle={drawerStyles.drawerLabel}
+        />
+      )}
+      {factionStats && (
+        <DrawerItem
+          label={`${label('faction.singular')} Statistics`}
+          onPress={() => navigation.navigate('FactionStats')}
+          focused={isActive('FactionStats')}
+          activeTintColor={activeTintColor}
+          inactiveTintColor={inactiveTintColor}
+          activeBackgroundColor={activeBackgroundColor}
+          labelStyle={drawerStyles.drawerLabel}
+        />
+      )}
       <DrawerItem
         label="Data Management"
         onPress={() => navigation.navigate('DataManagement')}
@@ -284,6 +308,8 @@ export function MainDrawer() {
   const discord = useFeature('discord');
   const influenceReport = useFeature('influenceReport');
   const relationshipGraph = useFeature('relationshipGraph');
+  const characterStats = useFeature('characterStats');
+  const factionStats = useFeature('factionStats');
 
   return (
     <Drawer.Navigator
@@ -374,6 +400,26 @@ export function MainDrawer() {
           options={{
             title: 'Relationship Graph',
             drawerLabel: 'Relationship Graph',
+          }}
+        />
+      )}
+      {characterStats && (
+        <Drawer.Screen
+          name="CharacterStats"
+          component={CharacterStatsScreen}
+          options={{
+            title: `${label('character.singular')} Statistics`,
+            drawerLabel: `${label('character.singular')} Statistics`,
+          }}
+        />
+      )}
+      {factionStats && (
+        <Drawer.Screen
+          name="FactionStats"
+          component={FactionStatsScreen}
+          options={{
+            title: `${label('faction.singular')} Statistics`,
+            drawerLabel: `${label('faction.singular')} Statistics`,
           }}
         />
       )}
@@ -491,16 +537,6 @@ export function AppNavigator() {
         name="AdvancedSearch"
         component={AdvancedSearchScreen}
         options={({ route }) => ({ title: route.params.title })}
-      />
-      <Stack.Screen
-        name="CharacterStats"
-        component={CharacterStatsScreen}
-        options={{ title: `${label('character.singular')} Statistics` }}
-      />
-      <Stack.Screen
-        name="FactionStats"
-        component={FactionStatsScreen}
-        options={{ title: `${label('faction.singular')} Statistics` }}
       />
       <Stack.Screen
         name="FactionDetails"

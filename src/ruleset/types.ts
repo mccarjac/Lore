@@ -136,6 +136,8 @@ export interface FeatureFlags {
   modifications: boolean;
   influenceReport: boolean;
   relationshipGraph: boolean;
+  characterStats: boolean;
+  factionStats: boolean;
 }
 
 /** Ruleset-level numeric limits that today are magic numbers in screens. */

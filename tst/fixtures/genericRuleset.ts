@@ -123,6 +123,8 @@ export const genericRuleset: RulesetDefinition = {
     modifications: true,
     influenceReport: false,
     relationshipGraph: true,
+    characterStats: false,
+    factionStats: false,
   },
   limits: { maxQualities: 1 },
   branding: { appName: 'Fixture' },
