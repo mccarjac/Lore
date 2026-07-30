@@ -19,8 +19,6 @@ import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
 import { useTheme } from '@/styles/theme';
 import {
   BaseListScreen,
-  HeaderAddButton,
-  HeaderSearchButton,
   ActiveFiltersBar,
   useEntitySearch,
   type FilterFieldConfig,
@@ -51,10 +49,6 @@ export const EventsTimelineScreen: React.FC = () => {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        headerRight: {
-          flexDirection: 'row',
-          gap: 8,
-        },
         eventCard: {
           backgroundColor: themeColors.surface,
           borderWidth: 1,
@@ -347,16 +341,6 @@ export const EventsTimelineScreen: React.FC = () => {
     });
   }, [navigation, filterFields, filterValues, setFilterValues]);
 
-  const renderHeaderRight = () => (
-    <View style={styles.headerRight}>
-      <HeaderSearchButton
-        activeCount={activeFilterCount}
-        onPress={handleSearchPress}
-      />
-      <HeaderAddButton onPress={() => navigation.navigate('EventsForm', {})} />
-    </View>
-  );
-
   return (
     <BaseListScreen
       data={filteredEvents}
@@ -365,9 +349,11 @@ export const EventsTimelineScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder="Search events..."
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       emptyStateTitle="No events found"
       emptyStateSubtitle="Tap the add button to create your first event"
-      headerRight={renderHeaderRight()}
+      onAddPress={() => navigation.navigate('EventsForm', {})}
       ListHeaderComponent={
         <ActiveFiltersBar
           fields={filterFields}

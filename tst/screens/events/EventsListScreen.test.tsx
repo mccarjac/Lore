@@ -61,12 +61,10 @@ describe('EventsTimelineScreen — header actions', () => {
     storage.loadEvents.mockResolvedValue([
       makeEvent({ id: 'e1', title: 'The Great Fire' }),
     ]);
-    render(<EventsTimelineScreen />);
+    const screen = render(<EventsTimelineScreen />);
 
-    await waitFor(() => expect(nav.setOptions).toHaveBeenCalled());
-    const header = render(getLastHeaderRight(nav));
-
-    fireEvent.press(header.getByText('🔍'));
+    await waitFor(() => expect(screen.getByText('Filters')).toBeTruthy());
+    fireEvent.press(screen.getByText('Filters'));
 
     expect(nav.navigate).toHaveBeenCalledWith(
       'AdvancedSearch',
@@ -103,8 +101,7 @@ describe('EventsTimelineScreen — header actions', () => {
     );
     expect(screen.getByText('The Rumored Sighting')).toBeTruthy();
 
-    const header = render(getLastHeaderRight(nav));
-    fireEvent.press(header.getByText('🔍'));
+    fireEvent.press(screen.getByText('Filters'));
 
     const onApply = nav.navigate.mock.calls.find(
       call => call[0] === 'AdvancedSearch'

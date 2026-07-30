@@ -28,7 +28,6 @@ import {
   BaseListScreen,
   HeaderAddButton,
   HeaderStatsButton,
-  HeaderSearchButton,
   ActiveFiltersBar,
   useEntitySearch,
 } from '@/components';
@@ -245,10 +244,6 @@ export const CharacterListScreen: React.FC = () => {
 
   const renderHeaderRight = () => (
     <View style={styles.headerRight}>
-      <HeaderSearchButton
-        activeCount={activeFilterCount}
-        onPress={handleSearchPress}
-      />
       <HeaderStatsButton
         onPress={() => navigation.navigate('CharacterStats')}
       />
@@ -266,6 +261,8 @@ export const CharacterListScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder={`Search ${label('character.plural', 'lower')} by name...`}
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       ListHeaderComponent={renderHeaderButtons()}
       headerRight={renderHeaderRight()}
       emptyStateTitle={`No ${label('character.plural', 'lower')} found`}

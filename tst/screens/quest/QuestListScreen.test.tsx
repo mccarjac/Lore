@@ -8,7 +8,6 @@ import { makeQuest } from '../../helpers/factories';
 import {
   installNavigationMock,
   resetNavigationMocks,
-  getLastHeaderRight,
 } from '../../helpers/navigation';
 
 jest.mock('@utils/characterStorage');
@@ -60,8 +59,7 @@ describe('QuestListScreen — advanced search', () => {
     );
     expect(screen.getByText('Scout the Ruins')).toBeTruthy();
 
-    const header = render(getLastHeaderRight(nav));
-    fireEvent.press(header.getByText('🔍'));
+    fireEvent.press(screen.getByText('Filters'));
 
     expect(nav.navigate).toHaveBeenCalledWith(
       'AdvancedSearch',

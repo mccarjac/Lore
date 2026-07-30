@@ -19,7 +19,6 @@ import { commonStyles } from '@/styles/commonStyles';
 import {
   BaseListScreen,
   HeaderAddButton,
-  HeaderSearchButton,
   ActiveFiltersBar,
   useEntitySearch,
   type FilterFieldConfig,
@@ -172,10 +171,6 @@ export const QuestListScreen: React.FC = () => {
       >
         <Text style={styles.headerProposalsButtonText}>Propose</Text>
       </TouchableOpacity>
-      <HeaderSearchButton
-        activeCount={activeFilterCount}
-        onPress={handleSearchPress}
-      />
       <HeaderAddButton onPress={handleCreateQuest} />
     </View>
   );
@@ -188,6 +183,8 @@ export const QuestListScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder={`Search ${label('quest.plural', 'lower')} by name...`}
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       emptyStateTitle={`No ${label('quest.plural', 'lower')} found`}
       emptyStateSubtitle={`Create a ${label('quest.singular', 'lower')} to get started`}
       headerRight={renderHeaderRight()}

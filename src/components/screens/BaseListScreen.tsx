@@ -30,6 +30,8 @@ export interface BaseListScreenProps<T> {
   contentContainerStyle?: ViewStyle;
   showSearch?: boolean;
   ListHeaderComponent?: ReactNode;
+  onAdvancedSearchPress?: () => void;
+  advancedFilterCount?: number;
 }
 
 export function BaseListScreen<T>({
@@ -46,6 +48,8 @@ export function BaseListScreen<T>({
   contentContainerStyle,
   showSearch = true,
   ListHeaderComponent,
+  onAdvancedSearchPress,
+  advancedFilterCount = 0,
 }: BaseListScreenProps<T>) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -63,6 +67,9 @@ export function BaseListScreen<T>({
         searchInput: commonStyles.search.input,
         clearSearchButton: commonStyles.search.clearButton,
         clearSearchText: commonStyles.search.clearText,
+        filtersLink: commonStyles.search.filtersLink,
+        filtersLinkText: commonStyles.search.filtersLinkText,
+        filtersLinkTextActive: commonStyles.search.filtersLinkTextActive,
         emptyContainer: {
           flex: 1,
           justifyContent: 'center',
@@ -131,6 +138,25 @@ export function BaseListScreen<T>({
             </TouchableOpacity>
           )}
         </View>
+      )}
+
+      {showSearch && onAdvancedSearchPress && (
+        <TouchableOpacity
+          style={styles.filtersLink}
+          onPress={onAdvancedSearchPress}
+          accessibilityRole="button"
+        >
+          <Text
+            style={[
+              styles.filtersLinkText,
+              advancedFilterCount > 0 && styles.filtersLinkTextActive,
+            ]}
+          >
+            {advancedFilterCount > 0
+              ? `Filters (${advancedFilterCount})`
+              : 'Filters'}
+          </Text>
+        </TouchableOpacity>
       )}
 
       <FlatList

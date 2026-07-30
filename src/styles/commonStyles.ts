@@ -473,6 +473,22 @@ const buildSearchStyles = (colors: ColorPalette, shadows: Shadows) =>
       fontSize: typography.fontSize.sm,
       fontWeight: typography.fontWeight.semibold,
     },
+
+    filtersLink: {
+      marginHorizontal: spacing.base,
+      marginTop: -spacing.xs,
+      marginBottom: spacing.sm,
+      alignSelf: 'flex-start',
+    },
+
+    filtersLinkText: {
+      color: colors.accent.primary,
+      fontSize: typography.fontSize.sm,
+    },
+
+    filtersLinkTextActive: {
+      fontWeight: typography.fontWeight.semibold,
+    },
   });
 
 const buildImageStyles = (colors: ColorPalette, shadows: Shadows) =>
