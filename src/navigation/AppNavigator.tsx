@@ -34,7 +34,7 @@ import { CharacterDetailScreen } from '@screens/character/CharacterDetailScreen'
 import { CharacterFormScreen } from '@screens/character/CharacterFormScreen';
 import { CharacterStatsScreen } from '@screens/CharacterStatsScreen';
 import { FactionStatsScreen } from '@screens/FactionStatsScreen';
-import { CharacterSearchScreen } from '@screens/character/CharacterSearchScreen';
+import { AdvancedSearchScreen } from '@screens/search/AdvancedSearchScreen';
 import { DataManagementScreen } from '@screens/DataManagementScreen';
 import { FactionListScreen } from '@screens/faction/FactionListScreen';
 import { FactionDetailsScreen } from '@screens/faction/FactionDetailScreen';
@@ -488,9 +488,9 @@ export function AppNavigator() {
         options={{ title: `${label('character.singular')} Form` }}
       />
       <Stack.Screen
-        name="CharacterSearch"
-        component={CharacterSearchScreen}
-        options={{ title: `Search ${label('character.plural')}` }}
+        name="AdvancedSearch"
+        component={AdvancedSearchScreen}
+        options={({ route }) => ({ title: route.params.title })}
       />
       <Stack.Screen
         name="CharacterStats"

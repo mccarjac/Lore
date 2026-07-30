@@ -11,7 +11,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
 import { useCommonStyles } from '@/styles/commonStyles';
-import { BaseListScreen, HeaderAddButton } from '@/components';
+import { BaseListScreen, HeaderAddButton, useEntitySearch } from '@/components';
 import { useFeature } from '@/ruleset';
 
 type LocationNavigationProp = CompositeNavigationProp<
@@ -28,7 +28,6 @@ interface LocationInfo {
 
 export const LocationListScreen: React.FC = () => {
   const [locationInfos, setLocationInfos] = useState<LocationInfo[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const navigation = useNavigation<LocationNavigationProp>();
   const mapEnabled = useFeature('map');
   const commonStyles = useCommonStyles();
@@ -127,27 +126,16 @@ export const LocationListScreen: React.FC = () => {
     }, [loadData])
   );
 
-  const getFilteredLocations = useCallback(() => {
-    let filtered = locationInfos;
-
-    // Filter by search query if provided
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        locationInfo =>
-          locationInfo.location.name.toLowerCase().includes(query) ||
-          (locationInfo.location.description &&
-            locationInfo.location.description.toLowerCase().includes(query))
-      );
-    }
-
-    return filtered;
-  }, [locationInfos, searchQuery]);
-
-  const filteredLocations = React.useMemo(
-    () => getFilteredLocations(),
-    [getFilteredLocations]
-  );
+  const {
+    searchQuery,
+    setSearchQuery,
+    results: filteredLocations,
+  } = useEntitySearch(locationInfos, {
+    searchableText: item => [
+      item.location.name,
+      item.location.description ?? '',
+    ],
+  });
 
   const handleLocationSelect = (locationInfo: LocationInfo) => {
     navigation.navigate('LocationDetails', {

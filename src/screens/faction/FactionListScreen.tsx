@@ -27,6 +27,7 @@ import {
   BaseListScreen,
   HeaderAddButton,
   HeaderStatsButton,
+  useEntitySearch,
 } from '@/components';
 import { useLabels } from '@/ruleset';
 
@@ -46,7 +47,6 @@ interface FactionInfo {
 
 export const FactionListScreen: React.FC = () => {
   const [factionInfos, setFactionInfos] = useState<FactionInfo[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [showRetired, setShowRetired] = useState<boolean>(false);
   const navigation = useNavigation<FactionNavigationProp>();
   const label = useLabels();
@@ -223,37 +223,25 @@ export const FactionListScreen: React.FC = () => {
     }, [loadData])
   );
 
-  const getFilteredFactions = useCallback(() => {
-    let filtered = factionInfos;
-
-    // Filter by retired status
-    if (showRetired) {
-      filtered = filtered.filter(factionInfo => factionInfo.retired === true);
-    } else {
-      filtered = filtered.filter(factionInfo => !factionInfo.retired);
+  const { searchQuery, setSearchQuery, results } = useEntitySearch(
+    factionInfos,
+    {
+      searchableText: item => [
+        item.faction.name,
+        item.faction.description ?? '',
+      ],
     }
+  );
 
-    // Filter by search query if provided
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        factionInfo =>
-          factionInfo.faction.name.toLowerCase().includes(query) ||
-          (factionInfo.faction.description &&
-            factionInfo.faction.description.toLowerCase().includes(query))
-      );
-    }
+  const filteredFactions = React.useMemo(() => {
+    const filtered = showRetired
+      ? results.filter(factionInfo => factionInfo.retired === true)
+      : results.filter(factionInfo => !factionInfo.retired);
 
-    // Sort alphabetically by faction name
-    return filtered.sort((a, b) =>
+    return [...filtered].sort((a, b) =>
       a.faction.name.localeCompare(b.faction.name)
     );
-  }, [factionInfos, searchQuery, showRetired]);
-
-  const filteredFactions = React.useMemo(
-    () => getFilteredFactions(),
-    [getFilteredFactions]
-  );
+  }, [results, showRetired]);
 
   const handleFactionSelect = (factionInfo: FactionInfo) => {
     navigation.navigate('FactionDetails', {

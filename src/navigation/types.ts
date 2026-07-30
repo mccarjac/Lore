@@ -4,6 +4,10 @@ import {
   GameEvent,
   GameQuest,
 } from '@models/types';
+import type {
+  FilterFieldConfig,
+  FilterValues,
+} from '@/components/search/filterFieldTypes';
 
 export type RootDrawerParamList = {
   GlobalSearch: undefined;
@@ -23,7 +27,12 @@ export type RootDrawerParamList = {
 
 export type RootStackParamList = {
   Main: undefined;
-  CharacterSearch: undefined;
+  AdvancedSearch: {
+    title: string;
+    fields: FilterFieldConfig[];
+    initialValues: FilterValues;
+    onApply: (values: FilterValues) => void;
+  };
   CharacterStats: undefined;
   FactionStats: undefined;
   FactionDetails: { factionName: string };

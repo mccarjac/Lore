@@ -6,6 +6,7 @@ export { HeaderAddButton } from './common/HeaderAddButton';
 export { HeaderEditButton } from './common/HeaderEditButton';
 export { HeaderDeleteButton } from './common/HeaderDeleteButton';
 export { HeaderStatsButton } from './common/HeaderStatsButton';
+export { HeaderSearchButton } from './common/HeaderSearchButton';
 export { Section } from './common/Section';
 export { CollapsibleSection } from './common/CollapsibleSection';
 export { Card } from './common/Card';
@@ -26,3 +27,11 @@ export type { GraphFilters } from './graph/GraphFilterBar';
 export { GraphLegend } from './graph/GraphLegend';
 export { GraphInfoCard } from './graph/GraphInfoCard';
 export { GraphSettingsPanel } from './graph/GraphSettingsPanel';
+export { ActiveFiltersBar } from './search/ActiveFiltersBar';
+export { useEntitySearch } from './search/useEntitySearch';
+export type {
+  FilterFieldConfig,
+  FilterValues,
+  SelectFilterField,
+  NumberFilterField,
+} from './search/filterFieldTypes';
