@@ -34,6 +34,16 @@ export interface LoadResult<T, C = void> {
   context: C;
 }
 
+export interface ListItemHelpers {
+  /**
+   * Re-runs `loadData` and refreshes the list in place. For a per-row
+   * mutation (e.g. Character's present/absent toggle) that isn't a bulk
+   * action but still needs the visible list to reflect the change
+   * immediately, `renderItem` calls this after the mutation resolves.
+   */
+  reload: () => Promise<void>;
+}
+
 export interface ListScreenConfig<T, C = void> {
   loadData: () => Promise<LoadResult<T, C>>;
   /**
@@ -45,7 +55,7 @@ export interface ListScreenConfig<T, C = void> {
    */
   initialContext?: C;
   keyExtractor: (item: T) => string;
-  renderItem: (item: T) => ReactNode;
+  renderItem: (item: T, helpers: ListItemHelpers) => ReactNode;
   searchableText: (item: T) => string[];
   useFilterFields: (context: C) => FilterFieldConfig[];
   initialFilterValues?: FilterValues;

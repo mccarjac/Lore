@@ -249,10 +249,15 @@ export function GenericListScreen<T, C = void>({
       </View>
     ) : undefined;
 
+  const renderItem = useCallback(
+    (item: T) => config.renderItem(item, { reload: loadData }),
+    [config, loadData]
+  );
+
   return (
     <BaseListScreen
       data={displayedResults}
-      renderItem={config.renderItem}
+      renderItem={renderItem}
       keyExtractor={config.keyExtractor}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}

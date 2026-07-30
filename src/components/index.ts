@@ -8,6 +8,7 @@ export type {
   BulkAction,
   HeaderButtonConfig,
   LoadResult,
+  ListItemHelpers,
 } from './screens/listScreenConfig';
 export { ErrorBoundary } from './common/ErrorBoundary';
 export { HeaderAddButton } from './common/HeaderAddButton';
