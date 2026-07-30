@@ -8,6 +8,7 @@ import { makeStoredFaction, makeCharacter } from '../../helpers/factories';
 import {
   installNavigationMock,
   resetNavigationMocks,
+  getLastHeaderRight,
 } from '../../helpers/navigation';
 
 jest.mock('@utils/characterStorage');
@@ -82,5 +83,30 @@ describe('FactionListScreen — advanced search', () => {
       expect(screen.queryByText('Void Cult')).toBeNull();
       expect(screen.getByText('Iron Legion')).toBeTruthy();
     });
+  });
+});
+
+describe('FactionListScreen — header menu', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    primeStorageDefaults();
+  });
+
+  afterEach(() => {
+    resetNavigationMocks();
+  });
+
+  it('navigates to FactionStats from the Statistics menu section', async () => {
+    const nav = installNavigationMock();
+    render(<FactionListScreen />);
+
+    await waitFor(() => expect(nav.setOptions).toHaveBeenCalled());
+    const header = render(getLastHeaderRight(nav));
+
+    fireEvent.press(header.getByLabelText('More options'));
+    expect(header.getByText('Statistics')).toBeTruthy();
+
+    fireEvent.press(header.getByText('Faction Statistics'));
+    expect(nav.navigate).toHaveBeenCalledWith('FactionStats');
   });
 });
