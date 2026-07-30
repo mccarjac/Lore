@@ -27,7 +27,9 @@ import {
   BaseListScreen,
   HeaderAddButton,
   HeaderStatsButton,
+  ActiveFiltersBar,
   useEntitySearch,
+  type FilterFieldConfig,
 } from '@/components';
 import { useLabels } from '@/ruleset';
 
@@ -44,6 +46,20 @@ interface FactionInfo {
   standingCounts: Record<string, number>;
   retired?: boolean;
 }
+
+const factionFilterFields: FilterFieldConfig[] = [
+  {
+    key: 'standing',
+    type: 'select',
+    label: 'Standing',
+    options: Object.values(RelationshipStanding).map(standing => ({
+      value: standing,
+      label: standing,
+    })),
+    matches: (item, value) =>
+      ((item as FactionInfo).standingCounts[value] ?? 0) > 0,
+  },
+];
 
 export const FactionListScreen: React.FC = () => {
   const [factionInfos, setFactionInfos] = useState<FactionInfo[]>([]);
@@ -223,15 +239,26 @@ export const FactionListScreen: React.FC = () => {
     }, [loadData])
   );
 
-  const { searchQuery, setSearchQuery, results } = useEntitySearch(
-    factionInfos,
-    {
-      searchableText: item => [
-        item.faction.name,
-        item.faction.description ?? '',
-      ],
-    }
-  );
+  const {
+    searchQuery,
+    setSearchQuery,
+    filterValues,
+    setFilterValues,
+    activeFilterCount,
+    results,
+  } = useEntitySearch(factionInfos, {
+    searchableText: item => [item.faction.name, item.faction.description ?? ''],
+    filterFields: factionFilterFields,
+  });
+
+  const handleSearchPress = useCallback(() => {
+    navigation.navigate('AdvancedSearch', {
+      title: `Search ${label('faction.plural')}`,
+      fields: factionFilterFields,
+      initialValues: filterValues,
+      onApply: setFilterValues,
+    });
+  }, [navigation, label, filterValues, setFilterValues]);
 
   const filteredFactions = React.useMemo(() => {
     const filtered = showRetired
@@ -350,8 +377,19 @@ export const FactionListScreen: React.FC = () => {
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       searchPlaceholder={`Search ${label('faction.plural', 'lower')} by name...`}
+      onAdvancedSearchPress={handleSearchPress}
+      advancedFilterCount={activeFilterCount}
       emptyStateTitle={`No ${label('faction.plural', 'lower')} found`}
       headerRight={renderHeaderRight()}
+      ListHeaderComponent={
+        <ActiveFiltersBar
+          fields={factionFilterFields}
+          values={filterValues}
+          onRemove={key =>
+            setFilterValues({ ...filterValues, [key]: undefined })
+          }
+        />
+      }
     />
   );
 };
