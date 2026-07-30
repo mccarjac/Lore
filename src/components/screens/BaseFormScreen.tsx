@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { layout } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 
 export interface BaseFormScreenProps {
   children: ReactNode;
@@ -26,6 +26,23 @@ export function BaseFormScreen({
   enableKeyboardAvoidance = true,
 }: BaseFormScreenProps) {
   const insets = useSafeAreaInsets();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        keyboardView: {
+          flex: 1,
+        },
+        container: {
+          flex: 1,
+          height: 882,
+          overflow: 'scroll',
+        },
+        scrollView: commonStyles.layout.scrollView,
+        contentContainer: commonStyles.layout.contentContainer,
+      }),
+    [commonStyles]
+  );
 
   const content = (
     <View style={styles.container}>
@@ -62,16 +79,3 @@ export function BaseFormScreen({
 
   return content;
 }
-
-const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    height: 882,
-    overflow: 'scroll',
-  },
-  scrollView: commonStyles.layout.scrollView,
-  contentContainer: commonStyles.layout.contentContainer,
-});

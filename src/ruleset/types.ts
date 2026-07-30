@@ -9,6 +9,12 @@ import type { AttributeBag, AttributeDefinition } from './attributes';
 export type { AttributeBag, AttributeDefinition };
 
 export type TermKey =
+  | 'character.singular'
+  | 'character.plural'
+  | 'faction.singular'
+  | 'faction.plural'
+  | 'quest.singular'
+  | 'quest.plural'
   | 'archetype.singular'
   | 'archetype.plural'
   | 'trait.singular'
@@ -137,6 +143,80 @@ export interface RulesetLimits {
   maxQualities?: number;
 }
 
+/**
+ * A single brand color — any valid CSS/React-Native color string (hex,
+ * `rgba(...)`, a named color). Kept as a plain string rather than a
+ * branded type so the ruleset stays JSON-serializable.
+ */
+export type ColorToken = string;
+
+/**
+ * The engine's full color vocabulary. `src/styles/theme.ts` owns the
+ * default values; this interface is the shape a ruleset's `branding.colors`
+ * may override, declared here (not in `styles/`) so the engine schema has
+ * no dependency on the styling layer — `theme.ts` depends on this type,
+ * never the other way round.
+ */
+export interface ColorPalette {
+  primary: ColorToken;
+  secondary: ColorToken;
+  surface: ColorToken;
+  elevated: ColorToken;
+  text: {
+    primary: ColorToken;
+    secondary: ColorToken;
+    muted: ColorToken;
+    accent: ColorToken;
+  };
+  accent: {
+    primary: ColorToken;
+    secondary: ColorToken;
+    success: ColorToken;
+    warning: ColorToken;
+    danger: ColorToken;
+    info: ColorToken;
+  };
+  status: {
+    success: ColorToken;
+    warning: ColorToken;
+    error: ColorToken;
+    info: ColorToken;
+    present: ColorToken;
+    absent: ColorToken;
+  };
+  standing: {
+    allied: ColorToken;
+    friendly: ColorToken;
+    neutral: ColorToken;
+    hostile: ColorToken;
+    enemy: ColorToken;
+  };
+  certainty: {
+    confirmed: ColorToken;
+    unconfirmed: ColorToken;
+    disputed: ColorToken;
+  };
+  interactive: {
+    hover: ColorToken;
+    pressed: ColorToken;
+    disabled: ColorToken;
+  };
+  border: ColorToken;
+  borderLight: ColorToken;
+  shadow: ColorToken;
+}
+
+/**
+ * What a ruleset may override — every leaf is optional, so
+ * `branding.colors: {}` (or omitting it entirely) is a complete, valid
+ * choice that changes nothing.
+ */
+export type ColorPaletteOverrides = {
+  [K in keyof ColorPalette]?: ColorPalette[K] extends ColorToken
+    ? ColorToken
+    : Partial<ColorPalette[K]>;
+};
+
 export interface RulesetDefinition {
   id: string;
   name: string;
@@ -170,5 +250,12 @@ export interface RulesetDefinition {
     appName: string;
     iconKey?: string;
     splashKey?: string;
+    /**
+     * Brand color overrides, merged over `styles/theme.ts`'s defaults.
+     * Omit entirely (or `{}`) to use the engine's default dark theme —
+     * that is what every ruleset gets today, and stays true for any
+     * ruleset that never sets this.
+     */
+    colors?: ColorPaletteOverrides;
   };
 }

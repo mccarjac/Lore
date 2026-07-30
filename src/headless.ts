@@ -28,6 +28,7 @@ export {
   type Quality,
   type Recipe,
   type RulesetLimits,
+  type ColorPaletteOverrides,
   type TermKey,
   type TerminologyMap,
   type Trait,
@@ -45,6 +46,17 @@ export {
   calculateDerivedStats,
   type DerivedStats,
 } from './ruleset';
+
+// `theme.ts` has no React Native import — `ColorPalette` and the pure
+// merge/lookup functions are as headless as the rest of the ruleset schema.
+// `useTheme()` stays main-entry-only; it's a hook meant to run inside a
+// rendered screen, not something a ruleset's own tests call.
+export {
+  DEFAULT_COLORS,
+  mergeColors,
+  getActiveColors,
+  type ColorPalette,
+} from './styles/theme';
 
 export {
   type AttributeRole,

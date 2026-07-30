@@ -32,8 +32,8 @@ import {
 } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import {
   BaseDetailScreen,
   Section,
@@ -42,6 +42,7 @@ import {
 } from '@/components';
 import { Picker } from '@react-native-picker/picker';
 import Markdown from 'react-native-markdown-display';
+import { useLabels } from '@/ruleset';
 
 type FactionDetailsRouteProp = RouteProp<RootStackParamList, 'FactionDetails'>;
 type FactionDetailsNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -54,6 +55,7 @@ interface FactionMemberInfo {
 export const FactionDetailsScreen: React.FC = () => {
   const route = useRoute<FactionDetailsRouteProp>();
   const navigation = useNavigation<FactionDetailsNavigationProp>();
+  const label = useLabels();
   const { factionName } = route.params || {};
 
   const [members, setMembers] = useState<FactionMemberInfo[]>([]);
@@ -69,13 +71,410 @@ export const FactionDetailsScreen: React.FC = () => {
   const [selectedCharacter, setSelectedCharacter] = useState<string>('');
   const [selectedStanding, setSelectedStanding] =
     useState<RelationshipStanding>(RelationshipStanding.Neutral);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        statsGrid: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: 20,
+        },
+        statCard: {
+          ...commonStyles.card.base,
+          alignItems: 'center',
+          flex: 1,
+          marginHorizontal: 4,
+        },
+        statValue: {
+          fontSize: 24,
+          fontWeight: '700',
+          color: themeColors.text.primary,
+          marginBottom: 4,
+        },
+        statLabel: {
+          fontSize: 12,
+          color: themeColors.text.muted,
+          textAlign: 'center',
+        },
+        standingDistribution: {
+          ...commonStyles.card.base,
+        },
+        sectionSubtitle: {
+          ...commonStyles.text.h3,
+          marginBottom: 12,
+        },
+        standingGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+        },
+        standingCard: {
+          padding: 12,
+          borderRadius: 8,
+          alignItems: 'center',
+          minWidth: 70,
+        },
+        standingCardCount: {
+          fontSize: 18,
+          fontWeight: '700',
+          marginBottom: 2,
+        },
+        standingCardLabel: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
+        sectionDescription: {
+          fontSize: 14,
+          color: themeColors.text.secondary,
+          marginBottom: 16,
+          lineHeight: 20,
+        },
+        membersList: {
+          // Remove maxHeight constraint since we're using ScrollView now
+        },
+        memberCard: {
+          ...commonStyles.card.base,
+          marginBottom: 12,
+          overflow: 'hidden',
+        },
+        memberCardPresent: {
+          borderLeftWidth: 4,
+          borderLeftColor: themeColors.status.present,
+        },
+        memberContainer: {
+          padding: 16,
+        },
+        memberName: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          marginBottom: 12,
+        },
+        memberActions: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
+        removeIconButton: {
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: themeColors.accent.danger,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        removeIconText: {
+          color: themeColors.text.primary,
+          fontSize: 24,
+          fontWeight: '700',
+          lineHeight: 24,
+        },
+        addMemberForm: {
+          ...commonStyles.card.base,
+          padding: 16,
+        },
+        formLabel: {
+          ...commonStyles.text.label,
+          marginBottom: 8,
+          marginTop: 12,
+        },
+        pickerContainer: {
+          backgroundColor: themeColors.elevated,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+          overflow: 'hidden',
+        },
+        picker: {
+          color: themeColors.text.primary,
+          height: 50,
+        },
+        addButton: {
+          ...commonStyles.button.primary,
+          marginTop: 20,
+          paddingVertical: 12,
+        },
+        addButtonDisabled: {
+          opacity: 0.5,
+          backgroundColor: themeColors.interactive.disabled,
+        },
+        addButtonText: {
+          color: themeColors.text.primary,
+          fontSize: 16,
+          fontWeight: '600',
+          textAlign: 'center',
+        },
+        noCharactersText: {
+          fontSize: 14,
+          color: themeColors.text.secondary,
+          textAlign: 'center',
+          padding: 20,
+        },
+        modalOverlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        },
+        modalContent: {
+          backgroundColor: themeColors.surface,
+          borderRadius: 16,
+          padding: 24,
+          width: '100%',
+          maxWidth: 400,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        modalTitle: {
+          fontSize: 20,
+          fontWeight: '700',
+          color: themeColors.text.primary,
+          marginBottom: 8,
+          textAlign: 'center',
+        },
+        modalSubtitle: {
+          fontSize: 16,
+          color: themeColors.text.secondary,
+          marginBottom: 24,
+          textAlign: 'center',
+        },
+        modalButtons: {
+          gap: 10,
+          marginBottom: 20,
+        },
+        modalStandingButton: {
+          paddingVertical: 14,
+          paddingHorizontal: 20,
+          borderRadius: 8,
+          alignItems: 'center',
+        },
+        modalStandingText: {
+          fontSize: 16,
+          fontWeight: '600',
+        },
+        modalCancelButton: {
+          paddingVertical: 12,
+          alignItems: 'center',
+        },
+        modalCancelText: {
+          fontSize: 16,
+          color: themeColors.text.secondary,
+          fontWeight: '600',
+        },
+        standingBadge: {
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 8,
+          alignItems: 'center',
+        },
+        standingAllied: {
+          backgroundColor: themeColors.standing.allied,
+        },
+        standingFriendly: {
+          backgroundColor: themeColors.standing.friendly,
+        },
+        standingNeutral: {
+          backgroundColor: themeColors.standing.neutral,
+        },
+        standingHostile: {
+          backgroundColor: themeColors.standing.hostile,
+        },
+        standingEnemy: {
+          backgroundColor: themeColors.standing.enemy,
+        },
+        standingText: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.2,
+        },
+        standingTextLight: {
+          color: themeColors.text.primary,
+        },
+        standingTextDark: {
+          color: themeColors.text.primary,
+        },
+        presentBadge: {
+          ...commonStyles.badge.base,
+          paddingHorizontal: 8,
+          paddingVertical: 3,
+          borderRadius: 12,
+        },
+        presentBadgeActive: {
+          backgroundColor: themeColors.status.present,
+          borderColor: themeColors.status.present,
+        },
+        presentBadgeText: {
+          fontSize: 10,
+          fontWeight: '600',
+          color: themeColors.text.muted,
+          letterSpacing: 0.3,
+        },
+        presentBadgeTextActive: {
+          color: themeColors.text.primary,
+        },
+
+        // Faction Header Styles
+        factionHeader: {
+          ...commonStyles.card.base,
+          padding: 20,
+          marginBottom: 24,
+        },
+        factionName: {
+          ...commonStyles.text.h1,
+          textAlign: 'center',
+          marginBottom: 16,
+        },
+
+        // Description Styles
+        descriptionSection: {
+          marginTop: 8,
+        },
+        descriptionLabel: {
+          ...commonStyles.text.label,
+          marginBottom: 12,
+        },
+        descriptionDisplay: {
+          backgroundColor: themeColors.elevated,
+          padding: 16,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+          minHeight: 80,
+        },
+        descriptionText: {
+          fontSize: 14,
+          color: themeColors.text.primary,
+          lineHeight: 20,
+        },
+
+        // Image Gallery Styles
+        imageGallerySection: {
+          marginTop: 16,
+          marginBottom: 16,
+        },
+        imageGalleryLabel: {
+          ...commonStyles.text.label,
+          marginBottom: 12,
+        },
+        imageGallery: {
+          flexDirection: 'row',
+        },
+        factionImage: {
+          width: 150,
+          height: 150,
+          borderRadius: 12,
+          marginRight: 12,
+          backgroundColor: themeColors.surface,
+        },
+        relationshipsContainer: {
+          gap: 8,
+        },
+        relationshipCard: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 14,
+          borderRadius: 10,
+        },
+        relationshipCardContent: {
+          flex: 1,
+        },
+        relationshipCardName: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          marginBottom: 4,
+        },
+        relationshipCardType: {
+          fontSize: 12,
+          fontWeight: '500',
+        },
+        relationshipCardArrow: {
+          fontSize: 20,
+          fontWeight: '600',
+          marginLeft: 12,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
+
+  const markdownStyles = useMemo(
+    () => ({
+      body: {
+        color: themeColors.text.primary,
+        fontSize: 14,
+        lineHeight: 20,
+      },
+      heading1: {
+        color: themeColors.text.primary,
+        fontSize: 20,
+        fontWeight: '700' as const,
+        marginBottom: 8,
+      },
+      heading2: {
+        color: themeColors.text.primary,
+        fontSize: 18,
+        fontWeight: '600' as const,
+        marginBottom: 6,
+      },
+      heading3: {
+        color: themeColors.text.primary,
+        fontSize: 16,
+        fontWeight: '600' as const,
+        marginBottom: 4,
+      },
+      paragraph: {
+        color: themeColors.text.primary,
+        marginBottom: 10,
+      },
+      strong: {
+        fontWeight: '700' as const,
+      },
+      em: {
+        fontStyle: 'italic' as const,
+      },
+      link: {
+        color: themeColors.accent.primary,
+      },
+      list_item: {
+        color: themeColors.text.primary,
+      },
+      bullet_list: {
+        marginBottom: 10,
+      },
+      ordered_list: {
+        marginBottom: 10,
+      },
+      code_inline: {
+        backgroundColor: themeColors.elevated,
+        color: themeColors.accent.info,
+        fontFamily: 'monospace' as const,
+        padding: 2,
+        borderRadius: 4,
+      },
+      code_block: {
+        backgroundColor: themeColors.elevated,
+        color: themeColors.text.primary,
+        fontFamily: 'monospace' as const,
+        padding: 10,
+        borderRadius: 6,
+        marginBottom: 10,
+      },
+    }),
+    [themeColors]
+  );
 
   // Guard against missing factionName param
   React.useEffect(() => {
     if (!factionName) {
-      Alert.alert('Error', 'Faction name is missing. Please try again.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert(
+        'Error',
+        `${label('faction.singular')} name is missing. Please try again.`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     }
   }, [factionName, navigation]);
 
@@ -438,7 +837,9 @@ export const FactionDetailsScreen: React.FC = () => {
         {/* Faction Images */}
         {factionImageUris && factionImageUris.length > 0 && (
           <View style={styles.imageGallerySection}>
-            <Text style={styles.imageGalleryLabel}>Faction Images</Text>
+            <Text style={styles.imageGalleryLabel}>
+              {label('faction.singular')} Images
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -530,7 +931,7 @@ export const FactionDetailsScreen: React.FC = () => {
       {/* Faction Relationships */}
       {factionRelationships.length > 0 && (
         <CollapsibleSection
-          title="Faction Relationships"
+          title={`${label('faction.singular')} Relationships`}
           defaultCollapsed={true}
         >
           <View style={styles.relationshipsContainer}>
@@ -614,7 +1015,9 @@ export const FactionDetailsScreen: React.FC = () => {
       <Section title="Add Members">
         {nonMembers.length > 0 ? (
           <View style={styles.addMemberForm}>
-            <Text style={styles.formLabel}>Select Character</Text>
+            <Text style={styles.formLabel}>
+              Select {label('character.singular')}
+            </Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={selectedCharacter}
@@ -728,391 +1131,4 @@ export const FactionDetailsScreen: React.FC = () => {
       </Modal>
     </BaseDetailScreen>
   );
-};
-
-const styles = StyleSheet.create({
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  statCard: {
-    ...commonStyles.card.base,
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: themeColors.text.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: themeColors.text.muted,
-    textAlign: 'center',
-  },
-  standingDistribution: {
-    ...commonStyles.card.base,
-  },
-  sectionSubtitle: {
-    ...commonStyles.text.h3,
-    marginBottom: 12,
-  },
-  standingGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  standingCard: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    minWidth: 70,
-  },
-  standingCardCount: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  standingCardLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    fontSize: 14,
-    color: themeColors.text.secondary,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  membersList: {
-    // Remove maxHeight constraint since we're using ScrollView now
-  },
-  memberCard: {
-    ...commonStyles.card.base,
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  memberCardPresent: {
-    borderLeftWidth: 4,
-    borderLeftColor: themeColors.status.present,
-  },
-  memberContainer: {
-    padding: 16,
-  },
-  memberName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    marginBottom: 12,
-  },
-  memberActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  removeIconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: themeColors.accent.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeIconText: {
-    color: themeColors.text.primary,
-    fontSize: 24,
-    fontWeight: '700',
-    lineHeight: 24,
-  },
-  addMemberForm: {
-    ...commonStyles.card.base,
-    padding: 16,
-  },
-  formLabel: {
-    ...commonStyles.text.label,
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  pickerContainer: {
-    backgroundColor: themeColors.elevated,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    overflow: 'hidden',
-  },
-  picker: {
-    color: themeColors.text.primary,
-    height: 50,
-  },
-  addButton: {
-    ...commonStyles.button.primary,
-    marginTop: 20,
-    paddingVertical: 12,
-  },
-  addButtonDisabled: {
-    opacity: 0.5,
-    backgroundColor: themeColors.interactive.disabled,
-  },
-  addButtonText: {
-    color: themeColors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  noCharactersText: {
-    fontSize: 14,
-    color: themeColors.text.secondary,
-    textAlign: 'center',
-    padding: 20,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: themeColors.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: themeColors.text.primary,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    color: themeColors.text.secondary,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  modalButtons: {
-    gap: 10,
-    marginBottom: 20,
-  },
-  modalStandingButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalStandingText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalCancelButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    fontSize: 16,
-    color: themeColors.text.secondary,
-    fontWeight: '600',
-  },
-  standingBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  standingAllied: {
-    backgroundColor: themeColors.standing.allied,
-  },
-  standingFriendly: {
-    backgroundColor: themeColors.standing.friendly,
-  },
-  standingNeutral: {
-    backgroundColor: themeColors.standing.neutral,
-  },
-  standingHostile: {
-    backgroundColor: themeColors.standing.hostile,
-  },
-  standingEnemy: {
-    backgroundColor: themeColors.standing.enemy,
-  },
-  standingText: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  standingTextLight: {
-    color: themeColors.text.primary,
-  },
-  standingTextDark: {
-    color: themeColors.text.primary,
-  },
-  presentBadge: {
-    ...commonStyles.badge.base,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  presentBadgeActive: {
-    backgroundColor: themeColors.status.present,
-    borderColor: themeColors.status.present,
-  },
-  presentBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: themeColors.text.muted,
-    letterSpacing: 0.3,
-  },
-  presentBadgeTextActive: {
-    color: themeColors.text.primary,
-  },
-
-  // Faction Header Styles
-  factionHeader: {
-    ...commonStyles.card.base,
-    padding: 20,
-    marginBottom: 24,
-  },
-  factionName: {
-    ...commonStyles.text.h1,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-
-  // Description Styles
-  descriptionSection: {
-    marginTop: 8,
-  },
-  descriptionLabel: {
-    ...commonStyles.text.label,
-    marginBottom: 12,
-  },
-  descriptionDisplay: {
-    backgroundColor: themeColors.elevated,
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    minHeight: 80,
-  },
-  descriptionText: {
-    fontSize: 14,
-    color: themeColors.text.primary,
-    lineHeight: 20,
-  },
-
-  // Image Gallery Styles
-  imageGallerySection: {
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  imageGalleryLabel: {
-    ...commonStyles.text.label,
-    marginBottom: 12,
-  },
-  imageGallery: {
-    flexDirection: 'row',
-  },
-  factionImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 12,
-    marginRight: 12,
-    backgroundColor: themeColors.surface,
-  },
-  relationshipsContainer: {
-    gap: 8,
-  },
-  relationshipCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 10,
-  },
-  relationshipCardContent: {
-    flex: 1,
-  },
-  relationshipCardName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    marginBottom: 4,
-  },
-  relationshipCardType: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  relationshipCardArrow: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginLeft: 12,
-  },
-});
-
-const markdownStyles = {
-  body: {
-    color: themeColors.text.primary,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  heading1: {
-    color: themeColors.text.primary,
-    fontSize: 20,
-    fontWeight: '700' as const,
-    marginBottom: 8,
-  },
-  heading2: {
-    color: themeColors.text.primary,
-    fontSize: 18,
-    fontWeight: '600' as const,
-    marginBottom: 6,
-  },
-  heading3: {
-    color: themeColors.text.primary,
-    fontSize: 16,
-    fontWeight: '600' as const,
-    marginBottom: 4,
-  },
-  paragraph: {
-    color: themeColors.text.primary,
-    marginBottom: 10,
-  },
-  strong: {
-    fontWeight: '700' as const,
-  },
-  em: {
-    fontStyle: 'italic' as const,
-  },
-  link: {
-    color: themeColors.accent.primary,
-  },
-  list_item: {
-    color: themeColors.text.primary,
-  },
-  bullet_list: {
-    marginBottom: 10,
-  },
-  ordered_list: {
-    marginBottom: 10,
-  },
-  code_inline: {
-    backgroundColor: themeColors.elevated,
-    color: themeColors.accent.info,
-    fontFamily: 'monospace' as const,
-    padding: 2,
-    borderRadius: 4,
-  },
-  code_block: {
-    backgroundColor: themeColors.elevated,
-    color: themeColors.text.primary,
-    fontFamily: 'monospace' as const,
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 10,
-  },
 };

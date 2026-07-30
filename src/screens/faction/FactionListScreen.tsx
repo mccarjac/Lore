@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import {
   GameCharacter,
@@ -21,12 +21,14 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import {
   BaseListScreen,
   HeaderAddButton,
   HeaderStatsButton,
 } from '@/components';
+import { useLabels } from '@/ruleset';
 
 type FactionNavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'Factions'>,
@@ -47,6 +49,82 @@ export const FactionListScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showRetired, setShowRetired] = useState<boolean>(false);
   const navigation = useNavigation<FactionNavigationProp>();
+  const label = useLabels();
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        headerRight: {
+          flexDirection: 'row',
+          gap: 8,
+          alignItems: 'center',
+        },
+        toggleButton: {
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 16,
+          borderWidth: 1,
+          minWidth: 70,
+          alignItems: 'center',
+        },
+        toggleButtonActive: {
+          // Same '#6C5CE7' AppNavigator's drawer highlight used to hardcode
+          // — mapped to accent.primary there, same mapping here.
+          backgroundColor: themeColors.accent.primary,
+          borderColor: themeColors.accent.primary,
+        },
+        toggleButtonInactive: {
+          backgroundColor: 'transparent',
+          borderColor: themeColors.accent.primary,
+        },
+        toggleButtonText: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+        factionCard: commonStyles.card.base,
+        factionContent: {
+          flex: 1,
+        },
+        factionHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: 12,
+        },
+        factionName: {
+          ...commonStyles.text.h3,
+          flex: 1,
+        },
+        factionCounts: {
+          alignItems: 'flex-end',
+        },
+        countText: {
+          ...commonStyles.text.body,
+          fontWeight: '500',
+        },
+        presentText: commonStyles.text.caption,
+        standingsContainer: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+        },
+        standingBadge: {
+          ...commonStyles.badge.base,
+          minWidth: 60,
+        },
+        standingAllied: commonStyles.badge.allied,
+        standingFriendly: commonStyles.badge.friendly,
+        standingNeutral: commonStyles.badge.neutral,
+        standingHostile: commonStyles.badge.hostile,
+        standingEnemy: commonStyles.badge.enemy,
+        standingText: commonStyles.badge.text,
+        standingTextLight: commonStyles.badge.text,
+        standingTextDark: commonStyles.badge.text,
+      }),
+    [commonStyles, themeColors]
+  );
 
   const loadData = useCallback(async () => {
     // Run migration on first load (idempotent operation)
@@ -283,77 +361,9 @@ export const FactionListScreen: React.FC = () => {
       keyExtractor={(item: FactionInfo) => item.faction.name}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
-      searchPlaceholder="Search factions by name..."
-      emptyStateTitle="No factions found"
+      searchPlaceholder={`Search ${label('faction.plural', 'lower')} by name...`}
+      emptyStateTitle={`No ${label('faction.plural', 'lower')} found`}
       headerRight={renderHeaderRight()}
     />
   );
 };
-
-const styles = StyleSheet.create({
-  headerRight: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  toggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  toggleButtonActive: {
-    backgroundColor: '#6C5CE7',
-    borderColor: '#6C5CE7',
-  },
-  toggleButtonInactive: {
-    backgroundColor: 'transparent',
-    borderColor: '#6C5CE7',
-  },
-  toggleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  factionCard: commonStyles.card.base,
-  factionContent: {
-    flex: 1,
-  },
-  factionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  factionName: {
-    ...commonStyles.text.h3,
-    flex: 1,
-  },
-  factionCounts: {
-    alignItems: 'flex-end',
-  },
-  countText: {
-    ...commonStyles.text.body,
-    fontWeight: '500',
-  },
-  presentText: commonStyles.text.caption,
-  standingsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  standingBadge: {
-    ...commonStyles.badge.base,
-    minWidth: 60,
-  },
-  standingAllied: commonStyles.badge.allied,
-  standingFriendly: commonStyles.badge.friendly,
-  standingNeutral: commonStyles.badge.neutral,
-  standingHostile: commonStyles.badge.hostile,
-  standingEnemy: commonStyles.badge.enemy,
-  standingText: commonStyles.badge.text,
-  standingTextLight: commonStyles.badge.text,
-  standingTextDark: commonStyles.badge.text,
-});

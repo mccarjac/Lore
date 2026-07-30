@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import {
   deleteEvent,
 } from '@utils/characterStorage';
 import { GameEvent, QuestStatus } from '@models/types';
-import { colors as themeColors } from '@/styles/theme';
+import { useTheme } from '@/styles/theme';
 import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
 import Markdown from 'react-native-markdown-display';
 import { formatEventDate } from '@utils/dateUtils';
@@ -63,6 +63,215 @@ export const EventsDetailScreen: React.FC = () => {
   const { eventId } = route.params;
 
   const [event, setEvent] = useState<EventWithDetails | null>(null);
+  const { colors: themeColors } = useTheme();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        loadingContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        loadingText: {
+          fontSize: 16,
+          color: themeColors.text.secondary,
+        },
+        imageGallery: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 12,
+          padding: 16,
+        },
+        imageContainer: {
+          width: 280,
+          height: 250,
+        },
+        eventImage: {
+          width: '100%',
+          height: '100%',
+          borderRadius: 12,
+          backgroundColor: themeColors.elevated,
+        },
+        bodyText: {
+          fontSize: 16,
+          color: themeColors.text.secondary,
+          lineHeight: 24,
+        },
+        list: {
+          gap: 8,
+        },
+        listItem: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+        },
+        listBullet: {
+          fontSize: 16,
+          color: themeColors.text.secondary,
+          marginRight: 8,
+          lineHeight: 24,
+        },
+        listText: {
+          fontSize: 16,
+          color: themeColors.text.secondary,
+          flex: 1,
+          lineHeight: 24,
+        },
+        metadata: {
+          padding: 16,
+          gap: 4,
+        },
+        metadataText: {
+          fontSize: 12,
+          color: themeColors.text.muted,
+        },
+        footer: {
+          height: 50,
+        },
+        certaintyBadge: {
+          alignSelf: 'flex-start',
+        },
+        certaintyText: {
+          fontSize: 14,
+          fontWeight: '600',
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 12,
+          overflow: 'hidden',
+        },
+        certaintyConfirmed: {
+          backgroundColor: themeColors.certainty.confirmed,
+          color: themeColors.text.primary,
+        },
+        certaintyUnconfirmed: {
+          backgroundColor: themeColors.certainty.unconfirmed,
+          color: themeColors.text.primary,
+        },
+        certaintyDisputed: {
+          backgroundColor: themeColors.certainty.disputed,
+          color: themeColors.text.primary,
+        },
+        overviewContainer: {
+          gap: 12,
+        },
+        eventTitle: {
+          fontSize: 20,
+          fontWeight: '700',
+          color: themeColors.text.primary,
+          marginBottom: 8,
+        },
+        overviewRow: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: 8,
+        },
+        overviewLabel: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: themeColors.text.secondary,
+          minWidth: 80,
+          flexShrink: 0,
+        },
+        overviewValue: {
+          flex: 1,
+          flexWrap: 'wrap',
+        },
+        questRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        },
+        questStatus: {
+          fontSize: 14,
+          color: themeColors.text.muted,
+        },
+      }),
+    [themeColors]
+  );
+
+  // Markdown styles for notes section
+  const markdownStyles = useMemo(
+    () => ({
+      body: {
+        color: themeColors.text.secondary,
+        fontSize: 16,
+        lineHeight: 24,
+      },
+      heading1: {
+        color: themeColors.text.primary,
+        fontSize: 20,
+        fontWeight: '700' as const,
+        marginBottom: 8,
+      },
+      heading2: {
+        color: themeColors.text.primary,
+        fontSize: 18,
+        fontWeight: '600' as const,
+        marginBottom: 6,
+      },
+      heading3: {
+        color: themeColors.text.primary,
+        fontSize: 16,
+        fontWeight: '600' as const,
+        marginBottom: 4,
+      },
+      paragraph: {
+        color: themeColors.text.secondary,
+        marginBottom: 10,
+        lineHeight: 24,
+      },
+      strong: {
+        fontWeight: '700' as const,
+        color: themeColors.text.primary,
+      },
+      em: {
+        fontStyle: 'italic' as const,
+      },
+      link: {
+        color: themeColors.accent.primary,
+      },
+      list_item: {
+        color: themeColors.text.secondary,
+      },
+      bullet_list: {
+        marginBottom: 10,
+      },
+      ordered_list: {
+        marginBottom: 10,
+      },
+      code_inline: {
+        backgroundColor: themeColors.elevated,
+        color: themeColors.accent.info,
+        fontFamily: 'monospace' as const,
+        padding: 2,
+        borderRadius: 4,
+      },
+      code_block: {
+        backgroundColor: themeColors.elevated,
+        color: themeColors.text.secondary,
+        fontFamily: 'monospace' as const,
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 10,
+      },
+      fence: {
+        backgroundColor: themeColors.elevated,
+        color: themeColors.text.secondary,
+        fontFamily: 'monospace' as const,
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 10,
+      },
+      blockquote: {
+        backgroundColor: themeColors.elevated,
+        borderLeftWidth: 4,
+        borderLeftColor: themeColors.accent.primary,
+        paddingLeft: 12,
+        paddingVertical: 8,
+        marginBottom: 10,
+      },
+    }),
+    [themeColors]
+  );
 
   const loadEventDetails = useCallback(async () => {
     const [events, characters, locations, quests] = await Promise.all([
@@ -266,206 +475,4 @@ export const EventsDetailScreen: React.FC = () => {
       <View style={styles.footer} />
     </BaseDetailScreen>
   );
-};
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: themeColors.text.secondary,
-  },
-  imageGallery: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    padding: 16,
-  },
-  imageContainer: {
-    width: 280,
-    height: 250,
-  },
-  eventImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-    backgroundColor: themeColors.elevated,
-  },
-  bodyText: {
-    fontSize: 16,
-    color: themeColors.text.secondary,
-    lineHeight: 24,
-  },
-  list: {
-    gap: 8,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  listBullet: {
-    fontSize: 16,
-    color: themeColors.text.secondary,
-    marginRight: 8,
-    lineHeight: 24,
-  },
-  listText: {
-    fontSize: 16,
-    color: themeColors.text.secondary,
-    flex: 1,
-    lineHeight: 24,
-  },
-  metadata: {
-    padding: 16,
-    gap: 4,
-  },
-  metadataText: {
-    fontSize: 12,
-    color: themeColors.text.muted,
-  },
-  footer: {
-    height: 50,
-  },
-  certaintyBadge: {
-    alignSelf: 'flex-start',
-  },
-  certaintyText: {
-    fontSize: 14,
-    fontWeight: '600',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  certaintyConfirmed: {
-    backgroundColor: themeColors.certainty.confirmed,
-    color: themeColors.text.primary,
-  },
-  certaintyUnconfirmed: {
-    backgroundColor: themeColors.certainty.unconfirmed,
-    color: themeColors.text.primary,
-  },
-  certaintyDisputed: {
-    backgroundColor: themeColors.certainty.disputed,
-    color: themeColors.text.primary,
-  },
-  overviewContainer: {
-    gap: 12,
-  },
-  eventTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: themeColors.text.primary,
-    marginBottom: 8,
-  },
-  overviewRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  overviewLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: themeColors.text.secondary,
-    minWidth: 80,
-    flexShrink: 0,
-  },
-  overviewValue: {
-    flex: 1,
-    flexWrap: 'wrap',
-  },
-  questRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  questStatus: {
-    fontSize: 14,
-    color: themeColors.text.muted,
-  },
-});
-
-// Markdown styles for notes section
-const markdownStyles = {
-  body: {
-    color: themeColors.text.secondary,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  heading1: {
-    color: themeColors.text.primary,
-    fontSize: 20,
-    fontWeight: '700' as const,
-    marginBottom: 8,
-  },
-  heading2: {
-    color: themeColors.text.primary,
-    fontSize: 18,
-    fontWeight: '600' as const,
-    marginBottom: 6,
-  },
-  heading3: {
-    color: themeColors.text.primary,
-    fontSize: 16,
-    fontWeight: '600' as const,
-    marginBottom: 4,
-  },
-  paragraph: {
-    color: themeColors.text.secondary,
-    marginBottom: 10,
-    lineHeight: 24,
-  },
-  strong: {
-    fontWeight: '700' as const,
-    color: themeColors.text.primary,
-  },
-  em: {
-    fontStyle: 'italic' as const,
-  },
-  link: {
-    color: themeColors.accent.primary,
-  },
-  list_item: {
-    color: themeColors.text.secondary,
-  },
-  bullet_list: {
-    marginBottom: 10,
-  },
-  ordered_list: {
-    marginBottom: 10,
-  },
-  code_inline: {
-    backgroundColor: themeColors.elevated,
-    color: themeColors.accent.info,
-    fontFamily: 'monospace' as const,
-    padding: 2,
-    borderRadius: 4,
-  },
-  code_block: {
-    backgroundColor: themeColors.elevated,
-    color: themeColors.text.secondary,
-    fontFamily: 'monospace' as const,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  fence: {
-    backgroundColor: themeColors.elevated,
-    color: themeColors.text.secondary,
-    fontFamily: 'monospace' as const,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  blockquote: {
-    backgroundColor: themeColors.elevated,
-    borderLeftWidth: 4,
-    borderLeftColor: themeColors.accent.primary,
-    paddingLeft: 12,
-    paddingVertical: 8,
-    marginBottom: 10,
-  },
 };

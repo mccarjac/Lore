@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,10 +20,11 @@ import {
   loadFactions,
   FactionRelationship,
 } from '@utils/characterStorage';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseFormScreen } from '@/components';
 import { Picker } from '@react-native-picker/picker';
+import { useLabels } from '@/ruleset';
 
 type FactionFormNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -43,6 +44,7 @@ interface FactionFormData {
 export const FactionFormScreen: React.FC = () => {
   const navigation = useNavigation<FactionFormNavigationProp>();
   const route = useRoute<FactionFormRouteProp>();
+  const label = useLabels();
   const { factionName } = route.params || {};
 
   const [formData, setFormData] = useState<FactionFormData>({
@@ -61,6 +63,310 @@ export const FactionFormScreen: React.FC = () => {
     useState<string>('');
   const [selectedRelationshipType, setSelectedRelationshipType] =
     useState<RelationshipStanding>(RelationshipStanding.Neutral);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        section: {
+          marginBottom: 24,
+        },
+        sectionTitle: {
+          ...commonStyles.text.h1,
+          marginBottom: 20,
+        },
+        inputGroup: {
+          marginBottom: 24,
+        },
+        inputLabel: {
+          ...commonStyles.text.label,
+          marginBottom: 8,
+        },
+        required: {
+          color: themeColors.accent.danger,
+        },
+        textInput: {
+          ...commonStyles.input.base,
+          minHeight: 52,
+        },
+        textArea: {
+          ...commonStyles.input.base,
+          minHeight: 120,
+        },
+        inputError: {
+          borderColor: themeColors.accent.danger,
+        },
+        errorText: {
+          ...commonStyles.text.danger,
+          marginTop: 6,
+        },
+        helperText: {
+          fontSize: 12,
+          color: themeColors.accent.info,
+          marginBottom: 6,
+          fontStyle: 'italic',
+        },
+        characterCount: {
+          fontSize: 12,
+          color: themeColors.text.muted,
+          textAlign: 'right',
+          marginTop: 6,
+        },
+        buttonContainer: {
+          flexDirection: 'row',
+          padding: 20,
+          gap: 12,
+          backgroundColor: themeColors.primary,
+          borderTopWidth: 1,
+          borderTopColor: themeColors.border,
+        },
+        button: {
+          flex: 1,
+          paddingVertical: 16,
+          paddingHorizontal: 24,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 52,
+        },
+        cancelButton: {
+          ...commonStyles.button.secondary,
+        },
+        submitButton: {
+          ...commonStyles.button.primary,
+        },
+        buttonDisabled: {
+          opacity: 0.6,
+        },
+        cancelButtonText: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          letterSpacing: 0.2,
+        },
+        submitButtonText: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          letterSpacing: 0.2,
+        },
+        imageGalleryContainer: {
+          ...commonStyles.image.container,
+        },
+        imageGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 12,
+          marginBottom: 12,
+        },
+        imageItemContainer: {
+          position: 'relative',
+          width: 100,
+          height: 100,
+        },
+        factionImageThumbnail: {
+          width: 100,
+          height: 100,
+          borderRadius: 8,
+          backgroundColor: themeColors.surface,
+        },
+        removeImageButton: {
+          position: 'absolute',
+          top: -8,
+          right: -8,
+          backgroundColor: themeColors.status.error,
+          borderRadius: 12,
+          width: 24,
+          height: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        removeImageButtonText: {
+          color: themeColors.text.primary,
+          fontSize: 16,
+          fontWeight: '700',
+          lineHeight: 20,
+        },
+        placeholderImage: commonStyles.image.placeholder,
+        placeholderText: {
+          ...commonStyles.text.body,
+          fontWeight: '500',
+        },
+        imagePickerButton: commonStyles.image.pickerButton,
+        imagePickerButtonText: {
+          ...commonStyles.button.text,
+          textAlign: 'center',
+        },
+        relationshipsList: {
+          gap: 8,
+          marginBottom: 12,
+        },
+        relationshipCard: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 12,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        relationshipCardContent: {
+          flex: 1,
+        },
+        relationshipFactionName: {
+          fontSize: 15,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          marginBottom: 4,
+        },
+        relationshipType: {
+          fontSize: 12,
+          fontWeight: '500',
+          color: themeColors.text.primary,
+          opacity: 0.9,
+        },
+        removeRelationshipButton: {
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          backgroundColor: themeColors.accent.danger,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginLeft: 12,
+        },
+        removeRelationshipButtonText: {
+          color: themeColors.text.primary,
+          fontSize: 20,
+          fontWeight: '700',
+          lineHeight: 20,
+        },
+        emptyRelationships: {
+          padding: 20,
+          backgroundColor: themeColors.elevated,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+          alignItems: 'center',
+          marginBottom: 12,
+        },
+        emptyRelationshipsText: {
+          fontSize: 14,
+          color: themeColors.text.muted,
+          fontStyle: 'italic',
+        },
+        addRelationshipButton: {
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          borderRadius: 8,
+          backgroundColor: themeColors.accent.primary,
+          alignItems: 'center',
+        },
+        addRelationshipButtonText: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+        standingAllied: {
+          backgroundColor: themeColors.standing.allied,
+        },
+        standingFriendly: {
+          backgroundColor: themeColors.standing.friendly,
+        },
+        standingNeutral: {
+          backgroundColor: themeColors.standing.neutral,
+        },
+        standingHostile: {
+          backgroundColor: themeColors.standing.hostile,
+        },
+        standingEnemy: {
+          backgroundColor: themeColors.standing.enemy,
+        },
+        modalOverlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        },
+        modalContent: {
+          backgroundColor: themeColors.surface,
+          borderRadius: 16,
+          padding: 24,
+          width: '100%',
+          maxWidth: 400,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        modalTitle: {
+          fontSize: 20,
+          fontWeight: '700',
+          color: themeColors.text.primary,
+          marginBottom: 20,
+          textAlign: 'center',
+        },
+        modalLabel: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          marginTop: 12,
+          marginBottom: 8,
+        },
+        pickerContainer: {
+          backgroundColor: themeColors.elevated,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+          overflow: 'hidden',
+        },
+        picker: {
+          color: themeColors.text.primary,
+          height: 50,
+        },
+        modalButtons: {
+          flexDirection: 'row',
+          gap: 12,
+          marginTop: 24,
+        },
+        modalButton: {
+          flex: 1,
+          paddingVertical: 12,
+          borderRadius: 8,
+          alignItems: 'center',
+        },
+        modalCancelButton: {
+          backgroundColor: themeColors.elevated,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        modalAddButton: {
+          backgroundColor: themeColors.accent.primary,
+        },
+        modalButtonDisabled: {
+          opacity: 0.5,
+        },
+        modalCancelButtonText: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+        modalAddButtonText: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+        statusButton: {
+          ...commonStyles.button.base,
+          ...commonStyles.button.success,
+        },
+        statusButtonRetired: {
+          backgroundColor: themeColors.status.error,
+          borderColor: themeColors.status.error,
+        },
+        statusButtonText: commonStyles.button.text,
+        statusButtonTextRetired: commonStyles.button.text,
+      }),
+    [commonStyles, themeColors]
+  );
 
   // Load existing faction data and available factions for relationships
   useEffect(() => {
@@ -93,9 +399,9 @@ export const FactionFormScreen: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Faction name is required';
+      newErrors.name = `${label('faction.singular')} name is required`;
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Faction name must be at least 2 characters';
+      newErrors.name = `${label('faction.singular')} name must be at least 2 characters`;
     }
 
     setErrors(newErrors);
@@ -248,16 +554,20 @@ export const FactionFormScreen: React.FC = () => {
         });
 
         if (updated) {
-          Alert.alert('Success', 'Faction updated successfully!', [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]);
+          Alert.alert(
+            'Success',
+            `${label('faction.singular')} updated successfully!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
         } else {
           Alert.alert(
             'Error',
-            'Failed to update faction. The name may already exist.',
+            `Failed to update ${label('faction.singular', 'lower')}. The name may already exist.`,
             [{ text: 'OK' }]
           );
         }
@@ -272,16 +582,20 @@ export const FactionFormScreen: React.FC = () => {
         });
 
         if (success) {
-          Alert.alert('Success', 'Faction created successfully!', [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]);
+          Alert.alert(
+            'Success',
+            `${label('faction.singular')} created successfully!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
         } else {
           Alert.alert(
             'Error',
-            'A faction with this name already exists. Please choose a different name.',
+            `A ${label('faction.singular', 'lower')} with this name already exists. Please choose a different name.`,
             [{ text: 'OK' }]
           );
         }
@@ -318,11 +632,14 @@ export const FactionFormScreen: React.FC = () => {
   return (
     <BaseFormScreen>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Faction Information</Text>
+        <Text style={styles.sectionTitle}>
+          {label('faction.singular')} Information
+        </Text>
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>
-            Faction Name <Text style={styles.required}>*</Text>
+            {label('faction.singular')} Name{' '}
+            <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={[styles.textInput, errors.name && styles.inputError]}
@@ -333,7 +650,7 @@ export const FactionFormScreen: React.FC = () => {
                 setErrors({ ...errors, name: '' });
               }
             }}
-            placeholder="Enter faction name"
+            placeholder={`Enter ${label('faction.singular', 'lower')} name`}
             placeholderTextColor={themeColors.text.muted}
             maxLength={50}
           />
@@ -341,7 +658,9 @@ export const FactionFormScreen: React.FC = () => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Faction Images</Text>
+          <Text style={styles.inputLabel}>
+            {label('faction.singular')} Images
+          </Text>
           <View style={styles.imageGalleryContainer}>
             {formData.imageUris && formData.imageUris.length > 0 ? (
               <View style={styles.imageGrid}>
@@ -405,7 +724,9 @@ export const FactionFormScreen: React.FC = () => {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Faction Relationships</Text>
+          <Text style={styles.inputLabel}>
+            {label('faction.singular')} Relationships
+          </Text>
           <Text style={styles.helperText}>
             Define relationships with other factions (allies, enemies, etc.)
           </Text>
@@ -491,9 +812,13 @@ export const FactionFormScreen: React.FC = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Faction Relationship</Text>
+            <Text style={styles.modalTitle}>
+              Add {label('faction.singular')} Relationship
+            </Text>
 
-            <Text style={styles.modalLabel}>Select Faction</Text>
+            <Text style={styles.modalLabel}>
+              Select {label('faction.singular')}
+            </Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={selectedFactionForRelationship}
@@ -593,310 +918,11 @@ export const FactionFormScreen: React.FC = () => {
                 ? 'Updating...'
                 : 'Creating...'
               : factionName
-                ? 'Update Faction'
-                : 'Create Faction'}
+                ? `Update ${label('faction.singular')}`
+                : `Create ${label('faction.singular')}`}
           </Text>
         </TouchableOpacity>
       </View>
     </BaseFormScreen>
   );
 };
-
-const styles = StyleSheet.create({
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    ...commonStyles.text.h1,
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    ...commonStyles.text.label,
-    marginBottom: 8,
-  },
-  required: {
-    color: themeColors.accent.danger,
-  },
-  textInput: {
-    ...commonStyles.input.base,
-    minHeight: 52,
-  },
-  textArea: {
-    ...commonStyles.input.base,
-    minHeight: 120,
-  },
-  inputError: {
-    borderColor: themeColors.accent.danger,
-  },
-  errorText: {
-    ...commonStyles.text.danger,
-    marginTop: 6,
-  },
-  helperText: {
-    fontSize: 12,
-    color: themeColors.accent.info,
-    marginBottom: 6,
-    fontStyle: 'italic',
-  },
-  characterCount: {
-    fontSize: 12,
-    color: themeColors.text.muted,
-    textAlign: 'right',
-    marginTop: 6,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    backgroundColor: themeColors.primary,
-    borderTopWidth: 1,
-    borderTopColor: themeColors.border,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  cancelButton: {
-    ...commonStyles.button.secondary,
-  },
-  submitButton: {
-    ...commonStyles.button.primary,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    letterSpacing: 0.2,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    letterSpacing: 0.2,
-  },
-  imageGalleryContainer: {
-    ...commonStyles.image.container,
-  },
-  imageGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 12,
-  },
-  imageItemContainer: {
-    position: 'relative',
-    width: 100,
-    height: 100,
-  },
-  factionImageThumbnail: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: themeColors.surface,
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: themeColors.status.error,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeImageButtonText: {
-    color: themeColors.text.primary,
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  placeholderImage: commonStyles.image.placeholder,
-  placeholderText: {
-    ...commonStyles.text.body,
-    fontWeight: '500',
-  },
-  imagePickerButton: commonStyles.image.pickerButton,
-  imagePickerButtonText: {
-    ...commonStyles.button.text,
-    textAlign: 'center',
-  },
-  relationshipsList: {
-    gap: 8,
-    marginBottom: 12,
-  },
-  relationshipCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  relationshipCardContent: {
-    flex: 1,
-  },
-  relationshipFactionName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    marginBottom: 4,
-  },
-  relationshipType: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: themeColors.text.primary,
-    opacity: 0.9,
-  },
-  removeRelationshipButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: themeColors.accent.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 12,
-  },
-  removeRelationshipButtonText: {
-    color: themeColors.text.primary,
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  emptyRelationships: {
-    padding: 20,
-    backgroundColor: themeColors.elevated,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  emptyRelationshipsText: {
-    fontSize: 14,
-    color: themeColors.text.muted,
-    fontStyle: 'italic',
-  },
-  addRelationshipButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: themeColors.accent.primary,
-    alignItems: 'center',
-  },
-  addRelationshipButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  standingAllied: {
-    backgroundColor: themeColors.standing.allied,
-  },
-  standingFriendly: {
-    backgroundColor: themeColors.standing.friendly,
-  },
-  standingNeutral: {
-    backgroundColor: themeColors.standing.neutral,
-  },
-  standingHostile: {
-    backgroundColor: themeColors.standing.hostile,
-  },
-  standingEnemy: {
-    backgroundColor: themeColors.standing.enemy,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: themeColors.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: themeColors.text.primary,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  pickerContainer: {
-    backgroundColor: themeColors.elevated,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    overflow: 'hidden',
-  },
-  picker: {
-    color: themeColors.text.primary,
-    height: 50,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalCancelButton: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  modalAddButton: {
-    backgroundColor: themeColors.accent.primary,
-  },
-  modalButtonDisabled: {
-    opacity: 0.5,
-  },
-  modalCancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  modalAddButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  statusButton: {
-    ...commonStyles.button.base,
-    ...commonStyles.button.success,
-  },
-  statusButtonRetired: {
-    backgroundColor: themeColors.status.error,
-    borderColor: themeColors.status.error,
-  },
-  statusButtonText: commonStyles.button.text,
-  statusButtonTextRetired: commonStyles.button.text,
-});

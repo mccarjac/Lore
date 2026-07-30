@@ -19,8 +19,10 @@ import {
   FactionInfluence,
 } from '@utils/influenceAnalysis';
 import { Card, Section } from '@components/index';
+import { useLabels } from '@/ruleset';
 
 export const InfluenceReportScreen: React.FC = () => {
+  const label = useLabels();
   const [characters, setCharacters] = useState<GameCharacter[]>([]);
   const [topInfluencers, setTopInfluencers] = useState<CharacterInfluence[]>(
     []
@@ -219,7 +221,9 @@ export const InfluenceReportScreen: React.FC = () => {
 
               {inf.factions.length > 0 && (
                 <View style={styles.factionsContainer}>
-                  <Text style={styles.factionsLabel}>Faction Memberships:</Text>
+                  <Text style={styles.factionsLabel}>
+                    {label('faction.singular')} Memberships:
+                  </Text>
                   <View style={styles.factionTags}>
                     {inf.factions.map(faction => (
                       <View key={faction} style={styles.factionTag}>
@@ -235,7 +239,10 @@ export const InfluenceReportScreen: React.FC = () => {
       </Section>
 
       {/* Faction Power Dynamics */}
-      <Section title="Faction Power Dynamics" style={styles.section}>
+      <Section
+        title={`${label('faction.singular')} Power Dynamics`}
+        style={styles.section}
+      >
         {factionInfluences.length === 0 ? (
           <Card>
             <Text style={styles.emptySubtext}>No factions found</Text>

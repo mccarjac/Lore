@@ -61,6 +61,7 @@ export {
   type Quality,
   type Recipe,
   type RulesetLimits,
+  type ColorPaletteOverrides,
   type TermKey,
   type TerminologyMap,
   type Trait,
@@ -165,6 +166,10 @@ export {
   typography,
   borderRadius,
   shadows,
+  useTheme,
+  getActiveColors,
+  type ColorPalette,
+  type ThemeValue,
 } from './styles/theme';
-export { commonStyles } from './styles/commonStyles';
+export { commonStyles, useCommonStyles } from './styles/commonStyles';
 export { CHART_PALETTE } from './styles/chartPalette';

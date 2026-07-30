@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Image } from 'react-native';
 import { GameEvent } from '@models/types';
 import {
@@ -16,7 +16,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
-import { colors as themeColors } from '@/styles/theme';
+import { useTheme } from '@/styles/theme';
 import { Picker } from '@react-native-picker/picker';
 import { BaseListScreen } from '@/components';
 import { formatEventDateShort, parseDateString } from '@utils/dateUtils';
@@ -46,6 +46,116 @@ export const EventsTimelineScreen: React.FC = () => {
   );
   const [factions, setFactions] = useState<string[]>([]);
   const navigation = useNavigation<EventsNavigationProp>();
+  const { colors: themeColors } = useTheme();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        filtersContainer: {
+          padding: 16,
+          paddingTop: 8,
+          backgroundColor: themeColors.surface,
+          borderBottomWidth: 1,
+          borderBottomColor: themeColors.border,
+          gap: 8,
+        },
+        pickerContainer: {
+          backgroundColor: themeColors.elevated,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+          borderRadius: 8,
+          overflow: 'hidden',
+        },
+        picker: {
+          color: themeColors.text.primary,
+        },
+        eventCard: {
+          backgroundColor: themeColors.surface,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 16,
+        },
+        eventHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: 12,
+        },
+        eventTitleContainer: {
+          flex: 1,
+          marginRight: 12,
+        },
+        titleRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 4,
+        },
+        eventTitle: {
+          fontSize: 18,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          flex: 1,
+        },
+        eventDate: {
+          fontSize: 14,
+          color: themeColors.text.secondary,
+        },
+        eventThumbnail: {
+          width: 60,
+          height: 60,
+          borderRadius: 8,
+          backgroundColor: themeColors.elevated,
+        },
+        eventDescription: {
+          fontSize: 14,
+          color: themeColors.text.secondary,
+          marginBottom: 12,
+          lineHeight: 20,
+        },
+        eventMeta: {
+          gap: 8,
+        },
+        metaItem: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        metaLabel: {
+          fontSize: 12,
+          color: themeColors.text.muted,
+          fontWeight: '600',
+          marginRight: 6,
+          minWidth: 70,
+        },
+        metaValue: {
+          fontSize: 12,
+          color: themeColors.text.secondary,
+          flex: 1,
+        },
+        certaintyBadge: {
+          paddingHorizontal: 8,
+          paddingVertical: 2,
+          borderRadius: 8,
+          alignSelf: 'flex-start',
+        },
+        certaintyBadgeText: {
+          fontSize: 10,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+        certaintyConfirmed: {
+          backgroundColor: themeColors.certainty.confirmed,
+        },
+        certaintyUnconfirmed: {
+          backgroundColor: themeColors.certainty.unconfirmed,
+        },
+        certaintyDisputed: {
+          backgroundColor: themeColors.certainty.disputed,
+        },
+      }),
+    [themeColors]
+  );
 
   const loadData = useCallback(async () => {
     // Backfill/prune quest<->event back-references (idempotent operation)
@@ -309,109 +419,3 @@ export const EventsTimelineScreen: React.FC = () => {
     />
   );
 };
-
-const styles = StyleSheet.create({
-  filtersContainer: {
-    padding: 16,
-    paddingTop: 8,
-    backgroundColor: themeColors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
-    gap: 8,
-  },
-  pickerContainer: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  picker: {
-    color: themeColors.text.primary,
-  },
-  eventCard: {
-    backgroundColor: themeColors.surface,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  eventHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  eventTitleContainer: {
-    flex: 1,
-    marginRight: 12,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  eventTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    flex: 1,
-  },
-  eventDate: {
-    fontSize: 14,
-    color: themeColors.text.secondary,
-  },
-  eventThumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: themeColors.elevated,
-  },
-  eventDescription: {
-    fontSize: 14,
-    color: themeColors.text.secondary,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  eventMeta: {
-    gap: 8,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metaLabel: {
-    fontSize: 12,
-    color: themeColors.text.muted,
-    fontWeight: '600',
-    marginRight: 6,
-    minWidth: 70,
-  },
-  metaValue: {
-    fontSize: 12,
-    color: themeColors.text.secondary,
-    flex: 1,
-  },
-  certaintyBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  certaintyBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  certaintyConfirmed: {
-    backgroundColor: themeColors.certainty.confirmed,
-  },
-  certaintyUnconfirmed: {
-    backgroundColor: themeColors.certainty.unconfirmed,
-  },
-  certaintyDisputed: {
-    backgroundColor: themeColors.certainty.disputed,
-  },
-});

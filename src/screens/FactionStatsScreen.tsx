@@ -498,7 +498,9 @@ export const FactionStatsScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
       >
-        <Text style={styles.header}>Faction Statistics</Text>
+        <Text style={styles.header}>
+          {label('faction.singular')} Statistics
+        </Text>
 
         {factionStats.length === 0 ? (
           <View style={styles.emptyStateContainer}>

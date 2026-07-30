@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import {
   loadFactions,
   loadQuests,
 } from '@utils/characterStorage';
-import { colors as themeColors } from '@/styles/theme';
+import { useTheme } from '@/styles/theme';
 import { Picker } from '@react-native-picker/picker';
 import {
   GameCharacter,
@@ -85,6 +85,168 @@ export const EventsFormScreen: React.FC = () => {
   const [locations, setLocations] = useState<GameLocation[]>([]);
   const [factions, setFactions] = useState<string[]>([]);
   const [quests, setQuests] = useState<GameQuest[]>([]);
+  const { colors: themeColors } = useTheme();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        content: {
+          padding: 16,
+          paddingBottom: 100,
+        },
+        section: {
+          marginBottom: 24,
+        },
+        label: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          marginBottom: 8,
+        },
+        labelMargin: {
+          marginTop: 16,
+        },
+        input: {
+          backgroundColor: themeColors.elevated,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+          borderRadius: 8,
+          padding: 12,
+          color: themeColors.text.primary,
+          fontSize: 16,
+        },
+        inputError: {
+          borderColor: themeColors.accent.danger,
+        },
+        textArea: {
+          minHeight: 100,
+          textAlignVertical: 'top',
+        },
+        errorText: {
+          color: themeColors.accent.danger,
+          fontSize: 12,
+          marginTop: 4,
+        },
+        pickerContainer: {
+          backgroundColor: themeColors.elevated,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+          borderRadius: 8,
+          overflow: 'hidden',
+        },
+        picker: {
+          color: themeColors.text.primary,
+        },
+        selectedList: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+          marginTop: 12,
+        },
+        selectedChip: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingLeft: 12,
+          paddingRight: 8,
+          paddingVertical: 8,
+          backgroundColor: themeColors.accent.secondary,
+          borderRadius: 16,
+          gap: 6,
+        },
+        selectedChipText: {
+          fontSize: 14,
+          color: themeColors.text.primary,
+        },
+        removeButton: {
+          fontSize: 20,
+          color: themeColors.text.primary,
+          fontWeight: 'bold',
+          paddingHorizontal: 4,
+        },
+        imageGalleryContainer: {
+          gap: 12,
+        },
+        imageGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 12,
+        },
+        imageItemContainer: {
+          position: 'relative',
+          width: 100,
+          height: 100,
+        },
+        imageThumbnail: {
+          width: 100,
+          height: 100,
+          borderRadius: 8,
+          backgroundColor: themeColors.elevated,
+        },
+        uploadButton: {
+          backgroundColor: themeColors.elevated,
+          borderWidth: 2,
+          borderColor: themeColors.border,
+          borderStyle: 'dashed',
+          borderRadius: 8,
+          padding: 24,
+          alignItems: 'center',
+        },
+        uploadButtonText: {
+          fontSize: 16,
+          color: themeColors.text.secondary,
+          fontWeight: '600',
+        },
+        addImageButton: {
+          backgroundColor: themeColors.elevated,
+          borderWidth: 2,
+          borderColor: themeColors.border,
+          borderStyle: 'dashed',
+          borderRadius: 8,
+          padding: 16,
+          alignItems: 'center',
+        },
+        addImageButtonText: {
+          fontSize: 14,
+          color: themeColors.text.secondary,
+          fontWeight: '600',
+        },
+        removeImageIconButton: {
+          position: 'absolute',
+          top: -8,
+          right: -8,
+          backgroundColor: themeColors.accent.danger,
+          borderRadius: 12,
+          width: 24,
+          height: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        removeImageIconText: {
+          color: themeColors.text.primary,
+          fontSize: 16,
+          fontWeight: '700',
+          lineHeight: 20,
+        },
+        submitButton: {
+          backgroundColor: themeColors.accent.primary,
+          borderRadius: 8,
+          padding: 16,
+          alignItems: 'center',
+          marginTop: 8,
+        },
+        submitButtonDisabled: {
+          opacity: 0.5,
+        },
+        submitButtonText: {
+          color: themeColors.text.primary,
+          fontSize: 16,
+          fontWeight: '600',
+        },
+        footer: {
+          height: 50,
+        },
+      }),
+    [themeColors]
+  );
 
   // Load characters, locations, factions, and quests
   useEffect(() => {
@@ -536,161 +698,3 @@ export const EventsFormScreen: React.FC = () => {
     </BaseFormScreen>
   );
 };
-
-const styles = StyleSheet.create({
-  content: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    marginBottom: 8,
-  },
-  labelMargin: {
-    marginTop: 16,
-  },
-  input: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    borderRadius: 8,
-    padding: 12,
-    color: themeColors.text.primary,
-    fontSize: 16,
-  },
-  inputError: {
-    borderColor: themeColors.accent.danger,
-  },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  errorText: {
-    color: themeColors.accent.danger,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  pickerContainer: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  picker: {
-    color: themeColors.text.primary,
-  },
-  selectedList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-  },
-  selectedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 12,
-    paddingRight: 8,
-    paddingVertical: 8,
-    backgroundColor: themeColors.accent.secondary,
-    borderRadius: 16,
-    gap: 6,
-  },
-  selectedChipText: {
-    fontSize: 14,
-    color: themeColors.text.primary,
-  },
-  removeButton: {
-    fontSize: 20,
-    color: themeColors.text.primary,
-    fontWeight: 'bold',
-    paddingHorizontal: 4,
-  },
-  imageGalleryContainer: {
-    gap: 12,
-  },
-  imageGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  imageItemContainer: {
-    position: 'relative',
-    width: 100,
-    height: 100,
-  },
-  imageThumbnail: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: themeColors.elevated,
-  },
-  uploadButton: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 2,
-    borderColor: themeColors.border,
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 24,
-    alignItems: 'center',
-  },
-  uploadButtonText: {
-    fontSize: 16,
-    color: themeColors.text.secondary,
-    fontWeight: '600',
-  },
-  addImageButton: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 2,
-    borderColor: themeColors.border,
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  addImageButtonText: {
-    fontSize: 14,
-    color: themeColors.text.secondary,
-    fontWeight: '600',
-  },
-  removeImageIconButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: themeColors.accent.danger,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeImageIconText: {
-    color: themeColors.text.primary,
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  submitButton: {
-    backgroundColor: themeColors.accent.primary,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitButtonText: {
-    color: themeColors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    height: 50,
-  },
-});

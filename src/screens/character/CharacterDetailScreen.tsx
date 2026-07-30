@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -26,8 +26,8 @@ import {
   deleteCharacter,
 } from '@/utils/characterStorage';
 import { getDiscordMessagesForCharacter } from '@/utils/discordStorage';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
 
 type CharacterDetailRouteProp = RouteProp<
@@ -59,6 +59,256 @@ export const CharacterDetailScreen: React.FC = () => {
   const [discordMessages, setDiscordMessages] = useState<DiscordMessage[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isValidating, setIsValidating] = useState(true);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        imageGallery: {
+          marginBottom: 16,
+        },
+        imageGalleryContent: {
+          gap: 12,
+        },
+        imageContainer: {
+          width: 200,
+          height: 200,
+          marginRight: 12,
+        },
+        characterImage: {
+          width: '100%',
+          height: '100%',
+          borderRadius: 12,
+          backgroundColor: themeColors.surface,
+        },
+        recipesContainer: {
+          marginTop: 16,
+          paddingTop: 16,
+          borderTopWidth: 2,
+          borderTopColor: themeColors.border,
+        },
+        recipesTitle: {
+          ...commonStyles.text.h3,
+          marginBottom: 12,
+          color: themeColors.accent.primary,
+        },
+        recipeItem: {
+          backgroundColor: themeColors.elevated,
+          padding: 16,
+          borderRadius: 12,
+          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        recipeHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 8,
+        },
+        recipeName: {
+          ...commonStyles.text.body,
+          fontWeight: '600',
+        },
+        recipeDescription: {
+          ...commonStyles.text.description,
+          marginBottom: 12,
+          lineHeight: 20,
+        },
+        materialsTitle: {
+          ...commonStyles.text.label,
+          fontSize: 14,
+          marginBottom: 8,
+        },
+        materialItem: {
+          ...commonStyles.text.body,
+          marginLeft: 12,
+          marginBottom: 4,
+        },
+        header: {
+          padding: 20,
+          backgroundColor: themeColors.surface,
+          borderBottomWidth: 2,
+          borderBottomColor: themeColors.border,
+          borderRadius: 16,
+          marginBottom: 16,
+          borderWidth: 1,
+        },
+        headerInfo: {
+          gap: 8,
+        },
+        tagScoresContainer: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 12,
+          marginTop: 12,
+        },
+        tagScoreItem: {
+          ...commonStyles.badge.base,
+          ...commonStyles.badge.tag,
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        tagName: {
+          ...commonStyles.badge.text,
+          color: themeColors.accent.primary,
+        },
+        tagScore: {
+          ...commonStyles.badge.text,
+          fontWeight: '700',
+          color: themeColors.accent.primary,
+          marginLeft: 6,
+        },
+        name: {
+          ...commonStyles.text.h1,
+          fontSize: 26,
+        },
+        subheader: {
+          ...commonStyles.text.body,
+          marginTop: 6,
+          fontWeight: '500',
+        },
+        itemContainer: {
+          marginBottom: 16,
+          paddingBottom: 16,
+          borderBottomWidth: 1,
+          borderBottomColor: themeColors.border,
+          backgroundColor: themeColors.elevated,
+          padding: 12,
+          borderRadius: 8,
+        },
+        headerContainer: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        },
+        titleText: {
+          ...commonStyles.text.body,
+          fontWeight: '600',
+        },
+        descriptionText: {
+          ...commonStyles.text.description,
+          marginTop: 6,
+          lineHeight: 20,
+        },
+        standingText: {
+          fontSize: 14,
+          color: themeColors.accent.primary,
+          fontWeight: '600',
+        },
+        relationshipTypeText: {
+          fontSize: 14,
+          color: themeColors.status.info,
+          fontWeight: '600',
+        },
+        clickableRelationship: {
+          borderWidth: 2,
+          borderColor: themeColors.accent.primary,
+          backgroundColor: themeColors.interactive.hover,
+        },
+        relationshipNameContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flex: 1,
+        },
+        clickableText: {
+          color: themeColors.accent.primary,
+          textDecorationLine: 'underline',
+        },
+        unavailableText: {
+          fontSize: 12,
+          color: themeColors.status.warning,
+          fontStyle: 'italic',
+        },
+
+        notes: {
+          ...commonStyles.text.description,
+          lineHeight: 22,
+        },
+        statsContainer: commonStyles.status.container,
+        statItem: commonStyles.status.item,
+        statValue: commonStyles.status.value,
+        retiredBadge: {
+          ...commonStyles.badge.base,
+          ...commonStyles.badge.retired,
+          alignSelf: 'flex-start',
+          marginTop: 8,
+        },
+        retiredText: {
+          ...commonStyles.badge.textDark,
+          fontSize: 12,
+          fontWeight: '700',
+          letterSpacing: 1.2,
+        },
+        cyberwareModifiersContainer: {
+          marginTop: 12,
+          paddingTop: 12,
+          borderTopWidth: 1,
+          borderTopColor: themeColors.border,
+        },
+        cyberwareModifiersTitle: {
+          ...commonStyles.text.label,
+          fontSize: 14,
+          marginBottom: 8,
+          color: themeColors.accent.primary,
+        },
+        cyberwareModifier: {
+          ...commonStyles.text.body,
+          fontSize: 14,
+          marginLeft: 8,
+          marginBottom: 4,
+          color: themeColors.text.secondary,
+        },
+        discordMessageContainer: {
+          backgroundColor: themeColors.elevated,
+          padding: 12,
+          borderRadius: 8,
+          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        discordMessageHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 8,
+        },
+        discordAuthor: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: themeColors.accent.primary,
+        },
+        discordTimestamp: {
+          fontSize: 12,
+          color: themeColors.text.secondary,
+        },
+        discordContent: {
+          fontSize: 14,
+          color: themeColors.text.primary,
+          lineHeight: 20,
+        },
+        discordImageIndicator: {
+          fontSize: 12,
+          color: themeColors.text.secondary,
+          marginTop: 8,
+          fontStyle: 'italic',
+        },
+        viewContextButton: {
+          marginTop: 12,
+          paddingVertical: 8,
+          paddingHorizontal: 16,
+          backgroundColor: themeColors.primary,
+          borderRadius: 6,
+          alignSelf: 'flex-start',
+        },
+        viewContextButtonText: {
+          fontSize: 13,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   // Guard against missing character param
   React.useEffect(() => {
@@ -68,9 +318,11 @@ export const CharacterDetailScreen: React.FC = () => {
     if (!character) {
       // eslint-disable-next-line no-console
       console.error('[CharacterDetail] Character param is missing!');
-      Alert.alert('Error', 'Character data is missing. Please try again.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert(
+        'Error',
+        `${label('character.singular')} data is missing. Please try again.`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
       return;
     }
 
@@ -81,9 +333,11 @@ export const CharacterDetailScreen: React.FC = () => {
         '[CharacterDetail] Character missing required properties:',
         character
       );
-      Alert.alert('Error', 'Character data is corrupted. Please try again.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert(
+        'Error',
+        `${label('character.singular')} data is corrupted. Please try again.`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
       return;
     }
 
@@ -291,7 +545,10 @@ export const CharacterDetailScreen: React.FC = () => {
     }
 
     return (
-      <CollapsibleSection title="Factions" defaultCollapsed={true}>
+      <CollapsibleSection
+        title={label('faction.plural')}
+        defaultCollapsed={true}
+      >
         {character.factions.map((faction, index) => (
           <View key={index} style={styles.itemContainer}>
             <View style={styles.headerContainer}>
@@ -502,9 +759,10 @@ export const CharacterDetailScreen: React.FC = () => {
         <Text style={styles.name}>{character.name}</Text>
         <View style={styles.headerInfo}>
           <Text style={styles.subheader}>
-            {label('archetype.singular')}:{' '}
-            {archetypeLabel(character.archetypeId)} / Location:{' '}
-            {getLocationName(character.locationId)}
+            {ruleset.archetypes.length > 1
+              ? `${label('archetype.singular')}: ${archetypeLabel(character.archetypeId)} / `
+              : ''}
+            Location: {getLocationName(character.locationId)}
           </Text>
           {character.occupation && (
             <Text style={styles.subheader}>
@@ -545,248 +803,3 @@ export const CharacterDetailScreen: React.FC = () => {
     </BaseDetailScreen>
   );
 };
-
-const styles = StyleSheet.create({
-  imageGallery: {
-    marginBottom: 16,
-  },
-  imageGalleryContent: {
-    gap: 12,
-  },
-  imageContainer: {
-    width: 200,
-    height: 200,
-    marginRight: 12,
-  },
-  characterImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-    backgroundColor: themeColors.surface,
-  },
-  recipesContainer: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 2,
-    borderTopColor: themeColors.border,
-  },
-  recipesTitle: {
-    ...commonStyles.text.h3,
-    marginBottom: 12,
-    color: themeColors.accent.primary,
-  },
-  recipeItem: {
-    backgroundColor: themeColors.elevated,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  recipeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  recipeName: {
-    ...commonStyles.text.body,
-    fontWeight: '600',
-  },
-  recipeDescription: {
-    ...commonStyles.text.description,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  materialsTitle: {
-    ...commonStyles.text.label,
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  materialItem: {
-    ...commonStyles.text.body,
-    marginLeft: 12,
-    marginBottom: 4,
-  },
-  header: {
-    padding: 20,
-    backgroundColor: themeColors.surface,
-    borderBottomWidth: 2,
-    borderBottomColor: themeColors.border,
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  headerInfo: {
-    gap: 8,
-  },
-  tagScoresContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 12,
-  },
-  tagScoreItem: {
-    ...commonStyles.badge.base,
-    ...commonStyles.badge.tag,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tagName: {
-    ...commonStyles.badge.text,
-    color: themeColors.accent.primary,
-  },
-  tagScore: {
-    ...commonStyles.badge.text,
-    fontWeight: '700',
-    color: themeColors.accent.primary,
-    marginLeft: 6,
-  },
-  name: {
-    ...commonStyles.text.h1,
-    fontSize: 26,
-  },
-  subheader: {
-    ...commonStyles.text.body,
-    marginTop: 6,
-    fontWeight: '500',
-  },
-  itemContainer: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
-    backgroundColor: themeColors.elevated,
-    padding: 12,
-    borderRadius: 8,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  titleText: {
-    ...commonStyles.text.body,
-    fontWeight: '600',
-  },
-  descriptionText: {
-    ...commonStyles.text.description,
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  standingText: {
-    fontSize: 14,
-    color: themeColors.accent.primary,
-    fontWeight: '600',
-  },
-  relationshipTypeText: {
-    fontSize: 14,
-    color: themeColors.status.info,
-    fontWeight: '600',
-  },
-  clickableRelationship: {
-    borderWidth: 2,
-    borderColor: themeColors.accent.primary,
-    backgroundColor: themeColors.interactive.hover,
-  },
-  relationshipNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  clickableText: {
-    color: themeColors.accent.primary,
-    textDecorationLine: 'underline',
-  },
-  unavailableText: {
-    fontSize: 12,
-    color: themeColors.status.warning,
-    fontStyle: 'italic',
-  },
-
-  notes: {
-    ...commonStyles.text.description,
-    lineHeight: 22,
-  },
-  statsContainer: commonStyles.status.container,
-  statItem: commonStyles.status.item,
-  statValue: commonStyles.status.value,
-  retiredBadge: {
-    ...commonStyles.badge.base,
-    ...commonStyles.badge.retired,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  retiredText: {
-    ...commonStyles.badge.textDark,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-  },
-  cyberwareModifiersContainer: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: themeColors.border,
-  },
-  cyberwareModifiersTitle: {
-    ...commonStyles.text.label,
-    fontSize: 14,
-    marginBottom: 8,
-    color: themeColors.accent.primary,
-  },
-  cyberwareModifier: {
-    ...commonStyles.text.body,
-    fontSize: 14,
-    marginLeft: 8,
-    marginBottom: 4,
-    color: themeColors.text.secondary,
-  },
-  discordMessageContainer: {
-    backgroundColor: themeColors.elevated,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  discordMessageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  discordAuthor: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: themeColors.accent.primary,
-  },
-  discordTimestamp: {
-    fontSize: 12,
-    color: themeColors.text.secondary,
-  },
-  discordContent: {
-    fontSize: 14,
-    color: themeColors.text.primary,
-    lineHeight: 20,
-  },
-  discordImageIndicator: {
-    fontSize: 12,
-    color: themeColors.text.secondary,
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  viewContextButton: {
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: themeColors.primary,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  viewContextButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-});

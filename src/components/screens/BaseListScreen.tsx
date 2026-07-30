@@ -1,4 +1,4 @@
-import React, { ReactNode, useLayoutEffect } from 'react';
+import React, { ReactNode, useLayoutEffect, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors as themeColors, layout } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme, layout } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { HeaderAddButton } from '@/components/common/HeaderAddButton';
 
 // trigger build
@@ -49,6 +49,39 @@ export function BaseListScreen<T>({
 }: BaseListScreenProps<T>) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: commonStyles.layout.container,
+        list: {
+          flex: 1,
+        },
+        contentContainer: commonStyles.layout.contentContainer,
+        searchContainer: commonStyles.search.container,
+        searchInput: commonStyles.search.input,
+        clearSearchButton: commonStyles.search.clearButton,
+        clearSearchText: commonStyles.search.clearText,
+        emptyContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: 60,
+        },
+        emptyText: {
+          ...commonStyles.text.h2,
+          color: themeColors.text.muted,
+          marginBottom: 8,
+        },
+        emptySubText: {
+          ...commonStyles.text.body,
+          color: themeColors.text.muted,
+          textAlign: 'center',
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   // Set up the header with the provided headerRight component or add button
   useLayoutEffect(() => {
@@ -124,31 +157,3 @@ export function BaseListScreen<T>({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: commonStyles.layout.container,
-  list: {
-    flex: 1,
-  },
-  contentContainer: commonStyles.layout.contentContainer,
-  searchContainer: commonStyles.search.container,
-  searchInput: commonStyles.search.input,
-  clearSearchButton: commonStyles.search.clearButton,
-  clearSearchText: commonStyles.search.clearText,
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    ...commonStyles.text.h2,
-    color: themeColors.text.muted,
-    marginBottom: 8,
-  },
-  emptySubText: {
-    ...commonStyles.text.body,
-    color: themeColors.text.muted,
-    textAlign: 'center',
-  },
-});

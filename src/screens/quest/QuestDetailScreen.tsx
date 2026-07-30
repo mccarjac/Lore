@@ -86,7 +86,7 @@ export const QuestDetailScreen: React.FC = () => {
 
     const foundQuest = quests.find(q => q.id === questId);
     if (!foundQuest) {
-      Alert.alert('Error', 'Quest not found', [
+      Alert.alert('Error', `${label('quest.singular')} not found`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
       return;
@@ -127,7 +127,7 @@ export const QuestDetailScreen: React.FC = () => {
 
     setCharacters(charactersData);
     setQuest(questWithDetails);
-  }, [questId, navigation]);
+  }, [questId, navigation, label]);
 
   useFocusEffect(
     useCallback(() => {

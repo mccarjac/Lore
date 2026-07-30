@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { clearStorage } from '@utils/characterStorage';
 import { clearDiscordData } from '@/utils/discordStorage';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { DataStoreSection } from '@components/common/DataStoreSection';
 import { AutoSyncToggle } from '@components/common/AutoSyncToggle';
 import { getActiveDataStores } from '@/datastores/registry';
@@ -43,6 +43,64 @@ export const DataManagementScreen: React.FC = () => {
   // may render this screen under a different provider than the active one.
   const { ruleset } = useRuleset();
   const ctx = useMemo(() => createDataStoreContext(ruleset), [ruleset]);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: commonStyles.layout.container,
+        scrollView: commonStyles.layout.scrollView,
+        contentContainer: commonStyles.layout.contentContainer,
+        header: commonStyles.text.h1,
+        description: {
+          ...commonStyles.text.bodyLarge,
+          marginBottom: 32,
+          lineHeight: 24,
+        },
+        section: commonStyles.layout.section,
+        dangerSection: commonStyles.layout.sectionDanger,
+        sectionTitle: commonStyles.text.h2,
+        dangerTitle: {
+          ...commonStyles.text.h2,
+          color: themeColors.accent.danger,
+        },
+        sectionDescription: {
+          ...commonStyles.text.description,
+          marginBottom: 16,
+          lineHeight: 20,
+        },
+        actionButton: commonStyles.button.base,
+        clearButton: commonStyles.button.danger,
+        buttonText: commonStyles.button.text,
+        modalOverlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        modalContent: {
+          backgroundColor: themeColors.surface,
+          borderRadius: 16,
+          padding: 32,
+          alignItems: 'center',
+          minWidth: 280,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        modalText: {
+          ...commonStyles.text.h3,
+          marginTop: 16,
+          textAlign: 'center',
+        },
+        modalSubText: {
+          ...commonStyles.text.body,
+          marginTop: 8,
+          textAlign: 'center',
+          color: themeColors.text.muted,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   const showProgress = (message: string) =>
     setProgress({ visible: true, message });
@@ -170,56 +228,3 @@ export const DataManagementScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: commonStyles.layout.container,
-  scrollView: commonStyles.layout.scrollView,
-  contentContainer: commonStyles.layout.contentContainer,
-  header: commonStyles.text.h1,
-  description: {
-    ...commonStyles.text.bodyLarge,
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  section: commonStyles.layout.section,
-  dangerSection: commonStyles.layout.sectionDanger,
-  sectionTitle: commonStyles.text.h2,
-  dangerTitle: {
-    ...commonStyles.text.h2,
-    color: themeColors.accent.danger,
-  },
-  sectionDescription: {
-    ...commonStyles.text.description,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  actionButton: commonStyles.button.base,
-  clearButton: commonStyles.button.danger,
-  buttonText: commonStyles.button.text,
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: themeColors.surface,
-    borderRadius: 16,
-    padding: 32,
-    alignItems: 'center',
-    minWidth: 280,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  modalText: {
-    ...commonStyles.text.h3,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  modalSubText: {
-    ...commonStyles.text.body,
-    marginTop: 8,
-    textAlign: 'center',
-    color: themeColors.text.muted,
-  },
-});

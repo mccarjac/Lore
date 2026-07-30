@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 
 interface SectionProps {
   title: string;
@@ -9,6 +9,16 @@ interface SectionProps {
 }
 
 export const Section: React.FC<SectionProps> = ({ title, children, style }) => {
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        section: commonStyles.layout.section,
+        sectionTitle: commonStyles.text.h2,
+      }),
+    [commonStyles]
+  );
+
   return (
     <View style={[styles.section, style]}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -16,8 +26,3 @@ export const Section: React.FC<SectionProps> = ({ title, children, style }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: commonStyles.layout.section,
-  sectionTitle: commonStyles.text.h2,
-});

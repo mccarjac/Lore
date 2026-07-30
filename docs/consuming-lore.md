@@ -302,7 +302,12 @@ one, `lore`, is the app:
 - the domain types — `GameCharacter`, `GameEvent`, `GameLocation`, `GameQuest`,
   and friends
 - storage entry points and the pure utilities a flavor's own tests need
-- the component library and the theme, if you want to compose your own screens
+- the component library and the theme, if you want to compose your own
+  screens — `useTheme()`/`useCommonStyles()` resolve a ruleset's
+  `branding.colors` override at render time; the static `colors`/
+  `commonStyles`/`shadows`/`componentStyles` exports always show the
+  engine's default palette regardless of `branding.colors`. See
+  [ruleset-authoring.md](./ruleset-authoring.md#theming).
 
 The second, `lore/ruleset`, is the same ruleset layer with no React Native
 behind it — the schema, the attribute primitive, the domain types and the pure

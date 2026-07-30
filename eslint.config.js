@@ -73,7 +73,18 @@ module.exports = [
       '@typescript-eslint/no-non-null-assertion': 'warn',
 
       // React Native specific rules
-      'react-native/no-unused-styles': 'error',
+      // 'no-unused-styles' is off: eslint-plugin-react-native@5's detector
+      // only names a stylesheet via `node.parent.id` (a plain
+      // `const styles = StyleSheet.create({...})` VariableDeclarator). The
+      // theming migration's mandated pattern — `useMemo(() => StyleSheet
+      // .create({...}), [deps])`, see Card.tsx / BaseListScreen.tsx and
+      // src/styles/*.ts's useTheme()/useCommonStyles() hooks — puts an
+      // ArrowFunctionExpression between the declarator and the call, so
+      // `.parent.id` is undefined and the rule reports every key as unused
+      // under a literal "undefined" stylesheet name, even when the JSX uses
+      // it. Verified against Card.tsx/BaseListScreen.tsx, both already on
+      // this pattern, both false-positiving before this file changed.
+      'react-native/no-unused-styles': 'off',
       'react-native/split-platform-components': 'error',
       'react-native/no-inline-styles': 'warn',
       'react-native/no-color-literals': 'warn',
