@@ -485,6 +485,34 @@ characterAttributes.test.ts` is the only proof that step 1b behaves.
   a different ruleset can say something else without a code change.
   The map's display name is `terminology['map.label']`; `RulesetDefinition.map`
   carries only `imageKey`, since two sources for one string only drift.
+  **`character`/`faction`/`quest` are `TermKey`s too**, added alongside
+  `branding.colors` — the engine's own core domain nouns, not just ruleset
+  content. `location`/`event` are not yet in `TermKey`.
+- `src/styles/theme.ts` / `src/styles/commonStyles.ts` — colors are
+  ruleset-configurable via `RulesetDefinition.branding.colors`
+  (`ColorPaletteOverrides`, declared in `ruleset/types.ts` so the schema has
+  no dependency on the styling layer); everything else in these two files
+  (`typography`/`spacing`/`borderRadius`/`layout`) is not. **Read colors
+  through `useTheme()`/`useCommonStyles()`, never the static `colors`/
+  `commonStyles` exports, in any component.** The static exports are kept
+  only for backward compatibility and always show the engine default —
+  they cannot show a ruleset's override, because a consumer's
+  `configureLore()` call runs _after_ this package's whole module graph
+  (every module-scope `StyleSheet.create()` included) has already
+  evaluated. `shadows`/`componentStyles` are themselves color-derived, so
+  they went the same route: `buildShadows(colors)`/
+  `buildComponentStyles(colors)` functions, with `useTheme()` computing
+  fresh ones from the resolved palette and a static `DEFAULT_COLORS`-backed
+  export kept for compat. `getActiveColors()` mirrors `getLabel()` for
+  non-component code. Not every screen has been migrated to the hooks —
+  `src/screens/quest/**`, `src/screens/discord/**`, the stats/influence/
+  graph screens, and the map screen still read the static defaults; that's
+  a known, deliberate gap (they weren't reachable by the consumer that
+  needed this), not an oversight to silently "fix" as a drive-by.
+  `eslint-plugin-react-native@5`'s `no-unused-styles` cannot resolve a
+  stylesheet name through the `useMemo(() => StyleSheet.create(...))`
+  wrapper this requires (reports every key `undefined.*`), so that rule is
+  off in `eslint.config.js`.
 - `src/ruleset/features.ts` — `useFeature(key)` / `isFeatureEnabled(ruleset,
 key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   runtime data so `validate.ts` can iterate it (a `keyof` cannot). Flags gate

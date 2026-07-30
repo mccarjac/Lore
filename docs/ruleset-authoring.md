@@ -143,7 +143,7 @@ deliberately small enough to hold in your head.
 | `features`              | yes      | Seven booleans gating whole subsystems.                                                                    |
 | `limits`                | no       | Ruleset-level numbers, e.g. `maxQualities`.                                                                |
 | `map`                   | no       | `{ imageKey }` — resolved through `RulesetAssets`, never a `require()`.                                    |
-| `branding`              | yes      | `appName` plus optional `iconKey` / `splashKey`.                                                           |
+| `branding`              | yes      | `appName` plus optional `iconKey` / `splashKey` / `colors`. See "Theming".                                 |
 
 ### Attributes and roles
 
@@ -211,10 +211,18 @@ it only if your rules need it.
 ### Terminology
 
 `terminology` maps a `TermKey` (`'trait.plural'`, `'archetype.singular'`,
-`'map.label'`, …) to what your game calls that thing. Anything you omit uses
-the neutral default, so `terminology: {}` is a complete, valid choice — the
-example ruleset does exactly that so the fallback path is exercised by a
-running app.
+`'character.plural'`, `'map.label'`, …) to what your game calls that thing.
+Anything you omit uses the neutral default, so `terminology: {}` is a
+complete, valid choice — the example ruleset does exactly that so the
+fallback path is exercised by a running app.
+
+Most `TermKey`s are ruleset-content nouns (`archetype`, `trait`,
+`traitCategory`, `quality`, `modification`, `resource`, `recipe`,
+`questSponsor`, `map.label`). Three are the engine's own core domain nouns —
+`character`, `faction`, `quest` — overridable for the same reason: a lore app
+for a real-world event ("Wastelander", "Tribe", "Mission") reads nothing like
+a fantasy campaign's "Character", "Faction", "Quest". `location` and `event`
+are not yet in `TermKey`; they're always "Location"/"Event".
 
 Screens read these through `useLabels()`, and non-component code through
 `getLabel(ruleset, key)`. **Never hardcode a domain noun in a screen** — a
@@ -223,6 +231,59 @@ different ruleset calls it something else.
 Terminology overrides are _content_. Renaming an engine field must not drag the
 override values along with it: Junktown's app still says "Species" and "Perks"
 after the Phase 1 renames precisely because those values live in the ruleset.
+
+### Theming
+
+`branding.colors` (`ColorPaletteOverrides`) reskins the engine's default dark
+blue-purple palette. It's a deep-partial of `ColorPalette` — override only
+the tokens you care about:
+
+```ts
+export const myFlavorRuleset: RulesetDefinition = {
+  // ...
+  branding: {
+    appName: 'My Flavor',
+    colors: {
+      primary: '#1A120B', // main background
+      accent: { primary: '#C0642C' }, // nested groups merge independently —
+    }, // accent.secondary/success/... keep their defaults
+  },
+};
+```
+
+See `src/styles/theme.ts`'s `ColorPalette` for the full shape (backgrounds,
+text, accent, status, standing, certainty, interactive, border, shadow).
+
+**Screens must read colors through `useTheme()` (or `useCommonStyles()` for
+the shared button/card/badge/etc. presets), never the static `colors` /
+`commonStyles` exports**, and must resolve them at _render_ time, not module
+load. A consumer's `configureLore({ ruleset })` call runs after this
+package's whole module graph — including every module-scope
+`StyleSheet.create()` — has already been evaluated (ES import order), so a
+color baked into a style object at import time can never reflect a ruleset's
+override. The pattern:
+
+```tsx
+import { useTheme } from 'lore'; // or '@/styles/theme' inside this repo
+
+function MyScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(
+    () => StyleSheet.create({ card: { backgroundColor: colors.surface } }),
+    [colors]
+  );
+  // ...
+}
+```
+
+The static `colors`/`commonStyles`/`shadows`/`componentStyles` exports still
+exist and still work — they just always show the engine's default palette,
+regardless of `branding.colors`. They're for code that hasn't been migrated
+to the hooks yet, not a second valid way to read a ruleset-aware color.
+
+`getActiveColors()` mirrors `getLabel()` for non-component code that needs a
+ruleset's resolved palette outside a render (rare — most color usage is in
+screens).
 
 ### Feature flags
 
