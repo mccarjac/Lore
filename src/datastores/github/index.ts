@@ -17,6 +17,7 @@
  */
 
 import { GitHubSection } from './GitHubSection';
+import { githubAutoSync } from './autoSync';
 import type { DataStore } from '../types';
 
 export const githubDataStore: DataStore = {
@@ -25,8 +26,10 @@ export const githubDataStore: DataStore = {
   // The section renders its own heading and description, since both depend on
   // configured state. These stay for a consumer listing the registry.
   description:
-    'Share data with other users through a GitHub repository. Exports create pull requests for review.',
+    'Share data with other users through a GitHub repository. Manual exports create pull requests for review; automatic sync (opt-in) commits directly.',
   Section: GitHubSection,
+  // Opt-in background sync (#31) — see `./autoSync.ts`.
+  autoSync: githubAutoSync,
 };
 
 export { GitHubSection };

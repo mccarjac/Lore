@@ -7,8 +7,10 @@ import {
   computeGitHubSyncPlan,
   exportToGitHub,
   getGitHubConfig,
+  getRemoteHeadSha,
   importFromGitHub,
   isGitHubConfigured,
+  pushDatasetToBranch,
   saveGitHubConfig,
   verifyGitHubToken,
 } from '@utils/gitIntegration';
@@ -679,6 +681,268 @@ describe('gitIntegration', () => {
 
       expect(result.success).toBe(false);
       expect(FileSystem.writeAsStringAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getRemoteHeadSha', () => {
+    beforeEach(() => {
+      (FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
+        (path: string) => {
+          if (path === CONFIG_PATH) {
+            return Promise.resolve(JSON.stringify({ token: 'abc123' }));
+          }
+          return Promise.reject(new Error(`unexpected read: ${path}`));
+        }
+      );
+    });
+
+    it('makes exactly one API call and writes nothing', async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'main-head-sha' } },
+      });
+
+      const result = await getRemoteHeadSha();
+
+      expect(result).toEqual({ success: true, sha: 'main-head-sha' });
+      expect(client.rest.git.getRef).toHaveBeenCalledTimes(1);
+      expect(client.rest.repos.get).not.toHaveBeenCalled();
+      expect(FileSystem.writeAsStringAsync).not.toHaveBeenCalled();
+    });
+
+    it('reports failure when no token is configured', async () => {
+      (FileSystem.readAsStringAsync as jest.Mock).mockRejectedValue(
+        new Error('ENOENT')
+      );
+
+      const result = await getRemoteHeadSha();
+
+      expect(result.success).toBe(false);
+      expect(result.sha).toBeUndefined();
+    });
+
+    it('classifies a failed lookup', async () => {
+      client.rest.git.getRef.mockRejectedValue(octokitError(404, 'Not Found'));
+
+      const result = await getRemoteHeadSha();
+
+      expect(result.success).toBe(false);
+      expect(result.errorKind).toBe('notFound');
+    });
+  });
+
+  describe('computeGitHubSyncPlan skipIfRemoteUnchanged', () => {
+    const emptyDataset = (): SyncDataset => ({
+      characters: [],
+      factions: [],
+      locations: [],
+      events: [],
+      quests: [],
+    });
+
+    beforeEach(() => {
+      (FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
+        (path: string) => {
+          if (path === CONFIG_PATH) {
+            return Promise.resolve(
+              JSON.stringify({
+                token: 'abc123',
+                sync: { baseCommitSha: 'same-sha' },
+              })
+            );
+          }
+          if (path === SYNC_BASE_PATH) {
+            return Promise.reject(new Error('ENOENT'));
+          }
+          return Promise.reject(new Error(`unexpected read: ${path}`));
+        }
+      );
+      (characterStorage.exportDataset as jest.Mock).mockResolvedValue(
+        JSON.stringify(emptyDataset())
+      );
+    });
+
+    it('reports unchanged without fetching the remote dataset when the head matches the base', async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'same-sha' } },
+      });
+
+      const result = await computeGitHubSyncPlan({
+        skipIfRemoteUnchanged: true,
+      });
+
+      expect(result).toEqual({
+        success: true,
+        remoteCommitSha: 'same-sha',
+        unchanged: true,
+      });
+      expect(client.rest.repos.getContent).not.toHaveBeenCalled();
+      expect(client.rest.repos.get).not.toHaveBeenCalled();
+    });
+
+    it('falls through to the full plan when the head has moved', async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'new-sha' } },
+      });
+      client.rest.repos.getContent.mockImplementation(
+        ({ path }: { path: string }) => {
+          if (path === 'data.json') {
+            return Promise.resolve({
+              data: {
+                content: Buffer.from(JSON.stringify(emptyDataset())).toString(
+                  'base64'
+                ),
+              },
+            });
+          }
+          return Promise.reject(octokitError(404, 'Not Found'));
+        }
+      );
+
+      const result = await computeGitHubSyncPlan({
+        skipIfRemoteUnchanged: true,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.unchanged).toBeUndefined();
+      expect(result.plan).toBeDefined();
+      expect(client.rest.repos.getContent).toHaveBeenCalled();
+    });
+
+    it('the manual path (no options) is unaffected by the reorder', async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'new-sha' } },
+      });
+      client.rest.repos.getContent.mockImplementation(
+        ({ path }: { path: string }) => {
+          if (path === 'data.json') {
+            return Promise.resolve({
+              data: {
+                content: Buffer.from(JSON.stringify(emptyDataset())).toString(
+                  'base64'
+                ),
+              },
+            });
+          }
+          return Promise.reject(octokitError(404, 'Not Found'));
+        }
+      );
+
+      const result = await computeGitHubSyncPlan();
+
+      expect(result.success).toBe(true);
+      expect(result.unchanged).toBeUndefined();
+      expect(result.plan).toBeDefined();
+    });
+  });
+
+  describe('pushDatasetToBranch', () => {
+    const emptyDataset = (): SyncDataset => ({
+      characters: [],
+      factions: [],
+      locations: [],
+      events: [],
+      quests: [],
+    });
+
+    beforeEach(() => {
+      (FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
+        (path: string) => {
+          if (path === CONFIG_PATH) {
+            return Promise.resolve(JSON.stringify({ token: 'abc123' }));
+          }
+          return Promise.reject(new Error(`unexpected read: ${path}`));
+        }
+      );
+      (characterStorage.exportDataset as jest.Mock).mockResolvedValue(
+        JSON.stringify(emptyDataset())
+      );
+    });
+
+    it('commits directly to the branch in one commit and advances the merge base', async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'head-sha' } },
+      });
+
+      const result = await pushDatasetToBranch({ expectedHeadSha: 'head-sha' });
+
+      expect(result.success).toBe(true);
+      expect(result.commitSha).toBe('new-commit-sha');
+      expect(client.rest.git.createRef).not.toHaveBeenCalled();
+      expect(client.rest.pulls.create).not.toHaveBeenCalled();
+      expect(client.rest.git.createCommit).toHaveBeenCalledWith(
+        expect.objectContaining({ parents: ['head-sha'] })
+      );
+      expect(client.rest.git.updateRef).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ref: 'heads/main',
+          sha: 'new-commit-sha',
+          force: false,
+        })
+      );
+      expect(FileSystem.writeAsStringAsync).toHaveBeenCalledWith(
+        SYNC_BASE_PATH,
+        expect.any(String)
+      );
+      const [, savedConfigJson] = (
+        FileSystem.writeAsStringAsync as jest.Mock
+      ).mock.calls.find(([path]) => path === CONFIG_PATH) as [string, string];
+      const savedConfig = JSON.parse(savedConfigJson);
+      expect(savedConfig.sync.baseCommitSha).toBe('new-commit-sha');
+    });
+
+    it('refuses and writes nothing when the branch moved before the commit was built', async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'someone-elses-new-head' } },
+      });
+
+      const result = await pushDatasetToBranch({
+        expectedHeadSha: 'stale-head-sha',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.remoteMoved).toBe(true);
+      expect(client.rest.git.createCommit).not.toHaveBeenCalled();
+      expect(FileSystem.writeAsStringAsync).not.toHaveBeenCalled();
+    });
+
+    it('maps a non-fast-forward updateRef rejection to remoteMoved and persists nothing', async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'head-sha' } },
+      });
+      client.rest.git.updateRef.mockRejectedValue(
+        octokitError(422, 'Update is not a fast forward')
+      );
+
+      const result = await pushDatasetToBranch({ expectedHeadSha: 'head-sha' });
+
+      expect(result.success).toBe(false);
+      expect(result.remoteMoved).toBe(true);
+      expect(FileSystem.writeAsStringAsync).not.toHaveBeenCalled();
+    });
+
+    it('uploads image blobs alongside data.json in the same commit', async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'head-sha' } },
+      });
+      (characterStorage.exportDataset as jest.Mock).mockResolvedValue(
+        JSON.stringify({
+          ...emptyDataset(),
+          characters: [
+            makeCharacter({
+              id: 'c1',
+              name: 'Alice',
+              imageUris: ['data:image/jpeg;base64,AAAA'],
+            }),
+          ],
+        })
+      );
+
+      const result = await pushDatasetToBranch({ expectedHeadSha: 'head-sha' });
+
+      expect(result.success).toBe(true);
+      expect(client.rest.git.createBlob).toHaveBeenCalledWith(
+        expect.objectContaining({ content: 'AAAA' })
+      );
     });
   });
 });

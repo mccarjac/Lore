@@ -83,6 +83,12 @@ export type {
   DataStoreActionVariant,
   DataStoreContext,
   DataStoreSectionProps,
+  DataStoreAutoSync,
+  AutoSyncReason,
+  AutoSyncRunOptions,
+  AutoSyncOutcome,
+  AutoSyncConflictSummary,
+  AutoSyncResult,
 } from './datastores/types';
 
 // --- Domain types -----------------------------------------------------------

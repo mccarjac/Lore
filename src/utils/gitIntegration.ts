@@ -54,6 +54,272 @@ const extractImageData = (
   return { mimeType, base64Data, extension };
 };
 
+interface ImageFile {
+  path: string;
+  content: string;
+  entityType: string;
+  entityId: string;
+}
+
+/**
+ * Read every entity's images (data URI or `file://`) into base64 blobs ready
+ * for upload, and rewrite each entity's `imageUris` in place to the
+ * repo-relative paths those blobs will land at
+ * (`images/<entityType>/<entityId>_<i>.<ext>`).
+ *
+ * Both `exportToGitHub` (PR path) and `pushDatasetToBranch` (direct-commit
+ * auto-sync path, #31) call this — sharing it is what keeps a manual export
+ * and an automatic push byte-identical on the image side, which is the
+ * flakiest part of sync (data-URI vs `file://` vs the legacy single
+ * `imageUri` field, faction-name sanitization).
+ *
+ * Mutates `dataset` in place, exactly like the code this replaced did — the
+ * caller must sort/serialize the dataset *after* calling this, not before.
+ */
+const collectImageFiles = async (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  dataset: any
+): Promise<{ imageFiles: ImageFile[]; totalImages: number }> => {
+  const imageFiles: ImageFile[] = [];
+
+  const processEntityImages = async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    entity: any,
+    entityType: 'characters' | 'locations' | 'events' | 'factions',
+    entityId: string
+  ) => {
+    const images: string[] = [];
+
+    // Handle multiple images
+    if (entity.imageUris && entity.imageUris.length > 0) {
+      for (let i = 0; i < entity.imageUris.length; i++) {
+        const uri = entity.imageUris[i];
+        if (uri) {
+          if (uri.startsWith('data:')) {
+            // Handle base64 data URI
+            const imageData = extractImageData(uri);
+            if (imageData) {
+              const filename = `images/${entityType}/${entityId}_${i}.${imageData.extension}`;
+              imageFiles.push({
+                path: filename,
+                content: imageData.base64Data,
+                entityType,
+                entityId,
+              });
+              images.push(filename);
+            }
+          } else if (uri.startsWith('file://') || uri.startsWith('/')) {
+            // Handle file URI - read file and convert to base64
+            try {
+              const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
+              const base64Data = await FileSystem.readAsStringAsync(fileUri, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+              const filename = `images/${entityType}/${entityId}_${i}.${extension}`;
+              imageFiles.push({
+                path: filename,
+                content: base64Data,
+                entityType,
+                entityId,
+              });
+              images.push(filename);
+            } catch (error) {
+              console.error(`Failed to read image file: ${uri}`, error);
+              // Skip this image if we can't read it
+            }
+          }
+        }
+      }
+    }
+    // Handle legacy single image
+    else if (entity.imageUri) {
+      const uri = entity.imageUri;
+      if (uri.startsWith('data:')) {
+        const imageData = extractImageData(uri);
+        if (imageData) {
+          const filename = `images/${entityType}/${entityId}.${imageData.extension}`;
+          imageFiles.push({
+            path: filename,
+            content: imageData.base64Data,
+            entityType,
+            entityId,
+          });
+          images.push(filename);
+        }
+      } else if (uri.startsWith('file://') || uri.startsWith('/')) {
+        try {
+          const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
+          const base64Data = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+          const filename = `images/${entityType}/${entityId}.${extension}`;
+          imageFiles.push({
+            path: filename,
+            content: base64Data,
+            entityType,
+            entityId,
+          });
+          images.push(filename);
+        } catch (error) {
+          console.error(`Failed to read image file: ${uri}`, error);
+        }
+      }
+    }
+
+    return images;
+  };
+
+  let totalImages = 0;
+  console.log('[GitHub Export] Processing images for export...');
+  if (dataset.characters) {
+    for (const character of dataset.characters) {
+      const images = await processEntityImages(
+        character,
+        'characters',
+        character.id
+      );
+      if (images.length > 0) {
+        character.imageUris = images;
+        totalImages += images.length;
+        console.log(
+          `[GitHub Export] Processed ${images.length} images for character: ${character.name}`
+        );
+      }
+    }
+  }
+
+  if (dataset.locations) {
+    for (const location of dataset.locations) {
+      const images = await processEntityImages(
+        location,
+        'locations',
+        location.id
+      );
+      if (images.length > 0) {
+        location.imageUris = images;
+        totalImages += images.length;
+        console.log(
+          `[GitHub Export] Processed ${images.length} images for location: ${location.name}`
+        );
+      }
+    }
+  }
+
+  if (dataset.events) {
+    for (const event of dataset.events) {
+      const images = await processEntityImages(event, 'events', event.id);
+      if (images.length > 0) {
+        event.imageUris = images;
+        totalImages += images.length;
+        console.log(
+          `[GitHub Export] Processed ${images.length} images for event: ${event.title}`
+        );
+      }
+    }
+  }
+
+  if (dataset.factions) {
+    for (const faction of dataset.factions) {
+      const safeName = faction.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const images = await processEntityImages(faction, 'factions', safeName);
+      if (images.length > 0) {
+        faction.imageUris = images;
+        totalImages += images.length;
+        console.log(
+          `[GitHub Export] Processed ${images.length} images for faction: ${faction.name}`
+        );
+      }
+    }
+  }
+
+  console.log(`[GitHub Export] Total images to upload: ${totalImages}`);
+
+  return { imageFiles, totalImages };
+};
+
+/**
+ * Build a tree on top of an existing commit's tree, adding/overwriting the
+ * given blobs, then commit it. Shared by `exportToGitHub`'s image upload and
+ * `pushDatasetToBranch`'s single-commit path (#31) — both need "take a
+ * commit, layer some blobs on its tree, commit the result" and nothing more.
+ *
+ * A blob that fails to create is skipped rather than failing the whole
+ * commit, matching the image-upload behavior this replaced ("continue with
+ * other images even if one fails").
+ */
+const createTreeCommit = async (
+  octokit: Octokit,
+  options: {
+    /** The commit whose tree the new tree is layered on top of. */
+    baseCommitSha: string;
+    files: Array<{
+      path: string;
+      content: string;
+      encoding?: 'base64' | 'utf-8';
+    }>;
+    message: string;
+  }
+): Promise<{ commitSha: string }> => {
+  const { data: baseCommit } = await octokit.rest.git.getCommit({
+    owner: DATA_REPO_OWNER,
+    repo: DATA_REPO_NAME,
+    commit_sha: options.baseCommitSha,
+  });
+  const baseTreeSha = baseCommit.tree.sha;
+
+  const treeItems: Array<{
+    path: string;
+    mode: '100644';
+    type: 'blob';
+    sha: string;
+  }> = [];
+
+  for (const file of options.files) {
+    try {
+      const content =
+        (file.encoding ?? 'base64') === 'base64'
+          ? file.content.replace(/[\r\n\s]/g, '')
+          : file.content;
+      const { data: blob } = await octokit.rest.git.createBlob({
+        owner: DATA_REPO_OWNER,
+        repo: DATA_REPO_NAME,
+        content,
+        encoding: file.encoding ?? 'base64',
+      });
+      treeItems.push({
+        path: file.path,
+        mode: '100644',
+        type: 'blob',
+        sha: blob.sha,
+      });
+    } catch (error) {
+      console.error(
+        `[GitHub Sync] Failed to create blob for ${file.path}:`,
+        error
+      );
+    }
+  }
+
+  const { data: newTree } = await octokit.rest.git.createTree({
+    owner: DATA_REPO_OWNER,
+    repo: DATA_REPO_NAME,
+    base_tree: baseTreeSha,
+    tree: treeItems,
+  });
+
+  const { data: newCommit } = await octokit.rest.git.createCommit({
+    owner: DATA_REPO_OWNER,
+    repo: DATA_REPO_NAME,
+    message: options.message,
+    tree: newTree.sha,
+    parents: [options.baseCommitSha],
+  });
+
+  return { commitSha: newCommit.sha };
+};
+
 /**
  * GitHub configuration storage keys
  */
@@ -114,7 +380,11 @@ export const saveGitHubConfig = async (config: GitHubConfig): Promise<void> => {
 
 // The merge-base snapshot is stored separately from GitHubConfig because it
 // is a full dataset (potentially large) rather than a few config fields.
-const getSyncBaseSnapshot = async (): Promise<SyncDataset | null> => {
+// Exported (#31) so auto-sync can tell "has a merge base ever been
+// established" without duplicating the file read — a store's own backend
+// state, not local game data, so reading it does not breach the "a store
+// never touches storage" rule (local data still arrives only on `ctx`).
+export const getSyncBaseSnapshot = async (): Promise<SyncDataset | null> => {
   try {
     const raw = await FileSystem.readAsStringAsync(
       FileSystem.documentDirectory + SYNC_BASE_KEY
@@ -192,6 +462,39 @@ const getMainHeadSha = async (octokit: Octokit): Promise<string> => {
     ref: `heads/${DATA_REPO_BRANCH}`,
   });
   return ref.object.sha;
+};
+
+/**
+ * The cheap remote-moved check auto-sync needs (#31): one `git.getRef` call,
+ * no repository verification, no data.json fetch, no images. Deliberately
+ * skips `verifyRepository` — a missing/unauthorized repo makes `getRef`
+ * itself fail with a 404/401, which `classifySyncError` already maps
+ * correctly, so a second check would only cost an extra call on every poll.
+ */
+export const getRemoteHeadSha = async (): Promise<{
+  success: boolean;
+  sha?: string;
+  error?: string;
+  errorKind?: SyncErrorKind;
+}> => {
+  try {
+    const octokit = await getOctokit();
+    if (!octokit) {
+      return {
+        success: false,
+        error: 'GitHub token not configured. Please set up your token first.',
+      };
+    }
+    const sha = await getMainHeadSha(octokit);
+    return { success: true, sha };
+  } catch (error) {
+    const classified = classifySyncError(error);
+    return {
+      success: false,
+      error: classified.message,
+      errorKind: classified.kind,
+    };
+  }
 };
 
 /**
@@ -281,169 +584,7 @@ export const exportToGitHub = async (
     }
 
     // Process and upload images
-    const imageFiles: Array<{
-      path: string;
-      content: string;
-      entityType: string;
-      entityId: string;
-    }> = [];
-
-    // Helper function to process images for an entity
-    const processEntityImages = async (
-      entity: any,
-      entityType: 'characters' | 'locations' | 'events' | 'factions',
-      entityId: string
-    ) => {
-      const images: string[] = [];
-
-      // Handle multiple images
-      if (entity.imageUris && entity.imageUris.length > 0) {
-        for (let i = 0; i < entity.imageUris.length; i++) {
-          const uri = entity.imageUris[i];
-          if (uri) {
-            if (uri.startsWith('data:')) {
-              // Handle base64 data URI
-              const imageData = extractImageData(uri);
-              if (imageData) {
-                const filename = `images/${entityType}/${entityId}_${i}.${imageData.extension}`;
-                imageFiles.push({
-                  path: filename,
-                  content: imageData.base64Data,
-                  entityType,
-                  entityId,
-                });
-                images.push(filename);
-              }
-            } else if (uri.startsWith('file://') || uri.startsWith('/')) {
-              // Handle file URI - read file and convert to base64
-              try {
-                const fileUri = uri.startsWith('file://')
-                  ? uri
-                  : `file://${uri}`;
-                const base64Data = await FileSystem.readAsStringAsync(fileUri, {
-                  encoding: FileSystem.EncodingType.Base64,
-                });
-                const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
-                const filename = `images/${entityType}/${entityId}_${i}.${extension}`;
-                imageFiles.push({
-                  path: filename,
-                  content: base64Data,
-                  entityType,
-                  entityId,
-                });
-                images.push(filename);
-              } catch (error) {
-                console.error(`Failed to read image file: ${uri}`, error);
-                // Skip this image if we can't read it
-              }
-            }
-          }
-        }
-      }
-      // Handle legacy single image
-      else if (entity.imageUri) {
-        const uri = entity.imageUri;
-        if (uri.startsWith('data:')) {
-          const imageData = extractImageData(uri);
-          if (imageData) {
-            const filename = `images/${entityType}/${entityId}.${imageData.extension}`;
-            imageFiles.push({
-              path: filename,
-              content: imageData.base64Data,
-              entityType,
-              entityId,
-            });
-            images.push(filename);
-          }
-        } else if (uri.startsWith('file://') || uri.startsWith('/')) {
-          try {
-            const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
-            const base64Data = await FileSystem.readAsStringAsync(fileUri, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
-            const filename = `images/${entityType}/${entityId}.${extension}`;
-            imageFiles.push({
-              path: filename,
-              content: base64Data,
-              entityType,
-              entityId,
-            });
-            images.push(filename);
-          } catch (error) {
-            console.error(`Failed to read image file: ${uri}`, error);
-          }
-        }
-      }
-
-      return images;
-    };
-
-    // Process images for all entities
-    let totalImages = 0;
-    console.log('[GitHub Export] Processing images for export...');
-    if (dataset.characters) {
-      for (const character of dataset.characters) {
-        const images = await processEntityImages(
-          character,
-          'characters',
-          character.id
-        );
-        if (images.length > 0) {
-          character.imageUris = images;
-          totalImages += images.length;
-          console.log(
-            `[GitHub Export] Processed ${images.length} images for character: ${character.name}`
-          );
-        }
-      }
-    }
-
-    if (dataset.locations) {
-      for (const location of dataset.locations) {
-        const images = await processEntityImages(
-          location,
-          'locations',
-          location.id
-        );
-        if (images.length > 0) {
-          location.imageUris = images;
-          totalImages += images.length;
-          console.log(
-            `[GitHub Export] Processed ${images.length} images for location: ${location.name}`
-          );
-        }
-      }
-    }
-
-    if (dataset.events) {
-      for (const event of dataset.events) {
-        const images = await processEntityImages(event, 'events', event.id);
-        if (images.length > 0) {
-          event.imageUris = images;
-          totalImages += images.length;
-          console.log(
-            `[GitHub Export] Processed ${images.length} images for event: ${event.title}`
-          );
-        }
-      }
-    }
-
-    if (dataset.factions) {
-      for (const faction of dataset.factions) {
-        const safeName = faction.name.replace(/[^a-zA-Z0-9]/g, '_');
-        const images = await processEntityImages(faction, 'factions', safeName);
-        if (images.length > 0) {
-          faction.imageUris = images;
-          totalImages += images.length;
-          console.log(
-            `[GitHub Export] Processed ${images.length} images for faction: ${faction.name}`
-          );
-        }
-      }
-    }
-
-    console.log(`[GitHub Export] Total images to upload: ${totalImages}`);
+    const { imageFiles, totalImages } = await collectImageFiles(dataset);
 
     // Sort the dataset deterministically to minimize diff noise
     const sortedDataset = sortDatasetDeterministically(dataset);
@@ -473,8 +614,7 @@ export const exportToGitHub = async (
     console.log(
       `[GitHub Export] Uploading ${imageFiles.length} images to GitHub...`
     );
-    let uploadedCount = 0;
-    // Get the latest commit for the branch to build on
+    // Get the latest commit for the branch to build the image tree on
     const { data: refData } = await octokit.rest.git.getRef({
       owner: DATA_REPO_OWNER,
       repo: DATA_REPO_NAME,
@@ -482,70 +622,10 @@ export const exportToGitHub = async (
     });
     const latestCommitSha = refData.object.sha;
 
-    // Get the tree for the latest commit
-    const { data: latestCommit } = await octokit.rest.git.getCommit({
-      owner: DATA_REPO_OWNER,
-      repo: DATA_REPO_NAME,
-      commit_sha: latestCommitSha,
-    });
-    const baseTreeSha = latestCommit.tree.sha;
-
-    // Create blobs for all images
-    const treeItems: Array<{
-      path: string;
-      mode: '100644';
-      type: 'blob';
-      sha: string;
-    }> = [];
-
-    for (const imageFile of imageFiles) {
-      try {
-        // Clean base64 content - remove any whitespace that might have been added during encoding
-        const cleanBase64 = imageFile.content.replace(/[\r\n\s]/g, '');
-
-        // Create a blob for the image
-        const { data: blob } = await octokit.rest.git.createBlob({
-          owner: DATA_REPO_OWNER,
-          repo: DATA_REPO_NAME,
-          content: cleanBase64,
-          encoding: 'base64',
-        });
-
-        treeItems.push({
-          path: imageFile.path,
-          mode: '100644',
-          type: 'blob',
-          sha: blob.sha,
-        });
-
-        uploadedCount++;
-        console.log(
-          `[GitHub Export] Created blob for image ${uploadedCount}/${imageFiles.length}: ${imageFile.path}`
-        );
-      } catch (error) {
-        console.error(
-          `[GitHub Export] Failed to create blob for image ${imageFile.path}:`,
-          error
-        );
-        // Continue with other images even if one fails
-      }
-    }
-
-    // Create a new tree with all the image blobs
-    const { data: newTree } = await octokit.rest.git.createTree({
-      owner: DATA_REPO_OWNER,
-      repo: DATA_REPO_NAME,
-      base_tree: baseTreeSha,
-      tree: treeItems,
-    });
-
-    // Create a commit with the new tree
-    const { data: newCommit } = await octokit.rest.git.createCommit({
-      owner: DATA_REPO_OWNER,
-      repo: DATA_REPO_NAME,
-      message: `Upload ${treeItems.length} images`,
-      tree: newTree.sha,
-      parents: [latestCommitSha],
+    const { commitSha: imagesCommitSha } = await createTreeCommit(octokit, {
+      baseCommitSha: latestCommitSha,
+      files: imageFiles,
+      message: `Upload ${imageFiles.length} images`,
     });
 
     // Update the branch reference to point to the new commit
@@ -553,10 +633,10 @@ export const exportToGitHub = async (
       owner: DATA_REPO_OWNER,
       repo: DATA_REPO_NAME,
       ref: `heads/${branchName}`,
-      sha: newCommit.sha,
+      sha: imagesCommitSha,
     });
     console.log(
-      `[GitHub Export] Successfully uploaded ${uploadedCount}/${imageFiles.length} images`
+      `[GitHub Export] Successfully uploaded ${imageFiles.length} images`
     );
 
     // Create Pull Request
@@ -1002,6 +1082,9 @@ export interface GitHubSyncPlanResult {
   // pass it through to applyGitHubSyncPlan so the merge base can be
   // recorded against the exact remote state this plan was built from.
   remoteCommitSha?: string;
+  // True when `skipIfRemoteUnchanged` was set and the remote hadn't moved —
+  // `plan` is omitted because nothing needed diffing.
+  unchanged?: boolean;
   error?: string;
   errorKind?: SyncErrorKind;
 }
@@ -1011,56 +1094,72 @@ export interface GitHubSyncPlanResult {
  * download), load the local dataset, and compute a three-way merge plan
  * against the last-synced base snapshot. Does not write anything — call
  * `applyGitHubSyncPlan` with the user's conflict resolutions to persist it.
+ *
+ * The head SHA is read *before* the full remote fetch — auto-sync (#31)
+ * polls this on an interval, and `importFromGitHub()` is expensive (a
+ * `data.json` fetch plus one request per image); `skipIfRemoteUnchanged`
+ * lets a poll skip all of that the moment the branch hasn't moved. The manual
+ * "Sync from GitHub" path calls this with no options and is unaffected: the
+ * SHA read happens either way, just earlier, and the total call count for a
+ * plan that does need computing is unchanged.
  */
-export const computeGitHubSyncPlan =
-  async (): Promise<GitHubSyncPlanResult> => {
-    try {
-      const remoteResult = await importFromGitHub();
-      if (!remoteResult.success || !remoteResult.data) {
-        return {
-          success: false,
-          error: remoteResult.error,
-          errorKind: remoteResult.errorKind,
-        };
-      }
-
-      const octokit = await getOctokit();
-      if (!octokit) {
-        return {
-          success: false,
-          error: 'GitHub token not configured. Please set up your token first.',
-        };
-      }
-      const remoteCommitSha = await getMainHeadSha(octokit);
-
-      // Normalize every side to the current field names before diffing.
-      // A remote or base snapshot written before the Phase 1 renames would
-      // otherwise differ from freshly-migrated local data on every single
-      // character, manufacturing a conflict per record.
-      const remote = normalizeDatasetRulesetFields(
-        JSON.parse(remoteResult.data) as SyncDataset
-      );
-      const local = normalizeDatasetRulesetFields(
-        JSON.parse(await exportDataset()) as SyncDataset
-      );
-      const rawBase = await getSyncBaseSnapshot();
-      const base = rawBase ? normalizeDatasetRulesetFields(rawBase) : rawBase;
-
-      return {
-        success: true,
-        plan: computeSyncPlan(base, local, remote),
-        remoteCommitSha,
-      };
-    } catch (error) {
-      console.error('Computing GitHub sync plan failed:', error);
-      const classified = classifySyncError(error);
+export const computeGitHubSyncPlan = async (
+  options: { skipIfRemoteUnchanged?: boolean } = {}
+): Promise<GitHubSyncPlanResult> => {
+  try {
+    const octokit = await getOctokit();
+    if (!octokit) {
       return {
         success: false,
-        error: classified.message,
-        errorKind: classified.kind,
+        error: 'GitHub token not configured. Please set up your token first.',
       };
     }
-  };
+    const remoteCommitSha = await getMainHeadSha(octokit);
+
+    if (options.skipIfRemoteUnchanged) {
+      const config = await getGitHubConfig();
+      if (config.sync?.baseCommitSha === remoteCommitSha) {
+        return { success: true, remoteCommitSha, unchanged: true };
+      }
+    }
+
+    const remoteResult = await importFromGitHub();
+    if (!remoteResult.success || !remoteResult.data) {
+      return {
+        success: false,
+        error: remoteResult.error,
+        errorKind: remoteResult.errorKind,
+      };
+    }
+
+    // Normalize every side to the current field names before diffing.
+    // A remote or base snapshot written before the Phase 1 renames would
+    // otherwise differ from freshly-migrated local data on every single
+    // character, manufacturing a conflict per record.
+    const remote = normalizeDatasetRulesetFields(
+      JSON.parse(remoteResult.data) as SyncDataset
+    );
+    const local = normalizeDatasetRulesetFields(
+      JSON.parse(await exportDataset()) as SyncDataset
+    );
+    const rawBase = await getSyncBaseSnapshot();
+    const base = rawBase ? normalizeDatasetRulesetFields(rawBase) : rawBase;
+
+    return {
+      success: true,
+      plan: computeSyncPlan(base, local, remote),
+      remoteCommitSha,
+    };
+  } catch (error) {
+    console.error('Computing GitHub sync plan failed:', error);
+    const classified = classifySyncError(error);
+    return {
+      success: false,
+      error: classified.message,
+      errorKind: classified.kind,
+    };
+  }
+};
 
 /**
  * Apply a sync plan (with the user's per-conflict resolutions) to local
@@ -1104,6 +1203,136 @@ export const applyGitHubSyncPlan = async (
       success: false,
       error:
         error instanceof Error ? error.message : 'An unexpected error occurred',
+    };
+  }
+};
+
+/**
+ * Commit the current local dataset straight to `DATA_REPO_BRANCH` — no
+ * branch, no pull request (#31, auto-sync only). This is a deliberate
+ * one-way door around the "nothing is merged automatically" rule the manual
+ * `exportToGitHub` path keeps: it exists so an opted-in user's edits reach
+ * everyone else without waiting on a human to merge a PR. It must never be
+ * reachable from the manual export UI.
+ *
+ * `expectedHeadSha` is the compare-and-set: the caller (auto-sync's `run`)
+ * must have just fetched it. `git.updateRef` below is called **without
+ * `force`**, so if the branch moved in the meantime the update is rejected as
+ * a non-fast-forward and nothing is written — the caller's next tick pulls,
+ * merges, and tries again. A second, cheaper head-check right before
+ * building the commit narrows that race window further, but the `updateRef`
+ * call is the actual guard.
+ *
+ * On success this advances the merge base
+ * (`saveSyncBaseSnapshot`/`sync.baseCommitSha`) exactly like
+ * `applyGitHubSyncPlan` does — without that, the very next poll would see
+ * "the remote moved" and pay a full merge diffing its own commit, forever.
+ */
+export const pushDatasetToBranch = async (options: {
+  expectedHeadSha: string;
+  ruleset?: RulesetDefinition;
+}): Promise<{
+  success: boolean;
+  commitSha?: string;
+  /** The branch head was no longer `expectedHeadSha` — nothing was written. */
+  remoteMoved?: boolean;
+  error?: string;
+  errorKind?: SyncErrorKind;
+}> => {
+  try {
+    const octokit = await getOctokit();
+    if (!octokit) {
+      return {
+        success: false,
+        error: 'GitHub token not configured. Please set up your token first.',
+      };
+    }
+
+    const jsonData = await exportDataset();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dataset: any = JSON.parse(jsonData);
+
+    // Snapshot the dataset *before* collectImageFiles rewrites `imageUris`
+    // to repo-relative paths — the merge base should keep the same local
+    // shape a later `exportDataset()` produces, so a future merge compares
+    // like with like. (`stripImages` makes either shape compare equal today,
+    // but persisting repo paths here would be a trap for whoever changes
+    // that later.)
+    const preImageDataset = JSON.parse(JSON.stringify(dataset)) as SyncDataset;
+
+    const { imageFiles, totalImages } = await collectImageFiles(dataset);
+    const sortedDataset = sortDatasetDeterministically(dataset);
+    const dataContent = Buffer.from(
+      JSON.stringify(sortedDataset, null, 2)
+    ).toString('base64');
+
+    // Narrow the race window: re-check the head right before building the
+    // commit. The `updateRef` call below is what actually enforces it.
+    const currentHeadSha = await getMainHeadSha(octokit);
+    if (currentHeadSha !== options.expectedHeadSha) {
+      return {
+        success: false,
+        remoteMoved: true,
+        errorKind: 'conflict',
+        error: 'The repository changed while this sync was running.',
+      };
+    }
+
+    const ruleset = options.ruleset ?? getActiveRuleset();
+    const { commitSha } = await createTreeCommit(octokit, {
+      baseCommitSha: options.expectedHeadSha,
+      files: [
+        ...imageFiles,
+        { path: 'data.json', content: dataContent, encoding: 'base64' },
+      ],
+      message: `Automatic sync from ${ruleset.branding.appName} (${totalImages} image${
+        totalImages === 1 ? '' : 's'
+      })`,
+    });
+
+    try {
+      await octokit.rest.git.updateRef({
+        owner: DATA_REPO_OWNER,
+        repo: DATA_REPO_NAME,
+        ref: `heads/${DATA_REPO_BRANCH}`,
+        sha: commitSha,
+        force: false,
+      });
+    } catch (error) {
+      const status = (error as { status?: number } | undefined)?.status;
+      if (status === 422 || status === 409) {
+        return {
+          success: false,
+          remoteMoved: true,
+          errorKind: 'conflict',
+          error: 'The repository changed while this sync was running.',
+        };
+      }
+      throw error;
+    }
+
+    // Advance the merge base — without this the very next poll would see
+    // "the remote moved" and pay a full merge diffing its own commit.
+    await saveSyncBaseSnapshot(preImageDataset);
+    const config = await getGitHubConfig();
+    await saveGitHubConfig({
+      ...config,
+      lastSync: new Date().toISOString(),
+      sync: {
+        ...config.sync,
+        baseCommitSha: commitSha,
+        lastPushedAt: new Date().toISOString(),
+      },
+    });
+
+    return { success: true, commitSha };
+  } catch (error) {
+    console.error('Direct push to GitHub branch failed:', error);
+    const classified = classifySyncError(error);
+    return {
+      success: false,
+      error: classified.message,
+      errorKind: classified.kind,
     };
   }
 };

@@ -433,6 +433,60 @@ export const computeSyncPlan = (
   };
 };
 
+/**
+ * Has local data changed since `base` (the merge-base snapshot)? Auto-sync
+ * (#31) uses this to decide whether a push is due, without a network call.
+ *
+ * Reuses `recordsEqual`/`COLLECTION_KEYS` rather than hashing
+ * `exportDataset()`'s JSON string — that string carries a fresh top-level
+ * `lastUpdated` stamped on every call, which would make a whole-string
+ * comparison report "changed" on every single check. Comparing per-record,
+ * per-collection sidesteps that: `lastUpdated` never enters the comparison.
+ *
+ * `base === null` (no prior sync) always reports changed — there is nothing
+ * to compare against, and a store should treat that as "everything is new"
+ * rather than silently skip the push.
+ */
+export const hasLocalChanges = (
+  base: SyncDataset | null,
+  rawLocal: SyncDataset
+): boolean => {
+  if (!base) return true;
+
+  const local = normalizeCollections(rawLocal);
+  const normalizedBase = normalizeCollections(base);
+
+  const collections: SyncCollection[] = [
+    'characters',
+    'factions',
+    'locations',
+    'events',
+    'quests',
+  ];
+
+  return collections.some(collection => {
+    const { key } = COLLECTION_KEYS[collection];
+    const baseRecords = normalizedBase[collection];
+    const localRecords = local[collection];
+
+    if (baseRecords.length !== localRecords.length) return true;
+
+    const baseMap = new Map(
+      baseRecords.map(r => [key(r as never), r as unknown])
+    );
+
+    for (const record of localRecords) {
+      const recordKey = key(record as never);
+      const baseRecord = baseMap.get(recordKey);
+      if (baseRecord === undefined || !recordsEqual(record, baseRecord)) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+};
+
 const conflictResolutionKey = (conflict: SyncConflict): string =>
   `${conflict.collection}:${conflict.key}`;
 

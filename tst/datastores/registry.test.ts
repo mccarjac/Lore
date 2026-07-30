@@ -81,4 +81,10 @@ describe('data store registry', () => {
 
     expect(getActiveDataStores()).not.toContain(githubDataStore);
   });
+
+  it('declares auto-sync only on the store that supports it (#31)', () => {
+    expect(jsonDataStore.autoSync).toBeUndefined();
+    expect(pdfDataStore.autoSync).toBeUndefined();
+    expect(githubDataStore.autoSync).toBeDefined();
+  });
 });

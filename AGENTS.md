@@ -309,6 +309,58 @@ the images, and changes no tracked source at all.
   there rather than growing it inside `gitIntegration.ts`. Network/offline
   failures are classified by `src/utils/syncErrors.ts`
   (`classifySyncError`) rather than surfaced as raw fetch error text.
+  **Two functions advance the merge base**, not one: a completed manual merge
+  (`applyGitHubSyncPlan`) and a successful automatic push (`pushDatasetToBranch`,
+  see below) — both need to, since whichever ran last is what the next sync of
+  either kind diffs against.
+- **Auto-sync is an opt-in capability on the data-store seam, not a GitHub
+  feature (#31).** `DataStore.autoSync?: DataStoreAutoSync` — absence means
+  the store does not support it; there is no `autoSync: false`. The engine
+  (`src/datastores/autoSync/`) owns everything generic: `controller.ts` is a
+  module-level singleton scheduler (not a React context — nothing here is a
+  value a component provides), self-rescheduling a `setTimeout` chain per
+  store rather than `setInterval` so backoff is just a different delay
+  instead of a second mechanism layered on overlapping ticks. It polls on an
+  interval, runs once after an `AppState` foreground transition, and runs
+  (debounced 5s) after a local-data-change signal; it never polls while
+  backgrounded. A store's `run` has two obligations: **never resolve a
+  genuine conflict** (return `{ outcome: 'conflicts' }` and write nothing —
+  the engine suspends that store's schedule rather than re-polling into the
+  same conflict) and **be cheap when nothing changed** (the engine calls it
+  on a timer). `src/datastores/autoSync/appState.ts` is the scheduler's only
+  React Native import, specifically so `controller.ts` stays RN-free and a
+  test mocks that two-function seam instead of RN's `AppState`.
+  `useAutoSyncStatus` reads the controller via `useSyncExternalStore`, not
+  `useEffect`+`setState` — the latter trips `react-hooks/set-state-in-effect`,
+  and the controller is exactly the external store that hook exists for.
+- **There is now exactly one change emitter in `src/`: `src/utils/dataChangeSignal.ts`**
+  (`notifyLocalDataChanged`/`onLocalDataChanged`). Every dataset write in
+  `characterStorage.ts` goes through a private `writeDataset()` helper that
+  calls it — **never call `SafeAsyncStorageJSONParser.setItem` directly from
+  that file**; use `writeDataset`. The signal is deliberately a coarse
+  _trigger_, not a fact: it only means "something might have changed", and
+  auto-sync answers "is a push actually due" itself, keyed on a **dataset
+  fingerprint** (`src/datastores/autoSync/fingerprint.ts`) recorded _after_ a
+  run completes, not before — recording it before would go stale the moment
+  a pull mutates storage mid-run, since the run's own writes fire this same
+  signal. That is also what makes a feedback loop impossible without origin
+  tagging: a pull's writes wake the scheduler, the next tick's fingerprint
+  matches the just-recorded baseline, and it stops there. The fingerprint
+  hashes only `characters`/`factions`/`locations`/`events`/`quests` —
+  deliberately excluding the dataset's top-level `lastUpdated`, which
+  `exportDataset()` stamps fresh on every call, and `discord`, which has its
+  own merge path and must not itself trigger a push.
+- **`hasLocalChanges(base, local)` in `src/utils/syncMerge.ts`** reuses the
+  module-private `recordsEqual`/`COLLECTION_KEYS` to answer, precisely, "does
+  local differ from a specific merge-base snapshot" — this is what
+  `githubAutoSync.run()` uses against its own `getSyncBaseSnapshot()`, in
+  preference to the scheduler's coarser fingerprint hint, because only the
+  store itself has a `SyncDataset`-shaped base to compare against and doing
+  so is immune to drift if a manual sync happened through the UI without the
+  scheduler's own bookkeeping knowing. Like `computeSyncPlan`, it treats
+  `base === null` as "changed" — auto-sync's `run()` refuses to start at all
+  in that state rather than let a first sync degrade into every difference
+  looking like a conflict.
 
 ## Ruleset layer
 
@@ -551,6 +603,21 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   code, see `tst/utils/storageQueue.test.ts` and
   `tst/utils/characterStorage.concurrency.test.ts` for the stateful-store
   pattern that proves serialization.
+- **Fake timers are file-scoped, never global (#31).** `jest.useFakeTimers()`/
+  `jest.useRealTimers()` belong in that one suite's `beforeEach`/`afterEach`
+  (`tst/datastores/autoSync/controller.test.ts` is the first and only user) —
+  putting them in `jest.setup.js` would break every other suite's real-timer
+  `waitFor` calls. Use `await jest.advanceTimersByTimeAsync(ms)`, never the
+  sync `advanceTimersByTime`: a scheduler tick's work is async
+  (`exportDataset` → preferences read → `run`), and the sync variant fires
+  the timer while leaving that chain unresolved when the next assertion runs.
+  Call `resetAutoSyncController()` in `afterEach`, mirroring `resetLoreConfig()`.
+- **`AppState` is reached through `src/datastores/autoSync/appState.ts`**, a
+  two-function seam, specifically so a test mocks that module
+  (`jest.mock('@/datastores/autoSync/appState')`) instead of RN's own
+  `AppState` — the repo has never mocked `AppState` directly, and doing so
+  through the RN preset is fragile compared to owning the one seam that
+  touches it.
 - **The rule: a test may not depend on which ruleset is the default. Pass one
   explicitly.** Asserting against whatever the build happens to ship proves
   the app works for exactly one ruleset. There are three to choose from, with

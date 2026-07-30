@@ -23,6 +23,8 @@ import type { ConflictResolution, SyncPlan } from '@utils/syncMerge';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { SyncConflictModal } from '@components/common/SyncConflictModal';
+import { clearAutoSyncConflicts } from '@utils/autoSyncPreferences';
+import { autoSyncController } from '@/datastores/autoSync/controller';
 import type { DataStoreSectionProps } from '../types';
 
 /**
@@ -136,6 +138,11 @@ export const GitHubSection: React.FC<DataStoreSectionProps> = ({
     if (applied.success) {
       const config = await getGitHubConfig();
       setLastSync(config.sync?.pulledAt || config.lastSync);
+      // A manual merge is exactly what un-blocks a store auto-sync
+      // suspended on conflicts (#31) — clear that state and let the
+      // scheduler re-arm rather than waiting for the user to toggle it.
+      await clearAutoSyncConflicts('github');
+      await autoSyncController.refreshPreferences();
       Alert.alert(
         'Sync Successful',
         'Your local data has been merged with the GitHub repository.',

@@ -34,6 +34,12 @@ export {
   type DataStoreActionVariant,
   type DataStoreContext,
   type DataStoreSectionProps,
+  type DataStoreAutoSync,
+  type AutoSyncReason,
+  type AutoSyncRunOptions,
+  type AutoSyncOutcome,
+  type AutoSyncConflictSummary,
+  type AutoSyncResult,
 } from './datastores/types';
 export { jsonDataStore } from './datastores/json';
 export { pdfDataStore } from './datastores/pdf';

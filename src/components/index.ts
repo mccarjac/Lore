@@ -12,6 +12,10 @@ export { Card } from './common/Card';
 export { InfoButton } from './common/InfoButton';
 export { SyncConflictModal } from './common/SyncConflictModal';
 export { DataStoreSection } from './common/DataStoreSection';
+export {
+  AutoSyncToggle,
+  type AutoSyncToggleProps,
+} from './common/AutoSyncToggle';
 export { LocationMarker } from './map/LocationMarker';
 export { MapInfoCard } from './map/MapInfoCard';
 export { MapLocationPickerModal } from './map/MapLocationPickerModal';

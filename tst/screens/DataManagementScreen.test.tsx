@@ -3,6 +3,7 @@ import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { DataManagementScreen } from '@screens/DataManagementScreen';
 import * as characterStorage from '@utils/characterStorage';
 import * as gitIntegration from '@utils/gitIntegration';
+import * as autoSyncPreferences from '@utils/autoSyncPreferences';
 import { configureLore, resetLoreConfig } from '@/activeRuleset';
 import { jsonDataStore } from '@/datastores/json';
 import { githubDataStore } from '@/datastores/github';
@@ -18,6 +19,7 @@ jest.mock('@utils/characterStorage');
 jest.mock('@octokit/rest', () => ({ Octokit: jest.fn() }));
 jest.mock('@utils/gitIntegration');
 jest.mock('@utils/discordStorage');
+jest.mock('@utils/autoSyncPreferences');
 
 const storage = jest.mocked(characterStorage);
 
@@ -32,6 +34,9 @@ describe('DataManagementScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     alertSpy = spyOnAlert();
+    jest
+      .mocked(autoSyncPreferences)
+      .setAutoSyncEnabled.mockResolvedValue({ stores: {}, state: {} });
   });
 
   afterEach(() => {
@@ -67,6 +72,22 @@ describe('DataManagementScreen', () => {
     await waitFor(() => {
       expect(getByText('JSON Data Management')).toBeTruthy();
       expect(getByText('GitHub Repository Sync')).toBeTruthy();
+    });
+  });
+
+  it('renders the auto-sync toggle only for a store that declares it (#31)', async () => {
+    jest.mocked(gitIntegration).getGitHubConfig.mockResolvedValue({});
+    configureLore({
+      ruleset: genericRuleset,
+      dataStores: [jsonDataStore, githubDataStore],
+    });
+
+    const { getByText, queryAllByText } = render(<DataManagementScreen />);
+
+    await waitFor(() => {
+      // One "Automatic Sync" section total — jsonDataStore has no autoSync.
+      expect(queryAllByText('Automatic Sync')).toHaveLength(1);
+      expect(getByText('Automatic sync is off.')).toBeTruthy();
     });
   });
 
@@ -212,5 +233,27 @@ describe('DataManagementScreen', () => {
     await waitFor(() => {
       expect(storage.clearStorage).toHaveBeenCalled();
     });
+  });
+
+  it('turns off auto-sync for every capable store before clearing data (#31)', async () => {
+    jest.mocked(gitIntegration).getGitHubConfig.mockResolvedValue({});
+    configureLore({
+      ruleset: genericRuleset,
+      dataStores: [jsonDataStore, githubDataStore],
+    });
+
+    const { getByText } = render(<DataManagementScreen />);
+    await waitFor(() => getByText('GitHub Repository Sync'));
+
+    fireEvent.press(getByText('Clear All Data'));
+    await pressAlertButton(alertSpy, 'Delete All');
+
+    await waitFor(() => {
+      expect(storage.clearStorage).toHaveBeenCalled();
+    });
+    expect(autoSyncPreferences.setAutoSyncEnabled).toHaveBeenCalledWith(
+      'github',
+      false
+    );
   });
 });
