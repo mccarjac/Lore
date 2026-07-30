@@ -19,6 +19,8 @@ export type RootDrawerParamList = {
   Quests: undefined;
   InfluenceReport: undefined;
   RelationshipGraph: undefined;
+  CharacterStats: undefined;
+  FactionStats: undefined;
   DiscordConfig: undefined;
   DiscordServers: undefined;
   DiscordCharacterMapping: undefined;
@@ -33,8 +35,6 @@ export type RootStackParamList = {
     initialValues: FilterValues;
     onApply: (values: FilterValues) => void;
   };
-  CharacterStats: undefined;
-  FactionStats: undefined;
   FactionDetails: { factionName: string };
   FactionForm: { factionName?: string };
   LocationDetails: { locationId: string };

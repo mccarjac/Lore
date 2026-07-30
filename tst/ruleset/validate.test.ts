@@ -92,6 +92,8 @@ const baseRuleset = (): RulesetDefinition => ({
     modifications: true,
     influenceReport: true,
     relationshipGraph: true,
+    characterStats: true,
+    factionStats: true,
   },
   limits: { maxQualities: 3 },
   map: { imageKey: 'map' },

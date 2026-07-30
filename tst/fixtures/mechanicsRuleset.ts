@@ -185,6 +185,8 @@ export const mechanicsRuleset: RulesetDefinition = {
     modifications: true,
     influenceReport: true,
     relationshipGraph: false,
+    characterStats: false,
+    factionStats: false,
   },
   limits: { maxQualities: 4 },
   branding: { appName: 'Mechanics Fixture' },
