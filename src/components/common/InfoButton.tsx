@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -7,8 +7,8 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 
 interface InfoButtonProps {
   title: string;
@@ -22,6 +22,64 @@ export const InfoButton: React.FC<InfoButtonProps> = ({
   iconSize = 18,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        infoButton: {
+          padding: 4,
+          marginLeft: 8,
+        },
+        infoIcon: {
+          color: themeColors.accent.info,
+          fontWeight: '600',
+        },
+        modalOverlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        },
+        modalContent: {
+          backgroundColor: themeColors.surface,
+          borderRadius: 16,
+          padding: 24,
+          width: '100%',
+          maxWidth: 500,
+          maxHeight: '80%',
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        modalTitle: {
+          ...commonStyles.text.h2,
+          marginBottom: 16,
+          textAlign: 'center',
+        },
+        modalScrollView: {
+          maxHeight: 400,
+        },
+        modalText: {
+          ...commonStyles.text.body,
+          lineHeight: 24,
+          color: themeColors.text.primary,
+        },
+        closeButton: {
+          backgroundColor: themeColors.accent.primary,
+          borderRadius: 8,
+          marginTop: 20,
+          paddingVertical: 12,
+        },
+        closeButtonText: {
+          color: themeColors.text.primary,
+          fontSize: 16,
+          fontWeight: '600',
+          textAlign: 'center',
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   return (
     <>
@@ -63,56 +121,3 @@ export const InfoButton: React.FC<InfoButtonProps> = ({
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  infoButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  infoIcon: {
-    color: themeColors.accent.info,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: themeColors.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '80%',
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  modalTitle: {
-    ...commonStyles.text.h2,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalScrollView: {
-    maxHeight: 400,
-  },
-  modalText: {
-    ...commonStyles.text.body,
-    lineHeight: 24,
-    color: themeColors.text.primary,
-  },
-  closeButton: {
-    backgroundColor: themeColors.accent.primary,
-    borderRadius: 8,
-    marginTop: 20,
-    paddingVertical: 12,
-  },
-  closeButtonText: {
-    color: themeColors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-});

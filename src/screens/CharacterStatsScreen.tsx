@@ -122,7 +122,9 @@ export const CharacterStatsScreen = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={true}
       >
-        <Text style={styles.header}>Character Statistics</Text>
+        <Text style={styles.header}>
+          {label('character.singular')} Statistics
+        </Text>
 
         <View style={styles.filterContainer}>
           <TouchableOpacity

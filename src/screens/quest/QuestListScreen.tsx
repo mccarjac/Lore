@@ -19,6 +19,7 @@ import { commonStyles } from '@/styles/commonStyles';
 import { Picker } from '@react-native-picker/picker';
 import { BaseListScreen, HeaderAddButton } from '@/components';
 import { formatEventDateShort } from '@utils/dateUtils';
+import { useLabels } from '@/ruleset';
 
 type QuestListNavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'Quests'>,
@@ -56,6 +57,7 @@ export const QuestListScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const navigation = useNavigation<QuestListNavigationProp>();
+  const label = useLabels();
 
   const loadData = useCallback(async () => {
     // Backfill/prune quest<->event back-references (idempotent operation)
@@ -184,9 +186,9 @@ export const QuestListScreen: React.FC = () => {
       keyExtractor={(item: GameQuest) => item.id}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
-      searchPlaceholder="Search quests by name..."
-      emptyStateTitle="No quests found"
-      emptyStateSubtitle="Create a quest to get started"
+      searchPlaceholder={`Search ${label('quest.plural', 'lower')} by name...`}
+      emptyStateTitle={`No ${label('quest.plural', 'lower')} found`}
+      emptyStateSubtitle={`Create a ${label('quest.singular', 'lower')} to get started`}
       headerRight={renderHeaderRight()}
       ListHeaderComponent={renderFilters()}
     />

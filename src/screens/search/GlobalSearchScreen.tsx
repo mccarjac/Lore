@@ -23,31 +23,35 @@ import {
   MIN_QUERY_LENGTH,
   searchAllDomains,
 } from '@utils/globalSearch';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { spacing } from '@/styles/theme';
 import { BaseListScreen } from '@/components';
-import { useRuleset } from '@/ruleset';
+import { useRuleset, getLabel, type RulesetDefinition } from '@/ruleset';
 
 type NavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'GlobalSearch'>,
   StackNavigationProp<RootStackParamList>
 >;
 
-const DOMAIN_LABELS: Record<SearchDomain, string> = {
-  character: 'Characters',
-  faction: 'Factions',
+const domainLabels = (
+  ruleset: RulesetDefinition
+): Record<SearchDomain, string> => ({
+  character: getLabel(ruleset, 'character.plural'),
+  faction: getLabel(ruleset, 'faction.plural'),
   location: 'Locations',
   event: 'Events',
-  quest: 'Quests',
-};
+  quest: getLabel(ruleset, 'quest.plural'),
+});
 
-const DOMAIN_BADGES: Record<SearchDomain, string> = {
-  character: 'Character',
-  faction: 'Faction',
+const domainBadges = (
+  ruleset: RulesetDefinition
+): Record<SearchDomain, string> => ({
+  character: getLabel(ruleset, 'character.singular'),
+  faction: getLabel(ruleset, 'faction.singular'),
   location: 'Location',
   event: 'Event',
-  quest: 'Quest',
-};
+  quest: getLabel(ruleset, 'quest.singular'),
+});
 
 type SearchRow =
   | { kind: 'header'; key: string; label: string }
@@ -66,6 +70,34 @@ export const GlobalSearchScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const navigation = useNavigation<NavigationProp>();
   const { ruleset } = useRuleset();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        sectionHeader: {
+          ...commonStyles.text.h3,
+          marginTop: spacing.base,
+          marginBottom: spacing.xs,
+        },
+        card: commonStyles.card.base,
+        cardHeader: commonStyles.card.header,
+        title: {
+          ...commonStyles.text.h3,
+          flex: 1,
+        },
+        badge: {
+          ...commonStyles.badge.base,
+          ...commonStyles.badge.small,
+          ...commonStyles.badge.tag,
+        },
+        badgeText: commonStyles.badge.text,
+        subtitle: {
+          ...commonStyles.text.caption,
+          marginTop: spacing.sm,
+        },
+      }),
+    [commonStyles]
+  );
 
   const loadData = useCallback(async () => {
     const [characters, factions, locations, events, quests] = await Promise.all(
@@ -89,6 +121,7 @@ export const GlobalSearchScreen: React.FC = () => {
 
   const rows = useMemo<SearchRow[]>(() => {
     const results = searchAllDomains(data, searchQuery, ruleset);
+    const labels = domainLabels(ruleset);
     const grouped: SearchRow[] = [];
     for (const domain of SEARCH_DOMAIN_ORDER) {
       const domainResults = results.filter(result => result.domain === domain);
@@ -98,7 +131,7 @@ export const GlobalSearchScreen: React.FC = () => {
       grouped.push({
         kind: 'header',
         key: `header:${domain}`,
-        label: `${DOMAIN_LABELS[domain]} (${domainResults.length})`,
+        label: `${labels[domain]} (${domainResults.length})`,
       });
       for (const result of domainResults) {
         grouped.push({ kind: 'result', key: result.key, result });
@@ -151,7 +184,9 @@ export const GlobalSearchScreen: React.FC = () => {
             {result.title}
           </Text>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{DOMAIN_BADGES[result.domain]}</Text>
+            <Text style={styles.badgeText}>
+              {domainBadges(ruleset)[result.domain]}
+            </Text>
           </View>
         </View>
         {result.subtitle ? (
@@ -182,27 +217,3 @@ export const GlobalSearchScreen: React.FC = () => {
     />
   );
 };
-
-const styles = StyleSheet.create({
-  sectionHeader: {
-    ...commonStyles.text.h3,
-    marginTop: spacing.base,
-    marginBottom: spacing.xs,
-  },
-  card: commonStyles.card.base,
-  cardHeader: commonStyles.card.header,
-  title: {
-    ...commonStyles.text.h3,
-    flex: 1,
-  },
-  badge: {
-    ...commonStyles.badge.base,
-    ...commonStyles.badge.small,
-    ...commonStyles.badge.tag,
-  },
-  badgeText: commonStyles.badge.text,
-  subtitle: {
-    ...commonStyles.text.caption,
-    marginTop: spacing.sm,
-  },
-});

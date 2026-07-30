@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 
 interface CardProps {
   children: React.ReactNode;
@@ -15,14 +15,19 @@ export const Card: React.FC<CardProps> = ({
   style,
   contentStyle,
 }) => {
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        card: commonStyles.card.base,
+        cardPresent: commonStyles.card.present,
+      }),
+    [commonStyles]
+  );
+
   return (
     <View style={[styles.card, present && styles.cardPresent, style]}>
       <View style={contentStyle}>{children}</View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  card: commonStyles.card.base,
-  cardPresent: commonStyles.card.present,
-});

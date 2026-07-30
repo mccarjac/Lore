@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Switch, StyleSheet } from 'react-native';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { autoSyncController } from '@/datastores/autoSync/controller';
 import { useAutoSyncStatus } from '@/datastores/autoSync/useAutoSyncStatus';
 import { setAutoSyncEnabled } from '@utils/autoSyncPreferences';
@@ -58,6 +58,36 @@ const statusLine = (status: ReturnType<typeof useAutoSyncStatus>): string => {
 export const AutoSyncToggle: React.FC<AutoSyncToggleProps> = ({ store }) => {
   const status = useAutoSyncStatus(store.id);
   const [enabled, setEnabled] = useState<boolean>(!!status?.enabled);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        section: commonStyles.layout.section,
+        sectionTitle: commonStyles.text.h2,
+        sectionDescription: {
+          ...commonStyles.text.description,
+          marginBottom: 16,
+          lineHeight: 20,
+        },
+        row: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 12,
+        },
+        rowLabel: {
+          fontSize: 16,
+          color: themeColors.text.primary,
+          fontWeight: '500',
+        },
+        statusText: {
+          ...commonStyles.text.body,
+          color: themeColors.text.muted,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   if (!store.autoSync) {
     return null;
@@ -98,28 +128,3 @@ export const AutoSyncToggle: React.FC<AutoSyncToggleProps> = ({ store }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: commonStyles.layout.section,
-  sectionTitle: commonStyles.text.h2,
-  sectionDescription: {
-    ...commonStyles.text.description,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  rowLabel: {
-    fontSize: 16,
-    color: themeColors.text.primary,
-    fontWeight: '500',
-  },
-  statusText: {
-    ...commonStyles.text.body,
-    color: themeColors.text.muted,
-  },
-});

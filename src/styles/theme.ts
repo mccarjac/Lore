@@ -1,10 +1,48 @@
 /**
  * Centralized theme configuration
  * Contains colors, typography, spacing, and other design tokens
+ *
+ * **Colors are ruleset-configurable (branding.colors); everything else in
+ * this file is not.** A ruleset's `branding.colors` (`ColorPaletteOverrides`,
+ * declared in `@/ruleset/types` so the engine schema has no dependency on
+ * this module) is deep-merged over `DEFAULT_COLORS` below. Two ways to read
+ * the result:
+ *
+ * - **`useTheme()`** (components) — reactive to the active ruleset, returns
+ *   `{ colors, shadows, componentStyles, typography, spacing, borderRadius,
+ *   layout }`. Prefer this for anything that should pick up a ruleset's
+ *   brand colors.
+ * - **`getActiveColors()`** (non-component code, mirroring `getLabel`) —
+ *   same resolution, no hook.
+ *
+ * `colors`, `shadows`, `componentStyles`, and `theme` below remain as
+ * **static exports of the engine's default palette**, for backward
+ * compatibility with code that hasn't migrated to `useTheme()` yet — they
+ * do not reflect a ruleset's `branding.colors` override. A ruleset that
+ * declares no color overrides is unaffected either way, which is why this
+ * is a non-breaking addition rather than a migration every consumer must
+ * make at once.
+ *
+ * **Why colors need a hook but can't just be a mutated constant:** a
+ * consumer's `configureLore()` call runs *after* `lore`'s whole module
+ * graph — including every screen's module-scope `StyleSheet.create()`
+ * call — has already been evaluated (ES module imports resolve
+ * depth-first, before the importing file's own statements run). A color
+ * baked into a `StyleSheet.create()` result at module load is frozen
+ * before `configureLore()` ever runs; only a value resolved at *render*
+ * time (a hook reading from `RulesetProvider`'s context, the same
+ * mechanism `useLabels()`/`useFeature()` already use) can reflect it.
  */
+import { useMemo } from 'react';
+import { useRuleset } from '@/ruleset';
+import { getActiveRuleset } from '@/activeRuleset';
+import type { ColorPalette, ColorPaletteOverrides } from '@/ruleset/types';
 
-// Modern Dark Color Palette
-export const colors = {
+export type { ColorPalette };
+
+// The engine's default dark palette — what every ruleset gets unless it
+// declares `branding.colors` overrides.
+export const DEFAULT_COLORS: ColorPalette = {
   // Background colors
   primary: '#0F0F23', // Deep dark blue-purple (main background)
   secondary: '#1B1B3A', // Slightly lighter dark
@@ -68,6 +106,33 @@ export const colors = {
   shadow: '#000000',
 };
 
+/** Backward-compatible alias — see the module doc for what this does and doesn't reflect. */
+export const colors = DEFAULT_COLORS;
+
+/**
+ * Deep-merges a ruleset's color overrides over the default palette. Every
+ * nested group merges independently, so overriding `accent.primary` alone
+ * doesn't drop the rest of `accent`.
+ */
+export function mergeColors(overrides?: ColorPaletteOverrides): ColorPalette {
+  if (!overrides) return DEFAULT_COLORS;
+  return {
+    ...DEFAULT_COLORS,
+    ...overrides,
+    text: { ...DEFAULT_COLORS.text, ...overrides.text },
+    accent: { ...DEFAULT_COLORS.accent, ...overrides.accent },
+    status: { ...DEFAULT_COLORS.status, ...overrides.status },
+    standing: { ...DEFAULT_COLORS.standing, ...overrides.standing },
+    certainty: { ...DEFAULT_COLORS.certainty, ...overrides.certainty },
+    interactive: { ...DEFAULT_COLORS.interactive, ...overrides.interactive },
+  };
+}
+
+/** Non-hook form, for use outside components — mirrors `getLabel`. */
+export function getActiveColors(): ColorPalette {
+  return mergeColors(getActiveRuleset().branding.colors);
+}
+
 // Typography scales
 export const typography = {
   // Font sizes
@@ -130,97 +195,103 @@ export const borderRadius = {
   full: 9999, // For circular elements
 };
 
-// Shadow configurations
-export const shadows = {
+// Shadow configurations — a function of colors, since shadowColor follows
+// the palette (`buildShadows(DEFAULT_COLORS)` below is what `shadows`, the
+// backward-compatible static export, freezes in).
+export const buildShadows = (c: ColorPalette) => ({
   small: {
-    shadowColor: colors.shadow,
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
   medium: {
-    shadowColor: colors.shadow,
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   large: {
-    shadowColor: colors.shadow,
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
   },
-};
+});
 
-// Component-specific styling presets
-export const componentStyles = {
+export const shadows = buildShadows(DEFAULT_COLORS);
+
+// Component-specific styling presets — likewise a function of colors.
+export const buildComponentStyles = (c: ColorPalette) => ({
   // Button variants
   button: {
     primary: {
-      backgroundColor: colors.accent.primary,
-      borderColor: colors.accent.primary,
+      backgroundColor: c.accent.primary,
+      borderColor: c.accent.primary,
     },
     secondary: {
-      backgroundColor: colors.accent.secondary,
-      borderColor: colors.accent.secondary,
+      backgroundColor: c.accent.secondary,
+      borderColor: c.accent.secondary,
     },
     success: {
-      backgroundColor: colors.accent.success,
-      borderColor: colors.accent.success,
+      backgroundColor: c.accent.success,
+      borderColor: c.accent.success,
     },
     warning: {
-      backgroundColor: colors.accent.warning,
-      borderColor: colors.accent.warning,
+      backgroundColor: c.accent.warning,
+      borderColor: c.accent.warning,
     },
     danger: {
-      backgroundColor: colors.accent.danger,
-      borderColor: colors.accent.danger,
+      backgroundColor: c.accent.danger,
+      borderColor: c.accent.danger,
     },
     info: {
-      backgroundColor: colors.accent.info,
-      borderColor: colors.accent.info,
+      backgroundColor: c.accent.info,
+      borderColor: c.accent.info,
     },
     outline: {
       backgroundColor: 'transparent',
-      borderColor: colors.border,
+      borderColor: c.border,
     },
   },
 
   // Input field styles
   input: {
     base: {
-      backgroundColor: colors.elevated,
-      borderColor: colors.border,
-      color: colors.text.primary,
+      backgroundColor: c.elevated,
+      borderColor: c.border,
+      color: c.text.primary,
     },
     focused: {
-      borderColor: colors.accent.primary,
+      borderColor: c.accent.primary,
     },
     error: {
-      borderColor: colors.accent.danger,
+      borderColor: c.accent.danger,
     },
   },
 
   // Card styles
   card: {
     base: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
+      backgroundColor: c.surface,
+      borderColor: c.border,
     },
     elevated: {
-      backgroundColor: colors.elevated,
-      borderColor: colors.border,
+      backgroundColor: c.elevated,
+      borderColor: c.border,
     },
     present: {
-      borderLeftWidth: 4,
-      borderLeftColor: colors.status.present,
-      borderColor: colors.status.present,
+      borderLeftWidth: 4 as const,
+      borderLeftColor: c.status.present,
+      borderColor: c.status.present,
     },
   },
-};
+});
+
+export const componentStyles = buildComponentStyles(DEFAULT_COLORS);
 
 // Layout constants
 export const layout = {
@@ -230,7 +301,8 @@ export const layout = {
   minSafeAreaPadding: 16,
 };
 
-// Export a default theme object
+// Export a default theme object — the engine's default palette, same
+// caveat as `colors`/`shadows`/`componentStyles` above.
 export const theme = {
   colors,
   typography,
@@ -242,3 +314,38 @@ export const theme = {
 };
 
 export type Theme = typeof theme;
+
+export interface ThemeValue {
+  colors: ColorPalette;
+  shadows: ReturnType<typeof buildShadows>;
+  componentStyles: ReturnType<typeof buildComponentStyles>;
+  typography: typeof typography;
+  spacing: typeof spacing;
+  borderRadius: typeof borderRadius;
+  layout: typeof layout;
+}
+
+/**
+ * The ruleset-aware theme. Reactive to the active ruleset (via
+ * `RulesetProvider`'s context, same as `useLabels()`/`useFeature()`) —
+ * prefer this over the static `colors`/`shadows`/`componentStyles` exports
+ * in any component, and recompute derived styles
+ * (`StyleSheet.create()`/`useMemo`) from its `colors`/`shadows`/
+ * `componentStyles` rather than the module-scope statics, or a ruleset's
+ * `branding.colors` override won't reach that component.
+ */
+export function useTheme(): ThemeValue {
+  const { ruleset } = useRuleset();
+  return useMemo(() => {
+    const resolvedColors = mergeColors(ruleset.branding.colors);
+    return {
+      colors: resolvedColors,
+      shadows: buildShadows(resolvedColors),
+      componentStyles: buildComponentStyles(resolvedColors),
+      typography,
+      spacing,
+      borderRadius,
+      layout,
+    };
+  }, [ruleset]);
+}

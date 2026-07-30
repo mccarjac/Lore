@@ -416,19 +416,25 @@ export const QuestFormScreen: React.FC = () => {
 
       if (quest) {
         await updateQuest(quest.id, payload);
-        Alert.alert('Success', 'Quest updated successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert(
+          'Success',
+          `${label('quest.singular')} updated successfully`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
       } else {
         await createQuest(payload);
-        Alert.alert('Success', 'Quest created successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        Alert.alert(
+          'Success',
+          `${label('quest.singular')} created successfully`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
       }
     } catch {
-      Alert.alert('Error', 'Failed to save quest. Please try again.', [
-        { text: 'OK' },
-      ]);
+      Alert.alert(
+        'Error',
+        `Failed to save ${label('quest.singular', 'lower')}. Please try again.`,
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -771,7 +777,11 @@ export const QuestFormScreen: React.FC = () => {
         disabled={isSubmitting}
       >
         <Text style={styles.submitButtonText}>
-          {isSubmitting ? 'Saving...' : quest ? 'Update Quest' : 'Create Quest'}
+          {isSubmitting
+            ? 'Saving...'
+            : quest
+              ? `Update ${label('quest.singular')}`
+              : `Create ${label('quest.singular')}`}
         </Text>
       </TouchableOpacity>
 

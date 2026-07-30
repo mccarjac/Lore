@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -34,8 +34,8 @@ import {
   loadFactions,
   loadLocations,
 } from '@utils/characterStorage';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseFormScreen } from '@/components';
 import { useLabels, useRuleset, useFeature } from '@/ruleset';
 import { roleOf, type AttributeDefinition } from '@/ruleset/attributes';
@@ -128,6 +128,386 @@ export const CharacterFormScreen: React.FC = () => {
   const [perksExpanded, setPerksExpanded] = useState<boolean>(false);
   const [distinctionsExpanded, setDistinctionsExpanded] =
     useState<boolean>(false);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        imageGalleryContainer: {
+          ...commonStyles.image.container,
+        },
+        imageGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 12,
+          marginBottom: 12,
+        },
+        imageItemContainer: {
+          position: 'relative',
+          width: 100,
+          height: 100,
+        },
+        characterImageThumbnail: {
+          width: 100,
+          height: 100,
+          borderRadius: 8,
+          backgroundColor: themeColors.surface,
+        },
+        removeImageButton: {
+          position: 'absolute',
+          top: -8,
+          right: -8,
+          backgroundColor: themeColors.status.error,
+          borderRadius: 12,
+          width: 24,
+          height: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        removeImageButtonText: {
+          color: themeColors.text.primary,
+          fontSize: 16,
+          fontWeight: '700',
+          lineHeight: 20,
+        },
+        placeholderImage: commonStyles.image.placeholder,
+        imagePickerButton: commonStyles.image.pickerButton,
+        imagePickerButtonText: {
+          ...commonStyles.button.text,
+          textAlign: 'center',
+        },
+        filterContainer: {
+          ...commonStyles.layout.section,
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 16,
+          padding: 16,
+        },
+        filterLabel: {
+          ...commonStyles.text.label,
+          marginRight: 12,
+          marginBottom: 0,
+        },
+        picker: commonStyles.input.picker,
+        perkContainer: {
+          flexDirection: 'column',
+          marginBottom: 4,
+        },
+        perkHeaderContainer: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        },
+        perkBadgeContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
+        tagText: {
+          ...commonStyles.badge.text,
+          ...commonStyles.badge.tag,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+        },
+        speciesText: {
+          ...commonStyles.badge.text,
+          ...commonStyles.badge.species,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+        },
+        speciesSpecificItem: {
+          borderLeftWidth: 4,
+          borderLeftColor: themeColors.status.info,
+          backgroundColor: themeColors.elevated,
+        },
+        descriptionText: {
+          ...commonStyles.text.description,
+          marginTop: 6,
+          lineHeight: 20,
+        },
+        formSection: commonStyles.layout.formSection,
+        label: commonStyles.text.label,
+        input: commonStyles.input.base,
+        notesInput: {
+          ...commonStyles.input.base,
+          ...commonStyles.input.multiline,
+        },
+        statusButton: {
+          ...commonStyles.button.base,
+          ...commonStyles.button.success,
+        },
+        statusButtonRetired: {
+          backgroundColor: themeColors.status.error,
+          borderColor: themeColors.status.error,
+        },
+        statusButtonText: commonStyles.button.text,
+        statusButtonTextRetired: commonStyles.button.text,
+        selectionItem: {
+          backgroundColor: themeColors.elevated,
+          padding: 16,
+          borderRadius: 12,
+          marginVertical: 6,
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        selectedItem: {
+          backgroundColor: themeColors.interactive.hover,
+          borderColor: themeColors.accent.primary,
+        },
+        itemName: {
+          fontSize: 16,
+          color: themeColors.text.primary,
+          fontWeight: '500',
+        },
+        factionContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 12,
+          gap: 8,
+        },
+        factionInput: {
+          ...commonStyles.input.base,
+          padding: 12,
+          borderRadius: 8,
+          flex: 1,
+        },
+        customFactionContainer: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
+        backToDropdownButton: {
+          backgroundColor: themeColors.interactive.hover,
+          padding: 8,
+          borderRadius: 6,
+          minWidth: 36,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        backToDropdownText: {
+          color: themeColors.text.primary,
+          fontSize: 16,
+          fontWeight: '600',
+        },
+        factionStanding: {
+          width: '35%',
+        },
+        relationshipGroup: {
+          marginBottom: 16,
+          padding: 12,
+          backgroundColor: themeColors.elevated,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        relationshipContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 12,
+          gap: 8,
+        },
+        relationshipPickerContainer: {
+          flex: 1,
+        },
+        relationshipNamePicker: {
+          ...commonStyles.input.picker,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        relationshipType: {
+          width: '35%',
+        },
+        customNameContainer: {
+          marginBottom: 12,
+          marginTop: -8,
+        },
+        customNameInput: {
+          ...commonStyles.input.base,
+          padding: 12,
+          borderRadius: 8,
+        },
+        relationshipDescContainer: {
+          marginBottom: 12,
+        },
+        relationshipDescInput: {
+          ...commonStyles.input.base,
+          padding: 12,
+          borderRadius: 8,
+          minHeight: 80,
+          textAlignVertical: 'top',
+        },
+        removeButton: {
+          ...commonStyles.button.small,
+          backgroundColor: themeColors.status.error,
+        },
+        removeButtonText: commonStyles.button.textSmall,
+        addButton: {
+          ...commonStyles.button.base,
+          ...commonStyles.button.primary,
+          marginTop: 12,
+        },
+        addButtonText: commonStyles.button.text,
+        submitContainer: {
+          marginTop: 32,
+          marginBottom: 40,
+          paddingHorizontal: 16,
+        },
+        placeholderText: {
+          ...commonStyles.text.body,
+          fontWeight: '500',
+        },
+        sectionHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingVertical: 8,
+        },
+        expandIcon: {
+          color: themeColors.text.secondary,
+          fontSize: 16,
+          fontWeight: '600',
+        },
+        cyberwareContainer: {
+          backgroundColor: themeColors.elevated,
+          padding: 16,
+          borderRadius: 12,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        cyberwareHeaderRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 12,
+        },
+        cyberwareName: {
+          ...commonStyles.input.base,
+          flex: 1,
+          padding: 12,
+          borderRadius: 8,
+          fontWeight: '600',
+        },
+        cyberwareDescription: {
+          ...commonStyles.input.base,
+          padding: 12,
+          borderRadius: 8,
+          minHeight: 60,
+          textAlignVertical: 'top',
+          marginBottom: 12,
+        },
+        cyberwareModifiersSection: {
+          paddingTop: 12,
+          borderTopWidth: 1,
+          borderTopColor: themeColors.border,
+        },
+        cyberwareModifiersLabel: {
+          ...commonStyles.text.label,
+          fontSize: 14,
+          marginBottom: 12,
+          color: themeColors.accent.primary,
+        },
+        modifierRow: {
+          flexDirection: 'row',
+          gap: 12,
+          marginBottom: 12,
+        },
+        modifierInput: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
+        modifierLabel: {
+          ...commonStyles.text.label,
+          fontSize: 13,
+          marginBottom: 0,
+          minWidth: 80,
+        },
+        modifierField: {
+          ...commonStyles.input.base,
+          flex: 1,
+          padding: 8,
+          borderRadius: 6,
+          textAlign: 'center',
+        },
+        tagModifiersSection: {
+          marginTop: 16,
+          paddingTop: 16,
+          borderTopWidth: 1,
+          borderTopColor: themeColors.border,
+        },
+        tagModifiersLabel: {
+          ...commonStyles.text.label,
+          fontSize: 14,
+          marginBottom: 12,
+          color: themeColors.accent.secondary,
+        },
+        tagModifiersList: {
+          gap: 8,
+          marginBottom: 12,
+        },
+        tagModifierRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          backgroundColor: themeColors.surface,
+          padding: 10,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        tagModifierName: {
+          ...commonStyles.text.label,
+          fontSize: 13,
+          marginBottom: 0,
+          minWidth: 90,
+          color: themeColors.text.primary,
+        },
+        tagModifierField: {
+          ...commonStyles.input.base,
+          flex: 1,
+          padding: 8,
+          borderRadius: 6,
+          textAlign: 'center',
+          minWidth: 60,
+        },
+        tagModifierRemove: {
+          backgroundColor: themeColors.status.error,
+          borderRadius: 4,
+          width: 28,
+          height: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        tagModifierRemoveText: {
+          color: themeColors.text.primary,
+          fontSize: 18,
+          fontWeight: '700',
+          lineHeight: 20,
+        },
+        addTagModifierButton: {
+          backgroundColor: themeColors.surface,
+          padding: 10,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.accent.secondary,
+          borderStyle: 'dashed',
+          alignItems: 'center',
+        },
+        addTagModifierButtonText: {
+          ...commonStyles.text.label,
+          fontSize: 13,
+          marginBottom: 0,
+          color: themeColors.accent.secondary,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   const [form, setForm] = useState<CharacterFormData>(
     editingCharacter
@@ -355,12 +735,12 @@ export const CharacterFormScreen: React.FC = () => {
           style={styles.input}
           value={form.name}
           onChangeText={value => handleChange('name', value)}
-          placeholder="Character Name"
+          placeholder={`${label('character.singular')} Name`}
         />
       </View>
 
       <View style={styles.formSection}>
-        <Text style={styles.label}>Character Images</Text>
+        <Text style={styles.label}>{label('character.singular')} Images</Text>
         <View style={styles.imageGalleryContainer}>
           {form.imageUris && form.imageUris.length > 0 ? (
             <View style={styles.imageGrid}>
@@ -397,22 +777,26 @@ export const CharacterFormScreen: React.FC = () => {
         </View>
       </View>
 
-      <View style={styles.formSection}>
-        <Text style={styles.label}>{label('archetype.singular')}</Text>
-        <Picker
-          selectedValue={form.archetypeId}
-          style={[styles.picker, { flex: 1 }]}
-          onValueChange={(value: string) => handleChange('archetypeId', value)}
-        >
-          {ruleset.archetypes.map(archetype => (
-            <Picker.Item
-              key={archetype.id}
-              label={archetype.label}
-              value={archetype.id}
-            />
-          ))}
-        </Picker>
-      </View>
+      {ruleset.archetypes.length > 1 && (
+        <View style={styles.formSection}>
+          <Text style={styles.label}>{label('archetype.singular')}</Text>
+          <Picker
+            selectedValue={form.archetypeId}
+            style={[styles.picker, { flex: 1 }]}
+            onValueChange={(value: string) =>
+              handleChange('archetypeId', value)
+            }
+          >
+            {ruleset.archetypes.map(archetype => (
+              <Picker.Item
+                key={archetype.id}
+                label={archetype.label}
+                value={archetype.id}
+              />
+            ))}
+          </Picker>
+        </View>
+      )}
 
       <View style={styles.formSection}>
         <Text style={styles.label}>Location</Text>
@@ -434,138 +818,142 @@ export const CharacterFormScreen: React.FC = () => {
         </Picker>
       </View>
 
-      <View style={styles.formSection}>
-        <TouchableOpacity
-          style={styles.sectionHeader}
-          onPress={() => setPerksExpanded(!perksExpanded)}
-        >
-          <Text style={styles.label}>{label('trait.plural')}</Text>
-          <Text style={styles.expandIcon}>{perksExpanded ? '▼' : '▶'}</Text>
-        </TouchableOpacity>
-        {perksExpanded && (
-          <>
-            <View style={styles.filterContainer}>
-              <Text style={styles.filterLabel}>
-                Filter by {label('traitCategory.singular')}:
-              </Text>
-              <Picker
-                selectedValue={selectedCategoryId}
-                style={[styles.picker, { flex: 1 }]}
-                onValueChange={setSelectedCategoryId}
-              >
-                <Picker.Item
-                  label={`All ${label('traitCategory.plural')}`}
-                  value=""
-                />
-                {ruleset.traitCategories.map(category => (
-                  <Picker.Item
-                    key={category.id}
-                    label={category.label}
-                    value={category.id}
-                  />
-                ))}
-              </Picker>
-            </View>
-            {ruleset.traits
-              .filter(
-                trait =>
-                  (!selectedCategoryId ||
-                    trait.categoryId === selectedCategoryId) &&
-                  (!trait.allowedArchetypeIds ||
-                    trait.allowedArchetypeIds.includes(form.archetypeId))
-              )
-              .map(trait => (
-                <TouchableOpacity
-                  key={trait.id}
-                  style={[
-                    styles.selectionItem,
-                    form.traitIds.includes(trait.id) && styles.selectedItem,
-                    trait.allowedArchetypeIds && styles.speciesSpecificItem,
-                  ]}
-                  onPress={() => {
-                    const newTraitIds = form.traitIds.includes(trait.id)
-                      ? form.traitIds.filter(id => id !== trait.id)
-                      : [...form.traitIds, trait.id];
-                    handleChange('traitIds', newTraitIds);
-                  }}
+      {ruleset.traits.length > 0 && (
+        <View style={styles.formSection}>
+          <TouchableOpacity
+            style={styles.sectionHeader}
+            onPress={() => setPerksExpanded(!perksExpanded)}
+          >
+            <Text style={styles.label}>{label('trait.plural')}</Text>
+            <Text style={styles.expandIcon}>{perksExpanded ? '▼' : '▶'}</Text>
+          </TouchableOpacity>
+          {perksExpanded && (
+            <>
+              <View style={styles.filterContainer}>
+                <Text style={styles.filterLabel}>
+                  Filter by {label('traitCategory.singular')}:
+                </Text>
+                <Picker
+                  selectedValue={selectedCategoryId}
+                  style={[styles.picker, { flex: 1 }]}
+                  onValueChange={setSelectedCategoryId}
                 >
-                  <View style={styles.perkContainer}>
-                    <View style={styles.perkHeaderContainer}>
-                      <Text style={styles.itemName}>{trait.name}</Text>
-                      <View style={styles.perkBadgeContainer}>
-                        {trait.allowedArchetypeIds &&
-                          trait.allowedArchetypeIds.length > 0 && (
-                            <Text style={styles.speciesText}>
-                              {trait.allowedArchetypeIds.length === 1
-                                ? archetypeLabel(trait.allowedArchetypeIds[0])
-                                : `${trait.allowedArchetypeIds.length} ${label('archetype.plural')}`}
-                            </Text>
-                          )}
-                        <Text style={styles.tagText}>
-                          {categoryLabel(trait.categoryId)}
-                        </Text>
+                  <Picker.Item
+                    label={`All ${label('traitCategory.plural')}`}
+                    value=""
+                  />
+                  {ruleset.traitCategories.map(category => (
+                    <Picker.Item
+                      key={category.id}
+                      label={category.label}
+                      value={category.id}
+                    />
+                  ))}
+                </Picker>
+              </View>
+              {ruleset.traits
+                .filter(
+                  trait =>
+                    (!selectedCategoryId ||
+                      trait.categoryId === selectedCategoryId) &&
+                    (!trait.allowedArchetypeIds ||
+                      trait.allowedArchetypeIds.includes(form.archetypeId))
+                )
+                .map(trait => (
+                  <TouchableOpacity
+                    key={trait.id}
+                    style={[
+                      styles.selectionItem,
+                      form.traitIds.includes(trait.id) && styles.selectedItem,
+                      trait.allowedArchetypeIds && styles.speciesSpecificItem,
+                    ]}
+                    onPress={() => {
+                      const newTraitIds = form.traitIds.includes(trait.id)
+                        ? form.traitIds.filter(id => id !== trait.id)
+                        : [...form.traitIds, trait.id];
+                      handleChange('traitIds', newTraitIds);
+                    }}
+                  >
+                    <View style={styles.perkContainer}>
+                      <View style={styles.perkHeaderContainer}>
+                        <Text style={styles.itemName}>{trait.name}</Text>
+                        <View style={styles.perkBadgeContainer}>
+                          {trait.allowedArchetypeIds &&
+                            trait.allowedArchetypeIds.length > 0 && (
+                              <Text style={styles.speciesText}>
+                                {trait.allowedArchetypeIds.length === 1
+                                  ? archetypeLabel(trait.allowedArchetypeIds[0])
+                                  : `${trait.allowedArchetypeIds.length} ${label('archetype.plural')}`}
+                              </Text>
+                            )}
+                          <Text style={styles.tagText}>
+                            {categoryLabel(trait.categoryId)}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                  <Text style={styles.descriptionText}>
-                    {trait.description}
-                  </Text>
+                    <Text style={styles.descriptionText}>
+                      {trait.description}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+            </>
+          )}
+        </View>
+      )}
+
+      {ruleset.qualities.length > 0 && (
+        <View style={styles.formSection}>
+          <TouchableOpacity
+            style={styles.sectionHeader}
+            onPress={() => setDistinctionsExpanded(!distinctionsExpanded)}
+          >
+            <Text style={styles.label}>{label('quality.plural')}</Text>
+            <Text style={styles.expandIcon}>
+              {distinctionsExpanded ? '▼' : '▶'}
+            </Text>
+          </TouchableOpacity>
+          {distinctionsExpanded && (
+            <>
+              {ruleset.qualities.map(quality => (
+                <TouchableOpacity
+                  key={quality.id}
+                  style={[
+                    styles.selectionItem,
+                    form.qualityIds.includes(quality.id) && styles.selectedItem,
+                  ]}
+                  onPress={() => {
+                    const isSelected = form.qualityIds.includes(quality.id);
+
+                    if (isSelected) {
+                      // Allow deselection
+                      const newQualityIds = form.qualityIds.filter(
+                        id => id !== quality.id
+                      );
+                      handleChange('qualityIds', newQualityIds);
+                    } else if (form.qualityIds.length < maxQualities) {
+                      // Allow selection if under limit
+                      const newQualityIds = [...form.qualityIds, quality.id];
+                      handleChange('qualityIds', newQualityIds);
+                    } else {
+                      // Show alert when limit reached
+                      Alert.alert(
+                        'Maximum Reached',
+                        `You can only select up to ${maxQualities} ${label(
+                          'quality.plural',
+                          'lower'
+                        )}.`
+                      );
+                    }
+                  }}
+                >
+                  <Text style={styles.itemName}>{quality.name}</Text>
                 </TouchableOpacity>
               ))}
-          </>
-        )}
-      </View>
-
-      <View style={styles.formSection}>
-        <TouchableOpacity
-          style={styles.sectionHeader}
-          onPress={() => setDistinctionsExpanded(!distinctionsExpanded)}
-        >
-          <Text style={styles.label}>{label('quality.plural')}</Text>
-          <Text style={styles.expandIcon}>
-            {distinctionsExpanded ? '▼' : '▶'}
-          </Text>
-        </TouchableOpacity>
-        {distinctionsExpanded && (
-          <>
-            {ruleset.qualities.map(quality => (
-              <TouchableOpacity
-                key={quality.id}
-                style={[
-                  styles.selectionItem,
-                  form.qualityIds.includes(quality.id) && styles.selectedItem,
-                ]}
-                onPress={() => {
-                  const isSelected = form.qualityIds.includes(quality.id);
-
-                  if (isSelected) {
-                    // Allow deselection
-                    const newQualityIds = form.qualityIds.filter(
-                      id => id !== quality.id
-                    );
-                    handleChange('qualityIds', newQualityIds);
-                  } else if (form.qualityIds.length < maxQualities) {
-                    // Allow selection if under limit
-                    const newQualityIds = [...form.qualityIds, quality.id];
-                    handleChange('qualityIds', newQualityIds);
-                  } else {
-                    // Show alert when limit reached
-                    Alert.alert(
-                      'Maximum Reached',
-                      `You can only select up to ${maxQualities} ${label(
-                        'quality.plural',
-                        'lower'
-                      )}.`
-                    );
-                  }
-                }}
-              >
-                <Text style={styles.itemName}>{quality.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </>
-        )}
-      </View>
+            </>
+          )}
+        </View>
+      )}
 
       {/* Gated on `modifications`. Existing modifications stay on the
           character and are saved untouched, so the flag hides the editor
@@ -778,7 +1166,7 @@ export const CharacterFormScreen: React.FC = () => {
       )}
 
       <View style={styles.formSection}>
-        <Text style={styles.label}>Factions</Text>
+        <Text style={styles.label}>{label('faction.plural')}</Text>
         {form.factions.map((faction, index) => (
           <View key={index} style={styles.factionContainer}>
             {showCustomFactionInput[index] ? (
@@ -853,7 +1241,10 @@ export const CharacterFormScreen: React.FC = () => {
                     value={factionName}
                   />
                 ))}
-                <Picker.Item label="Add New Faction..." value="__ADD_NEW__" />
+                <Picker.Item
+                  label={`Add New ${label('faction.singular')}...`}
+                  value="__ADD_NEW__"
+                />
               </Picker>
             )}
             <Picker
@@ -889,7 +1280,9 @@ export const CharacterFormScreen: React.FC = () => {
             ]);
           }}
         >
-          <Text style={styles.addButtonText}>Add Faction</Text>
+          <Text style={styles.addButtonText}>
+            Add {label('faction.singular')}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -911,7 +1304,10 @@ export const CharacterFormScreen: React.FC = () => {
                     handleChange('relationships', newRelationships);
                   }}
                 >
-                  <Picker.Item label="Select Character..." value="" />
+                  <Picker.Item
+                    label={`Select ${label('character.singular')}...`}
+                    value=""
+                  />
                   {getAvailableCharacterNames().map(name => (
                     <Picker.Item key={name} label={name} value={name} />
                   ))}
@@ -1024,7 +1420,7 @@ export const CharacterFormScreen: React.FC = () => {
           style={styles.input}
           value={form.occupation}
           onChangeText={value => handleChange('occupation', value)}
-          placeholder="Character Occupation"
+          placeholder={`${label('character.singular')} Occupation`}
         />
       </View>
 
@@ -1034,392 +1430,21 @@ export const CharacterFormScreen: React.FC = () => {
           style={[styles.input, styles.notesInput]}
           value={form.notes}
           onChangeText={value => handleChange('notes', value)}
-          placeholder="Character Notes"
+          placeholder={`${label('character.singular')} Notes`}
           multiline
         />
       </View>
 
       <View style={styles.submitContainer}>
         <Button
-          title={editingCharacter ? 'Update Character' : 'Create Character'}
+          title={
+            editingCharacter
+              ? `Update ${label('character.singular')}`
+              : `Create ${label('character.singular')}`
+          }
           onPress={handleSubmit}
         />
       </View>
     </BaseFormScreen>
   );
 };
-
-const styles = StyleSheet.create({
-  imageGalleryContainer: {
-    ...commonStyles.image.container,
-  },
-  imageGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 12,
-  },
-  imageItemContainer: {
-    position: 'relative',
-    width: 100,
-    height: 100,
-  },
-  characterImageThumbnail: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: themeColors.surface,
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: themeColors.status.error,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeImageButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  placeholderImage: commonStyles.image.placeholder,
-  imagePickerButton: commonStyles.image.pickerButton,
-  imagePickerButtonText: {
-    ...commonStyles.button.text,
-    textAlign: 'center',
-  },
-  filterContainer: {
-    ...commonStyles.layout.section,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    padding: 16,
-  },
-  filterLabel: {
-    ...commonStyles.text.label,
-    marginRight: 12,
-    marginBottom: 0,
-  },
-  picker: commonStyles.input.picker,
-  perkContainer: {
-    flexDirection: 'column',
-    marginBottom: 4,
-  },
-  perkHeaderContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  perkBadgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  tagText: {
-    ...commonStyles.badge.text,
-    ...commonStyles.badge.tag,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  speciesText: {
-    ...commonStyles.badge.text,
-    ...commonStyles.badge.species,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  speciesSpecificItem: {
-    borderLeftWidth: 4,
-    borderLeftColor: themeColors.status.info,
-    backgroundColor: themeColors.elevated,
-  },
-  descriptionText: {
-    ...commonStyles.text.description,
-    marginTop: 6,
-    lineHeight: 20,
-  },
-  formSection: commonStyles.layout.formSection,
-  label: commonStyles.text.label,
-  input: commonStyles.input.base,
-  notesInput: {
-    ...commonStyles.input.base,
-    ...commonStyles.input.multiline,
-  },
-  statusButton: {
-    ...commonStyles.button.base,
-    ...commonStyles.button.success,
-  },
-  statusButtonRetired: {
-    backgroundColor: themeColors.status.error,
-    borderColor: themeColors.status.error,
-  },
-  statusButtonText: commonStyles.button.text,
-  statusButtonTextRetired: commonStyles.button.text,
-  selectionItem: {
-    backgroundColor: themeColors.elevated,
-    padding: 16,
-    borderRadius: 12,
-    marginVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  selectedItem: {
-    backgroundColor: themeColors.interactive.hover,
-    borderColor: themeColors.accent.primary,
-  },
-  itemName: {
-    fontSize: 16,
-    color: themeColors.text.primary,
-    fontWeight: '500',
-  },
-  factionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  factionInput: {
-    ...commonStyles.input.base,
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-  },
-  customFactionContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  backToDropdownButton: {
-    backgroundColor: themeColors.interactive.hover,
-    padding: 8,
-    borderRadius: 6,
-    minWidth: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backToDropdownText: {
-    color: themeColors.text.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  factionStanding: {
-    width: '35%',
-  },
-  relationshipGroup: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: themeColors.elevated,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  relationshipContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  relationshipPickerContainer: {
-    flex: 1,
-  },
-  relationshipNamePicker: {
-    ...commonStyles.input.picker,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  relationshipType: {
-    width: '35%',
-  },
-  customNameContainer: {
-    marginBottom: 12,
-    marginTop: -8,
-  },
-  customNameInput: {
-    ...commonStyles.input.base,
-    padding: 12,
-    borderRadius: 8,
-  },
-  relationshipDescContainer: {
-    marginBottom: 12,
-  },
-  relationshipDescInput: {
-    ...commonStyles.input.base,
-    padding: 12,
-    borderRadius: 8,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  removeButton: {
-    ...commonStyles.button.small,
-    backgroundColor: themeColors.status.error,
-  },
-  removeButtonText: commonStyles.button.textSmall,
-  addButton: {
-    ...commonStyles.button.base,
-    ...commonStyles.button.primary,
-    marginTop: 12,
-  },
-  addButtonText: commonStyles.button.text,
-  submitContainer: {
-    marginTop: 32,
-    marginBottom: 40,
-    paddingHorizontal: 16,
-  },
-  placeholderText: {
-    ...commonStyles.text.body,
-    fontWeight: '500',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  expandIcon: {
-    color: themeColors.text.secondary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cyberwareContainer: {
-    backgroundColor: themeColors.elevated,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  cyberwareHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  cyberwareName: {
-    ...commonStyles.input.base,
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    fontWeight: '600',
-  },
-  cyberwareDescription: {
-    ...commonStyles.input.base,
-    padding: 12,
-    borderRadius: 8,
-    minHeight: 60,
-    textAlignVertical: 'top',
-    marginBottom: 12,
-  },
-  cyberwareModifiersSection: {
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: themeColors.border,
-  },
-  cyberwareModifiersLabel: {
-    ...commonStyles.text.label,
-    fontSize: 14,
-    marginBottom: 12,
-    color: themeColors.accent.primary,
-  },
-  modifierRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  modifierInput: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modifierLabel: {
-    ...commonStyles.text.label,
-    fontSize: 13,
-    marginBottom: 0,
-    minWidth: 80,
-  },
-  modifierField: {
-    ...commonStyles.input.base,
-    flex: 1,
-    padding: 8,
-    borderRadius: 6,
-    textAlign: 'center',
-  },
-  tagModifiersSection: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: themeColors.border,
-  },
-  tagModifiersLabel: {
-    ...commonStyles.text.label,
-    fontSize: 14,
-    marginBottom: 12,
-    color: themeColors.accent.secondary,
-  },
-  tagModifiersList: {
-    gap: 8,
-    marginBottom: 12,
-  },
-  tagModifierRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: themeColors.surface,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  tagModifierName: {
-    ...commonStyles.text.label,
-    fontSize: 13,
-    marginBottom: 0,
-    minWidth: 90,
-    color: themeColors.text.primary,
-  },
-  tagModifierField: {
-    ...commonStyles.input.base,
-    flex: 1,
-    padding: 8,
-    borderRadius: 6,
-    textAlign: 'center',
-    minWidth: 60,
-  },
-  tagModifierRemove: {
-    backgroundColor: themeColors.status.error,
-    borderRadius: 4,
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tagModifierRemoveText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  addTagModifierButton: {
-    backgroundColor: themeColors.surface,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.accent.secondary,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-  },
-  addTagModifierButtonText: {
-    ...commonStyles.text.label,
-    fontSize: 13,
-    marginBottom: 0,
-    color: themeColors.accent.secondary,
-  },
-});

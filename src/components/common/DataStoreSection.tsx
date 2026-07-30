@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 import type {
   DataStore,
   DataStoreAction,
@@ -24,7 +24,10 @@ interface DataStoreSectionProps {
   hideProgress: () => void;
 }
 
-const variantStyle = (action: DataStoreAction) => {
+const variantStyle = (
+  commonStyles: ReturnType<typeof useCommonStyles>,
+  action: DataStoreAction
+) => {
   switch (action.variant) {
     case 'secondary':
       return commonStyles.button.secondary;
@@ -43,6 +46,26 @@ export const DataStoreSection: React.FC<DataStoreSectionProps> = ({
   showProgress,
   hideProgress,
 }) => {
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        section: commonStyles.layout.section,
+        sectionTitle: commonStyles.text.h2,
+        sectionDescription: {
+          ...commonStyles.text.description,
+          marginBottom: 16,
+          lineHeight: 20,
+        },
+        actionButton: commonStyles.button.base,
+        spaced: {
+          marginBottom: 12,
+        },
+        buttonText: commonStyles.button.text,
+      }),
+    [commonStyles]
+  );
+
   const runAction = async (action: DataStoreAction) => {
     showProgress(action.progressMessage);
     try {
@@ -83,7 +106,11 @@ export const DataStoreSection: React.FC<DataStoreSectionProps> = ({
       {(store.actions ?? []).map(action => (
         <TouchableOpacity
           key={action.id}
-          style={[styles.actionButton, variantStyle(action), styles.spaced]}
+          style={[
+            styles.actionButton,
+            variantStyle(commonStyles, action),
+            styles.spaced,
+          ]}
           onPress={() => runAction(action)}
         >
           <Text style={styles.buttonText}>{action.label}</Text>
@@ -92,18 +119,3 @@ export const DataStoreSection: React.FC<DataStoreSectionProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: commonStyles.layout.section,
-  sectionTitle: commonStyles.text.h2,
-  sectionDescription: {
-    ...commonStyles.text.description,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  actionButton: commonStyles.button.base,
-  spaced: {
-    marginBottom: 12,
-  },
-  buttonText: commonStyles.button.text,
-});

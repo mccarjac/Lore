@@ -17,7 +17,7 @@ import {
   generateQuestProposals,
   scoreCharacterForQuest,
 } from '@utils/questProposal';
-import { useRuleset } from '@/ruleset';
+import { useRuleset, useLabels } from '@/ruleset';
 
 type QuestProposalsNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -27,6 +27,7 @@ type QuestProposalsNavigationProp = StackNavigationProp<
 export const QuestProposalScreen: React.FC = () => {
   const navigation = useNavigation<QuestProposalsNavigationProp>();
   const { ruleset } = useRuleset();
+  const label = useLabels();
 
   const [loading, setLoading] = useState(true);
   const [quests, setQuests] = useState<GameQuest[]>([]);
@@ -123,7 +124,7 @@ export const QuestProposalScreen: React.FC = () => {
 
   return (
     <BaseDetailScreen headerRight={renderHeaderRight()}>
-      <Text style={styles.title}>Quest Team Proposals</Text>
+      <Text style={styles.title}>{label('quest.singular')} Team Proposals</Text>
       <Text style={styles.subtitle}>
         Proposed teams for unresolved quests that don&apos;t have a team
         assigned yet, drawn only from present characters.

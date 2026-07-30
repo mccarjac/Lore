@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
-import { commonStyles } from '@/styles/commonStyles';
-import { colors as themeColors } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -23,6 +23,30 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   defaultCollapsed = false,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        section: commonStyles.layout.section,
+        header: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 8,
+        },
+        sectionTitle: commonStyles.text.h2,
+        indicator: {
+          color: themeColors.text.secondary,
+          fontSize: 14,
+          marginLeft: 8,
+        },
+        content: {
+          marginTop: 8,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   return (
     <View style={[styles.section, style]}>
@@ -38,22 +62,3 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: commonStyles.layout.section,
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sectionTitle: commonStyles.text.h2,
-  indicator: {
-    color: themeColors.text.secondary,
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  content: {
-    marginTop: 8,
-  },
-});

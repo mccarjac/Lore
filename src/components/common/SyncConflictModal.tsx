@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   View,
@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { CollapsibleSection } from './CollapsibleSection';
 import type {
   ConflictResolution,
@@ -66,6 +66,131 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({
   const [resolutions, setResolutions] = useState<
     Record<string, ConflictResolution>
   >(() => defaultResolutions(conflicts));
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        overlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        },
+        content: {
+          backgroundColor: themeColors.surface,
+          borderRadius: 16,
+          padding: 24,
+          width: '100%',
+          maxWidth: 560,
+          maxHeight: '85%',
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        title: {
+          ...commonStyles.text.h2,
+          textAlign: 'center',
+        },
+        subtitle: {
+          ...commonStyles.text.body,
+          color: themeColors.text.secondary,
+          textAlign: 'center',
+          marginTop: 8,
+          marginBottom: 16,
+        },
+        bulkRow: {
+          flexDirection: 'row',
+          gap: 12,
+          marginBottom: 16,
+        },
+        bulkButton: {
+          flex: 1,
+          paddingVertical: 10,
+          borderRadius: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        bulkButtonSecondary: {
+          backgroundColor: themeColors.elevated,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        bulkButtonText: {
+          ...commonStyles.text.body,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+        scrollArea: {
+          maxHeight: 420,
+        },
+        conflictSection: {
+          marginBottom: 12,
+        },
+        fieldRow: {
+          marginBottom: 8,
+        },
+        fieldName: {
+          ...commonStyles.text.body,
+          fontWeight: '700',
+          color: themeColors.text.primary,
+        },
+        fieldValue: {
+          ...commonStyles.text.body,
+          color: themeColors.text.secondary,
+        },
+        choiceRow: {
+          flexDirection: 'row',
+          gap: 12,
+          marginTop: 8,
+        },
+        choiceButton: {
+          flex: 1,
+          paddingVertical: 8,
+          borderRadius: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: themeColors.elevated,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        choiceButtonSelected: {
+          backgroundColor: themeColors.accent.primary,
+          borderColor: themeColors.accent.primary,
+        },
+        choiceButtonText: {
+          ...commonStyles.text.body,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+        footerRow: {
+          flexDirection: 'row',
+          gap: 12,
+          marginTop: 16,
+        },
+        footerButton: {
+          flex: 1,
+          paddingVertical: 12,
+          borderRadius: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        cancelButton: {
+          backgroundColor: themeColors.elevated,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        applyButton: {
+          backgroundColor: themeColors.accent.primary,
+        },
+        footerButtonText: {
+          ...commonStyles.text.body,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   // Every conflict defaults to keeping the local value, so cancelling or
   // applying without touching a row never silently discards local work.
@@ -191,123 +316,3 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  content: {
-    backgroundColor: themeColors.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 560,
-    maxHeight: '85%',
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  title: {
-    ...commonStyles.text.h2,
-    textAlign: 'center',
-  },
-  subtitle: {
-    ...commonStyles.text.body,
-    color: themeColors.text.secondary,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  bulkRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  bulkButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bulkButtonSecondary: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  bulkButtonText: {
-    ...commonStyles.text.body,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  scrollArea: {
-    maxHeight: 420,
-  },
-  conflictSection: {
-    marginBottom: 12,
-  },
-  fieldRow: {
-    marginBottom: 8,
-  },
-  fieldName: {
-    ...commonStyles.text.body,
-    fontWeight: '700',
-    color: themeColors.text.primary,
-  },
-  fieldValue: {
-    ...commonStyles.text.body,
-    color: themeColors.text.secondary,
-  },
-  choiceRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  choiceButton: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: themeColors.elevated,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  choiceButtonSelected: {
-    backgroundColor: themeColors.accent.primary,
-    borderColor: themeColors.accent.primary,
-  },
-  choiceButtonText: {
-    ...commonStyles.text.body,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  footerButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: themeColors.elevated,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  applyButton: {
-    backgroundColor: themeColors.accent.primary,
-  },
-  footerButtonText: {
-    ...commonStyles.text.body,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-});

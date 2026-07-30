@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { GameCharacter, GameLocation } from '@models/types';
 import { loadCharacters, loadLocations } from '@utils/characterStorage';
@@ -10,7 +10,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseListScreen, HeaderAddButton } from '@/components';
 import { useFeature } from '@/ruleset';
 
@@ -31,6 +31,56 @@ export const LocationListScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const navigation = useNavigation<LocationNavigationProp>();
   const mapEnabled = useFeature('map');
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        locationCard: commonStyles.card.base,
+        locationContent: {
+          flex: 1,
+          flexDirection: 'row',
+          gap: 12,
+        },
+        locationTextContent: {
+          flex: 1,
+        },
+        locationHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: 8,
+        },
+        locationName: {
+          ...commonStyles.text.h3,
+          flex: 1,
+        },
+        locationCounts: {
+          alignItems: 'flex-end',
+        },
+        countText: {
+          ...commonStyles.text.body,
+          fontWeight: '500',
+        },
+        presentText: commonStyles.text.caption,
+        locationDescription: {
+          ...commonStyles.text.body,
+          lineHeight: 20,
+        },
+        headerButtons: {
+          flexDirection: 'row',
+          gap: 8,
+        },
+        headerMapButton: {
+          ...commonStyles.headerButton.add,
+          marginRight: 4,
+        },
+        headerMapButtonText: {
+          ...commonStyles.headerButton.addText,
+          fontSize: 20,
+        },
+      }),
+    [commonStyles]
+  );
 
   const loadData = useCallback(async () => {
     const characters = await loadCharacters();
@@ -170,49 +220,3 @@ export const LocationListScreen: React.FC = () => {
     />
   );
 };
-
-const styles = StyleSheet.create({
-  locationCard: commonStyles.card.base,
-  locationContent: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  locationTextContent: {
-    flex: 1,
-  },
-  locationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  locationName: {
-    ...commonStyles.text.h3,
-    flex: 1,
-  },
-  locationCounts: {
-    alignItems: 'flex-end',
-  },
-  countText: {
-    ...commonStyles.text.body,
-    fontWeight: '500',
-  },
-  presentText: commonStyles.text.caption,
-  locationDescription: {
-    ...commonStyles.text.body,
-    lineHeight: 20,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  headerMapButton: {
-    ...commonStyles.headerButton.add,
-    marginRight: 4,
-  },
-  headerMapButtonText: {
-    ...commonStyles.headerButton.addText,
-    fontSize: 20,
-  },
-});

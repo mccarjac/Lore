@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,8 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
 import { createLocation, updateLocation } from '@utils/characterStorage';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseFormScreen } from '@/components';
 
 type LocationFormNavigationProp = StackNavigationProp<
@@ -43,6 +43,159 @@ export const LocationFormScreen: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        section: {
+          marginBottom: 24,
+        },
+        sectionTitle: {
+          ...commonStyles.text.h1,
+          marginBottom: 20,
+        },
+        inputGroup: {
+          marginBottom: 24,
+        },
+        inputLabel: {
+          ...commonStyles.text.label,
+          marginBottom: 8,
+        },
+        required: {
+          color: themeColors.accent.danger,
+        },
+        textInput: {
+          ...commonStyles.input.base,
+          minHeight: 52,
+        },
+        textArea: {
+          ...commonStyles.input.base,
+          minHeight: 120,
+        },
+        inputError: {
+          borderColor: themeColors.accent.danger,
+        },
+        errorText: {
+          ...commonStyles.text.danger,
+          marginTop: 6,
+        },
+        characterCount: {
+          fontSize: 12,
+          color: themeColors.text.muted,
+          textAlign: 'right',
+          marginTop: 6,
+        },
+        imageGalleryContainer: {
+          gap: 12,
+        },
+        imageGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 12,
+        },
+        imageItemContainer: {
+          position: 'relative',
+          width: 100,
+          height: 100,
+        },
+        locationImageThumbnail: {
+          width: 100,
+          height: 100,
+          borderRadius: 8,
+          backgroundColor: themeColors.surface,
+        },
+        imagePickerButton: {
+          backgroundColor: themeColors.surface,
+          borderWidth: 2,
+          borderColor: themeColors.border,
+          borderStyle: 'dashed',
+          borderRadius: 12,
+          padding: 32,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+        },
+        imagePickerIcon: {
+          fontSize: 48,
+        },
+        imagePickerText: {
+          ...commonStyles.text.body,
+          color: themeColors.text.secondary,
+        },
+        addImageButton: {
+          backgroundColor: themeColors.surface,
+          borderWidth: 2,
+          borderColor: themeColors.border,
+          borderStyle: 'dashed',
+          borderRadius: 8,
+          padding: 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        addImageButtonText: {
+          ...commonStyles.text.body,
+          color: themeColors.text.secondary,
+          fontWeight: '600',
+        },
+        removeImageIconButton: {
+          position: 'absolute',
+          top: -8,
+          right: -8,
+          backgroundColor: themeColors.accent.danger,
+          borderRadius: 12,
+          width: 24,
+          height: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        removeImageIconText: {
+          color: themeColors.text.primary,
+          fontSize: 16,
+          fontWeight: '700',
+          lineHeight: 20,
+        },
+        buttonContainer: {
+          flexDirection: 'row',
+          padding: 20,
+          gap: 12,
+          backgroundColor: themeColors.primary,
+          borderTopWidth: 1,
+          borderTopColor: themeColors.border,
+        },
+        button: {
+          flex: 1,
+          paddingVertical: 16,
+          paddingHorizontal: 24,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 52,
+        },
+        cancelButton: {
+          ...commonStyles.button.secondary,
+        },
+        submitButton: {
+          ...commonStyles.button.primary,
+        },
+        buttonDisabled: {
+          opacity: 0.6,
+        },
+        cancelButtonText: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          letterSpacing: 0.2,
+        },
+        submitButtonText: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          letterSpacing: 0.2,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   // Load existing location data if editing
   useEffect(() => {
@@ -306,151 +459,3 @@ export const LocationFormScreen: React.FC = () => {
     </BaseFormScreen>
   );
 };
-
-const styles = StyleSheet.create({
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    ...commonStyles.text.h1,
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    ...commonStyles.text.label,
-    marginBottom: 8,
-  },
-  required: {
-    color: themeColors.accent.danger,
-  },
-  textInput: {
-    ...commonStyles.input.base,
-    minHeight: 52,
-  },
-  textArea: {
-    ...commonStyles.input.base,
-    minHeight: 120,
-  },
-  inputError: {
-    borderColor: themeColors.accent.danger,
-  },
-  errorText: {
-    ...commonStyles.text.danger,
-    marginTop: 6,
-  },
-  characterCount: {
-    fontSize: 12,
-    color: themeColors.text.muted,
-    textAlign: 'right',
-    marginTop: 6,
-  },
-  imageGalleryContainer: {
-    gap: 12,
-  },
-  imageGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  imageItemContainer: {
-    position: 'relative',
-    width: 100,
-    height: 100,
-  },
-  locationImageThumbnail: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: themeColors.surface,
-  },
-  imagePickerButton: {
-    backgroundColor: themeColors.surface,
-    borderWidth: 2,
-    borderColor: themeColors.border,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  imagePickerIcon: {
-    fontSize: 48,
-  },
-  imagePickerText: {
-    ...commonStyles.text.body,
-    color: themeColors.text.secondary,
-  },
-  addImageButton: {
-    backgroundColor: themeColors.surface,
-    borderWidth: 2,
-    borderColor: themeColors.border,
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addImageButtonText: {
-    ...commonStyles.text.body,
-    color: themeColors.text.secondary,
-    fontWeight: '600',
-  },
-  removeImageIconButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: themeColors.accent.danger,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeImageIconText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    backgroundColor: themeColors.primary,
-    borderTopWidth: 1,
-    borderTopColor: themeColors.border,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  cancelButton: {
-    ...commonStyles.button.secondary,
-  },
-  submitButton: {
-    ...commonStyles.button.primary,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    letterSpacing: 0.2,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    letterSpacing: 0.2,
-  },
-});

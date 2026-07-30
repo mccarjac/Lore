@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 
 interface HeaderAddButtonProps {
   onPress: () => void;
@@ -11,14 +11,19 @@ export const HeaderAddButton: React.FC<HeaderAddButtonProps> = ({
   onPress,
   label = '+',
 }) => {
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        headerAddButton: commonStyles.headerButton.add,
+        headerAddButtonText: commonStyles.headerButton.addText,
+      }),
+    [commonStyles]
+  );
+
   return (
     <TouchableOpacity style={styles.headerAddButton} onPress={onPress}>
       <Text style={styles.headerAddButtonText}>{label}</Text>
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  headerAddButton: commonStyles.headerButton.add,
-  headerAddButtonText: commonStyles.headerButton.addText,
-});

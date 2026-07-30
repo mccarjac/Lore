@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -22,8 +22,8 @@ import {
 } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
-import { colors as themeColors } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useTheme } from '@/styles/theme';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
 
 type LocationDetailsRouteProp = RouteProp<
@@ -39,6 +39,157 @@ export const LocationDetailsScreen: React.FC = () => {
 
   const [location, setLocation] = useState<GameLocation | null>(null);
   const [characters, setCharacters] = useState<GameCharacter[]>([]);
+  const { colors: themeColors } = useTheme();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: themeColors.primary,
+        },
+        loadingText: {
+          ...commonStyles.text.body,
+          textAlign: 'center',
+          marginTop: 40,
+          paddingTop: 8,
+        },
+        statsGrid: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: 20,
+        },
+        statCard: {
+          ...commonStyles.card.base,
+          alignItems: 'center',
+          flex: 1,
+          marginHorizontal: 4,
+        },
+        statValue: {
+          fontSize: 24,
+          fontWeight: '700',
+          color: themeColors.text.primary,
+          marginBottom: 4,
+        },
+        statLabel: {
+          fontSize: 12,
+          color: themeColors.text.muted,
+          textAlign: 'center',
+        },
+        charactersList: {
+          gap: 12,
+        },
+        characterCard: {
+          ...commonStyles.card.base,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        },
+        characterCardPresent: {
+          borderLeftWidth: 4,
+          borderLeftColor: themeColors.status.present,
+        },
+        characterInfo: {
+          flex: 1,
+        },
+        characterName: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: themeColors.text.primary,
+          marginBottom: 4,
+        },
+        characterSpecies: {
+          fontSize: 14,
+          color: themeColors.text.secondary,
+        },
+        presentBadge: {
+          ...commonStyles.badge.base,
+          paddingHorizontal: 8,
+          paddingVertical: 3,
+          borderRadius: 12,
+        },
+        presentBadgeActive: {
+          backgroundColor: themeColors.status.present,
+          borderColor: themeColors.status.present,
+        },
+        presentBadgeText: {
+          fontSize: 10,
+          fontWeight: '600',
+          color: themeColors.text.muted,
+          letterSpacing: 0.3,
+        },
+        presentBadgeTextActive: {
+          color: themeColors.text.primary,
+        },
+        emptyContainer: {
+          padding: 40,
+          alignItems: 'center',
+        },
+        emptyText: {
+          ...commonStyles.text.h3,
+          color: themeColors.text.muted,
+          marginBottom: 8,
+          textAlign: 'center',
+        },
+        emptySubText: {
+          ...commonStyles.text.body,
+          color: themeColors.text.muted,
+          textAlign: 'center',
+        },
+
+        // Location Header Styles
+        locationHeader: {
+          ...commonStyles.card.base,
+          padding: 20,
+          marginBottom: 24,
+        },
+        locationName: {
+          ...commonStyles.text.h1,
+          textAlign: 'center',
+          marginBottom: 16,
+        },
+        imageGallery: {
+          marginBottom: 16,
+        },
+        imageGalleryContent: {
+          gap: 12,
+        },
+        imageContainer: {
+          width: 250,
+          height: 200,
+          borderRadius: 12,
+          overflow: 'hidden',
+          marginRight: 12,
+        },
+        locationImage: {
+          width: '100%',
+          height: '100%',
+          backgroundColor: themeColors.surface,
+        },
+
+        // Description Styles
+        descriptionSection: {
+          marginTop: 8,
+        },
+        descriptionLabel: {
+          ...commonStyles.text.label,
+          marginBottom: 12,
+        },
+        descriptionDisplay: {
+          backgroundColor: themeColors.elevated,
+          padding: 16,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: themeColors.border,
+        },
+        descriptionText: {
+          fontSize: 14,
+          color: themeColors.text.primary,
+          lineHeight: 20,
+        },
+      }),
+    [commonStyles, themeColors]
+  );
 
   // Guard against missing locationId param
   React.useEffect(() => {
@@ -226,149 +377,3 @@ export const LocationDetailsScreen: React.FC = () => {
     </BaseDetailScreen>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: themeColors.primary,
-  },
-  loadingText: {
-    ...commonStyles.text.body,
-    textAlign: 'center',
-    marginTop: 40,
-    paddingTop: 8,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  statCard: {
-    ...commonStyles.card.base,
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: themeColors.text.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: themeColors.text.muted,
-    textAlign: 'center',
-  },
-  charactersList: {
-    gap: 12,
-  },
-  characterCard: {
-    ...commonStyles.card.base,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  characterCardPresent: {
-    borderLeftWidth: 4,
-    borderLeftColor: themeColors.status.present,
-  },
-  characterInfo: {
-    flex: 1,
-  },
-  characterName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-    marginBottom: 4,
-  },
-  characterSpecies: {
-    fontSize: 14,
-    color: themeColors.text.secondary,
-  },
-  presentBadge: {
-    ...commonStyles.badge.base,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  presentBadgeActive: {
-    backgroundColor: themeColors.status.present,
-    borderColor: themeColors.status.present,
-  },
-  presentBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: themeColors.text.muted,
-    letterSpacing: 0.3,
-  },
-  presentBadgeTextActive: {
-    color: themeColors.text.primary,
-  },
-  emptyContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    ...commonStyles.text.h3,
-    color: themeColors.text.muted,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubText: {
-    ...commonStyles.text.body,
-    color: themeColors.text.muted,
-    textAlign: 'center',
-  },
-
-  // Location Header Styles
-  locationHeader: {
-    ...commonStyles.card.base,
-    padding: 20,
-    marginBottom: 24,
-  },
-  locationName: {
-    ...commonStyles.text.h1,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  imageGallery: {
-    marginBottom: 16,
-  },
-  imageGalleryContent: {
-    gap: 12,
-  },
-  imageContainer: {
-    width: 250,
-    height: 200,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginRight: 12,
-  },
-  locationImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: themeColors.surface,
-  },
-
-  // Description Styles
-  descriptionSection: {
-    marginTop: 8,
-  },
-  descriptionLabel: {
-    ...commonStyles.text.label,
-    marginBottom: 12,
-  },
-  descriptionDisplay: {
-    backgroundColor: themeColors.elevated,
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
-  descriptionText: {
-    fontSize: 14,
-    color: themeColors.text.primary,
-    lineHeight: 20,
-  },
-});

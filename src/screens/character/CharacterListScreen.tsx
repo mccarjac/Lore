@@ -23,12 +23,13 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { RootStackParamList, RootDrawerParamList } from '@/navigation/types';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 import {
   BaseListScreen,
   HeaderAddButton,
   HeaderStatsButton,
 } from '@/components';
+import { useLabels } from '@/ruleset';
 
 type NavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'CharacterList'>,
@@ -40,6 +41,66 @@ export const CharacterListScreen: React.FC = () => {
   const [showOnlyPresent, setShowOnlyPresent] = React.useState<boolean>(false);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const navigation = useNavigation<NavigationProp>();
+  const label = useLabels();
+  const commonStyles = useCommonStyles();
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        listContentContainer: {
+          paddingBottom: 100,
+        },
+        headerButtons: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+        },
+        actionButton: {
+          ...commonStyles.button.base,
+          flex: 1,
+          marginHorizontal: 4,
+        },
+        filterButton: commonStyles.button.outline,
+        filterButtonActive: commonStyles.button.outlineActive,
+        resetButton: commonStyles.button.warning,
+        buttonText: commonStyles.button.text,
+        card: commonStyles.card.base,
+        cardPresent: commonStyles.card.present,
+        cardHeader: commonStyles.card.header,
+        name: {
+          ...commonStyles.text.h3,
+          flex: 1,
+        },
+        factions: {
+          ...commonStyles.text.caption,
+          marginTop: 8,
+          fontStyle: 'italic',
+        },
+        presentButton: {
+          ...commonStyles.badge.base,
+          ...commonStyles.badge.absent,
+          minWidth: 70,
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 16,
+        },
+        presentButtonActive: commonStyles.badge.present,
+        presentText: commonStyles.badge.textMuted,
+        presentTextActive: commonStyles.badge.text,
+        headerRight: {
+          flexDirection: 'row',
+          gap: 8,
+        },
+        headerSearchButton: {
+          ...commonStyles.headerButton.add,
+          marginRight: 4,
+        },
+        headerSearchButtonText: {
+          ...commonStyles.headerButton.addText,
+          fontSize: 20,
+        },
+      }),
+    [commonStyles]
+  );
 
   const loadData = React.useCallback(async () => {
     // Run migrations on first load (both idempotent)
@@ -67,27 +128,22 @@ export const CharacterListScreen: React.FC = () => {
 
   const handleResetAllPresent = useCallback(async () => {
     const confirmReset = () => {
+      const confirmMessage = `Are you sure you want to reset present status for all ${label('character.plural', 'lower')}?`;
       if (Platform.OS === 'web') {
-        return window.confirm(
-          'Are you sure you want to reset present status for all characters?'
-        );
+        return window.confirm(confirmMessage);
       } else {
         return new Promise<boolean>(resolve => {
-          Alert.alert(
-            'Reset Present Status',
-            'Are you sure you want to reset present status for all characters?',
-            [
-              {
-                text: 'Cancel',
-                style: 'cancel',
-                onPress: () => resolve(false),
-              },
-              {
-                text: 'Reset All',
-                onPress: () => resolve(true),
-              },
-            ]
-          );
+          Alert.alert('Reset Present Status', confirmMessage, [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => resolve(false),
+            },
+            {
+              text: 'Reset All',
+              onPress: () => resolve(true),
+            },
+          ]);
         });
       }
     };
@@ -97,7 +153,7 @@ export const CharacterListScreen: React.FC = () => {
       await resetAllPresentStatus();
       await loadData();
     }
-  }, [loadData]);
+  }, [loadData, label]);
 
   const handleSearchPress = useCallback(() => {
     navigation.navigate('CharacterSearch');
@@ -207,67 +263,12 @@ export const CharacterListScreen: React.FC = () => {
       keyExtractor={item => item.id}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
-      searchPlaceholder="Search characters by name..."
+      searchPlaceholder={`Search ${label('character.plural', 'lower')} by name...`}
       ListHeaderComponent={renderHeaderButtons()}
       headerRight={renderHeaderRight()}
-      emptyStateTitle="No characters found"
-      emptyStateSubtitle="Create a character to get started"
+      emptyStateTitle={`No ${label('character.plural', 'lower')} found`}
+      emptyStateSubtitle={`Create a ${label('character.singular', 'lower')} to get started`}
       contentContainerStyle={styles.listContentContainer}
     />
   );
 };
-
-const styles = StyleSheet.create({
-  listContentContainer: {
-    paddingBottom: 100,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  actionButton: {
-    ...commonStyles.button.base,
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  filterButton: commonStyles.button.outline,
-  filterButtonActive: commonStyles.button.outlineActive,
-  resetButton: commonStyles.button.warning,
-  buttonText: commonStyles.button.text,
-  card: commonStyles.card.base,
-  cardPresent: commonStyles.card.present,
-  cardHeader: commonStyles.card.header,
-  name: {
-    ...commonStyles.text.h3,
-    flex: 1,
-  },
-  factions: {
-    ...commonStyles.text.caption,
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  presentButton: {
-    ...commonStyles.badge.base,
-    ...commonStyles.badge.absent,
-    minWidth: 70,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  presentButtonActive: commonStyles.badge.present,
-  presentText: commonStyles.badge.textMuted,
-  presentTextActive: commonStyles.badge.text,
-  headerRight: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  headerSearchButton: {
-    ...commonStyles.headerButton.add,
-    marginRight: 4,
-  },
-  headerSearchButtonText: {
-    ...commonStyles.headerButton.addText,
-    fontSize: 20,
-  },
-});

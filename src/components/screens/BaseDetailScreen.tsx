@@ -1,4 +1,4 @@
-import React, { ReactNode, useLayoutEffect, useCallback } from 'react';
+import React, { ReactNode, useLayoutEffect, useCallback, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -11,7 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { layout } from '@/styles/theme';
-import { commonStyles } from '@/styles/commonStyles';
+import { useCommonStyles } from '@/styles/commonStyles';
 import { HeaderEditButton } from '@/components/common/HeaderEditButton';
 import { HeaderDeleteButton } from '@/components/common/HeaderDeleteButton';
 
@@ -39,6 +39,20 @@ export function BaseDetailScreen({
 }: BaseDetailScreenProps) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const commonStyles = useCommonStyles();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          height: 882,
+          overflow: 'scroll',
+        },
+        scrollView: commonStyles.layout.scrollView,
+        contentContainer: commonStyles.layout.contentContainer,
+      }),
+    [commonStyles]
+  );
 
   const handleDelete = useCallback(async () => {
     if (!deleteConfig) return;
@@ -118,16 +132,6 @@ export function BaseDetailScreen({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    height: 882,
-    overflow: 'scroll',
-  },
-  scrollView: commonStyles.layout.scrollView,
-  contentContainer: commonStyles.layout.contentContainer,
-});
 
 const headerStyles = StyleSheet.create({
   rightContainer: {

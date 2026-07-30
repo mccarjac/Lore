@@ -3,6 +3,12 @@ import { useRuleset } from './context';
 import type { RulesetDefinition, TermKey, TerminologyMap } from './types';
 
 export const DEFAULT_TERMINOLOGY: TerminologyMap = {
+  'character.singular': 'Character',
+  'character.plural': 'Characters',
+  'faction.singular': 'Faction',
+  'faction.plural': 'Factions',
+  'quest.singular': 'Quest',
+  'quest.plural': 'Quests',
   'archetype.singular': 'Archetype',
   'archetype.plural': 'Archetypes',
   'trait.singular': 'Trait',

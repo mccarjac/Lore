@@ -22,7 +22,6 @@ import {
   DrawerContentComponentProps,
 } from '@react-navigation/drawer';
 import {
-  StyleSheet,
   useWindowDimensions,
   View,
   Text,
@@ -60,14 +59,64 @@ import { DiscordCharacterMappingScreen } from '@screens/discord/DiscordCharacter
 import { DiscordMessagesScreen } from '@screens/discord/DiscordMessagesScreen';
 import { DiscordMessageContextScreen } from '@screens/discord/DiscordMessageContextScreen';
 import { useLabels, useFeature } from '@/ruleset';
+import { useTheme, type ColorPalette } from '@/styles/theme';
 
 const Drawer = createDrawerNavigator<RootDrawerParamList>();
 const Stack = createStackNavigator<RootStackParamList>();
+
+// Shared by every `DrawerItem` — one place to change the drawer's
+// selection colors instead of six per item.
+const buildDrawerStyles = (colors: ColorPalette) => ({
+  drawerBackground: { backgroundColor: colors.surface },
+  drawerLabel: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    letterSpacing: 0.3,
+  },
+  drawerLabelIndented: {
+    fontSize: 15,
+    fontWeight: '500' as const,
+    letterSpacing: 0.3,
+    marginLeft: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.interactive.hover,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.borderLight,
+    marginTop: 8,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    letterSpacing: 0.5,
+    color: colors.text.secondary,
+    textTransform: 'uppercase' as const,
+  },
+  sectionHeaderArrow: {
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+  sectionContent: { backgroundColor: 'rgba(0, 0, 0, 0.1)' },
+  activeTintColor: colors.accent.primary,
+  inactiveTintColor: colors.text.secondary,
+  activeBackgroundColor: colors.interactive.hover,
+});
 
 // Custom drawer content with collapsible Discord section
 export function CustomDrawerContent(props: DrawerContentComponentProps) {
   const [discordExpanded, setDiscordExpanded] = useState(false);
   const { state, navigation } = props;
+  const label = useLabels();
+  const { colors } = useTheme();
+  const drawerStyles = useMemo(() => buildDrawerStyles(colors), [colors]);
+  const { activeTintColor, inactiveTintColor, activeBackgroundColor } =
+    drawerStyles;
   const quests = useFeature('quests');
   const discord = useFeature('discord');
   const influenceReport = useFeature('influenceReport');
@@ -84,55 +133,55 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
         label="Search"
         onPress={() => navigation.navigate('GlobalSearch')}
         focused={isActive('GlobalSearch')}
-        activeTintColor="#6C5CE7"
-        inactiveTintColor="#B8B8CC"
-        activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+        activeTintColor={activeTintColor}
+        inactiveTintColor={inactiveTintColor}
+        activeBackgroundColor={activeBackgroundColor}
         labelStyle={drawerStyles.drawerLabel}
       />
       <DrawerItem
-        label="Characters"
+        label={label('character.plural')}
         onPress={() => navigation.navigate('CharacterList')}
         focused={isActive('CharacterList')}
-        activeTintColor="#6C5CE7"
-        inactiveTintColor="#B8B8CC"
-        activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+        activeTintColor={activeTintColor}
+        inactiveTintColor={inactiveTintColor}
+        activeBackgroundColor={activeBackgroundColor}
         labelStyle={drawerStyles.drawerLabel}
       />
       <DrawerItem
-        label="Factions"
+        label={label('faction.plural')}
         onPress={() => navigation.navigate('Factions')}
         focused={isActive('Factions')}
-        activeTintColor="#6C5CE7"
-        inactiveTintColor="#B8B8CC"
-        activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+        activeTintColor={activeTintColor}
+        inactiveTintColor={inactiveTintColor}
+        activeBackgroundColor={activeBackgroundColor}
         labelStyle={drawerStyles.drawerLabel}
       />
       <DrawerItem
         label="Locations"
         onPress={() => navigation.navigate('Locations')}
         focused={isActive('Locations')}
-        activeTintColor="#6C5CE7"
-        inactiveTintColor="#B8B8CC"
-        activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+        activeTintColor={activeTintColor}
+        inactiveTintColor={inactiveTintColor}
+        activeBackgroundColor={activeBackgroundColor}
         labelStyle={drawerStyles.drawerLabel}
       />
       <DrawerItem
         label="Events"
         onPress={() => navigation.navigate('Events')}
         focused={isActive('Events')}
-        activeTintColor="#6C5CE7"
-        inactiveTintColor="#B8B8CC"
-        activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+        activeTintColor={activeTintColor}
+        inactiveTintColor={inactiveTintColor}
+        activeBackgroundColor={activeBackgroundColor}
         labelStyle={drawerStyles.drawerLabel}
       />
       {quests && (
         <DrawerItem
-          label="Quests"
+          label={label('quest.plural')}
           onPress={() => navigation.navigate('Quests')}
           focused={isActive('Quests')}
-          activeTintColor="#6C5CE7"
-          inactiveTintColor="#B8B8CC"
-          activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+          activeTintColor={activeTintColor}
+          inactiveTintColor={inactiveTintColor}
+          activeBackgroundColor={activeBackgroundColor}
           labelStyle={drawerStyles.drawerLabel}
         />
       )}
@@ -141,9 +190,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
           label="Influence Report"
           onPress={() => navigation.navigate('InfluenceReport')}
           focused={isActive('InfluenceReport')}
-          activeTintColor="#6C5CE7"
-          inactiveTintColor="#B8B8CC"
-          activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+          activeTintColor={activeTintColor}
+          inactiveTintColor={inactiveTintColor}
+          activeBackgroundColor={activeBackgroundColor}
           labelStyle={drawerStyles.drawerLabel}
         />
       )}
@@ -152,9 +201,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
           label="Relationship Graph"
           onPress={() => navigation.navigate('RelationshipGraph')}
           focused={isActive('RelationshipGraph')}
-          activeTintColor="#6C5CE7"
-          inactiveTintColor="#B8B8CC"
-          activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+          activeTintColor={activeTintColor}
+          inactiveTintColor={inactiveTintColor}
+          activeBackgroundColor={activeBackgroundColor}
           labelStyle={drawerStyles.drawerLabel}
         />
       )}
@@ -162,9 +211,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
         label="Data Management"
         onPress={() => navigation.navigate('DataManagement')}
         focused={isActive('DataManagement')}
-        activeTintColor="#6C5CE7"
-        inactiveTintColor="#B8B8CC"
-        activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+        activeTintColor={activeTintColor}
+        inactiveTintColor={inactiveTintColor}
+        activeBackgroundColor={activeBackgroundColor}
         labelStyle={drawerStyles.drawerLabel}
       />
 
@@ -187,36 +236,36 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
                 label="Discord Setup (Legacy)"
                 onPress={() => navigation.navigate('DiscordConfig')}
                 focused={isActive('DiscordConfig')}
-                activeTintColor="#6C5CE7"
-                inactiveTintColor="#B8B8CC"
-                activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+                activeTintColor={activeTintColor}
+                inactiveTintColor={inactiveTintColor}
+                activeBackgroundColor={activeBackgroundColor}
                 labelStyle={drawerStyles.drawerLabelIndented}
               />
               <DrawerItem
                 label="Server/Channel Management"
                 onPress={() => navigation.navigate('DiscordServers')}
                 focused={isActive('DiscordServers')}
-                activeTintColor="#6C5CE7"
-                inactiveTintColor="#B8B8CC"
-                activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+                activeTintColor={activeTintColor}
+                inactiveTintColor={inactiveTintColor}
+                activeBackgroundColor={activeBackgroundColor}
                 labelStyle={drawerStyles.drawerLabelIndented}
               />
               <DrawerItem
                 label="Character Name Mapping"
                 onPress={() => navigation.navigate('DiscordCharacterMapping')}
                 focused={isActive('DiscordCharacterMapping')}
-                activeTintColor="#6C5CE7"
-                inactiveTintColor="#B8B8CC"
-                activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+                activeTintColor={activeTintColor}
+                inactiveTintColor={inactiveTintColor}
+                activeBackgroundColor={activeBackgroundColor}
                 labelStyle={drawerStyles.drawerLabelIndented}
               />
               <DrawerItem
                 label="Discord Messages"
                 onPress={() => navigation.navigate('DiscordMessages')}
                 focused={isActive('DiscordMessages')}
-                activeTintColor="#6C5CE7"
-                inactiveTintColor="#B8B8CC"
-                activeBackgroundColor="rgba(108, 92, 231, 0.1)"
+                activeTintColor={activeTintColor}
+                inactiveTintColor={inactiveTintColor}
+                activeBackgroundColor={activeBackgroundColor}
                 labelStyle={drawerStyles.drawerLabelIndented}
               />
             </View>
@@ -227,51 +276,10 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
   );
 }
 
-const drawerStyles = StyleSheet.create({
-  drawerBackground: {
-    backgroundColor: '#262647',
-  },
-  drawerLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  drawerLabelIndented: {
-    fontSize: 15,
-    fontWeight: '500',
-    letterSpacing: 0.3,
-    marginLeft: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(108, 92, 231, 0.05)',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#404066',
-    marginTop: 8,
-  },
-  sectionHeaderText: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    color: '#B8B8CC',
-    textTransform: 'uppercase',
-  },
-  sectionHeaderArrow: {
-    fontSize: 14,
-    color: '#B8B8CC',
-  },
-  sectionContent: {
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
-});
-
 // Main drawer navigator for primary screens
 export function MainDrawer() {
+  const label = useLabels();
+  const { colors } = useTheme();
   const quests = useFeature('quests');
   const discord = useFeature('discord');
   const influenceReport = useFeature('influenceReport');
@@ -283,18 +291,18 @@ export function MainDrawer() {
       drawerContent={props => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#262647',
+          backgroundColor: colors.surface,
           borderBottomWidth: 1,
-          borderBottomColor: '#404066',
+          borderBottomColor: colors.borderLight,
         },
-        headerTintColor: '#FFFFFF',
+        headerTintColor: colors.text.primary,
         headerTitleStyle: {
           fontWeight: '600',
           fontSize: 18,
           letterSpacing: 0.3,
         },
         drawerStyle: {
-          backgroundColor: '#262647',
+          backgroundColor: colors.surface,
           width: 280,
         },
       }}
@@ -311,16 +319,16 @@ export function MainDrawer() {
         name="CharacterList"
         component={CharacterListScreen}
         options={{
-          title: 'Characters',
-          drawerLabel: 'Characters',
+          title: label('character.plural'),
+          drawerLabel: label('character.plural'),
         }}
       />
       <Drawer.Screen
         name="Factions"
         component={FactionListScreen}
         options={{
-          title: 'Factions',
-          drawerLabel: 'Factions',
+          title: label('faction.plural'),
+          drawerLabel: label('faction.plural'),
         }}
       />
       <Drawer.Screen
@@ -344,8 +352,8 @@ export function MainDrawer() {
           name="Quests"
           component={QuestListScreen}
           options={{
-            title: 'Quests',
-            drawerLabel: 'Quests',
+            title: label('quest.plural'),
+            drawerLabel: label('quest.plural'),
           }}
         />
       )}
@@ -421,6 +429,7 @@ export function MainDrawer() {
 export function AppNavigator() {
   const { width: screenWidth } = useWindowDimensions();
   const label = useLabels();
+  const { colors } = useTheme();
   const quests = useFeature('quests');
   const discord = useFeature('discord');
   const map = useFeature('map');
@@ -442,11 +451,11 @@ export function AppNavigator() {
       initialRouteName="Main"
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#262647',
+          backgroundColor: colors.surface,
           borderBottomWidth: 1,
-          borderBottomColor: '#404066',
+          borderBottomColor: colors.borderLight,
         },
-        headerTintColor: '#FFFFFF',
+        headerTintColor: colors.text.primary,
         headerTitleStyle: {
           fontWeight: '600',
           fontSize: 18,
@@ -455,7 +464,7 @@ export function AppNavigator() {
         },
         headerTitleAlign: 'left',
         cardStyle: {
-          backgroundColor: '#0F0F23',
+          backgroundColor: colors.primary,
         },
       }}
     >
@@ -468,40 +477,43 @@ export function AppNavigator() {
         name="CharacterDetail"
         component={CharacterDetailScreen}
         options={({ route }) => ({
-          title: route.params?.character?.name || 'Character Detail',
+          title:
+            route.params?.character?.name ||
+            `${label('character.singular')} Detail`,
         })}
       />
       <Stack.Screen
         name="CharacterForm"
         component={CharacterFormScreen}
-        options={{ title: 'Character Form' }}
+        options={{ title: `${label('character.singular')} Form` }}
       />
       <Stack.Screen
         name="CharacterSearch"
         component={CharacterSearchScreen}
-        options={{ title: 'Search Characters' }}
+        options={{ title: `Search ${label('character.plural')}` }}
       />
       <Stack.Screen
         name="CharacterStats"
         component={CharacterStatsScreen}
-        options={{ title: 'Character Statistics' }}
+        options={{ title: `${label('character.singular')} Statistics` }}
       />
       <Stack.Screen
         name="FactionStats"
         component={FactionStatsScreen}
-        options={{ title: 'Faction Statistics' }}
+        options={{ title: `${label('faction.singular')} Statistics` }}
       />
       <Stack.Screen
         name="FactionDetails"
         component={FactionDetailsScreen}
         options={({ route }) => ({
-          title: route.params?.factionName || 'Faction Details',
+          title:
+            route.params?.factionName || `${label('faction.singular')} Details`,
         })}
       />
       <Stack.Screen
         name="FactionForm"
         component={FactionFormScreen}
-        options={{ title: 'Create Faction' }}
+        options={{ title: `Create ${label('faction.singular')}` }}
       />
       <Stack.Screen
         name="LocationDetails"
@@ -540,22 +552,22 @@ export function AppNavigator() {
           <Stack.Screen
             name="QuestsList"
             component={QuestListScreen}
-            options={{ title: 'Quests' }}
+            options={{ title: label('quest.plural') }}
           />
           <Stack.Screen
             name="QuestsForm"
             component={QuestFormScreen}
-            options={{ title: 'Quest Form' }}
+            options={{ title: `${label('quest.singular')} Form` }}
           />
           <Stack.Screen
             name="QuestsDetail"
             component={QuestDetailScreen}
-            options={{ title: 'Quest Details' }}
+            options={{ title: `${label('quest.singular')} Details` }}
           />
           <Stack.Screen
             name="QuestProposals"
             component={QuestProposalScreen}
-            options={{ title: 'Quest Proposals' }}
+            options={{ title: `${label('quest.singular')} Proposals` }}
           />
         </>
       )}
