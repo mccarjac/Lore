@@ -272,6 +272,8 @@ export const mechanicsRuleset: RulesetDefinition = {
     map: false,
     influenceReport: true,
     relationshipGraph: false,
+    characterStats: false,
+    factionStats: false,
   },
   branding: { appName: 'Mechanics Fixture' },
 };

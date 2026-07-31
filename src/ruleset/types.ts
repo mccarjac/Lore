@@ -53,6 +53,8 @@ export interface FeatureFlags {
   map: boolean;
   influenceReport: boolean;
   relationshipGraph: boolean;
+  characterStats: boolean;
+  factionStats: boolean;
 }
 
 /**

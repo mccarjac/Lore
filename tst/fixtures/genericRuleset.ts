@@ -153,6 +153,8 @@ export const genericRuleset: RulesetDefinition = {
     map: false,
     influenceReport: false,
     relationshipGraph: true,
+    characterStats: false,
+    factionStats: false,
   },
   branding: { appName: 'Fixture' },
 };

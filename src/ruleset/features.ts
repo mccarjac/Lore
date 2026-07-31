@@ -15,6 +15,8 @@ export const FEATURE_KEYS: readonly FeatureKey[] = [
   'map',
   'influenceReport',
   'relationshipGraph',
+  'characterStats',
+  'factionStats',
 ];
 
 /** Non-hook form, mirroring `getLabel` — for navigators and pure utils. */

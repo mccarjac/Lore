@@ -27,7 +27,6 @@ import { useCommonStyles } from '@/styles/commonStyles';
 import {
   BaseListScreen,
   HeaderAddButton,
-  HeaderStatsButton,
   ActiveFiltersBar,
   useEntitySearch,
 } from '@/components';
@@ -244,9 +243,6 @@ export const CharacterListScreen: React.FC = () => {
 
   const renderHeaderRight = () => (
     <View style={styles.headerRight}>
-      <HeaderStatsButton
-        onPress={() => navigation.navigate('CharacterStats')}
-      />
       <HeaderAddButton
         onPress={() => navigation.navigate('CharacterForm', {})}
       />

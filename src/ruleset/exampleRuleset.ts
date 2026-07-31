@@ -222,8 +222,11 @@ export const exampleRuleset: RulesetDefinition = {
     quests: true,
     discord: true,
     map: false,
-    influenceReport: true,
-    relationshipGraph: true,
+    modifications: true,
+    influenceReport: false,
+    relationshipGraph: false,
+    characterStats: false,
+    factionStats: false,
   },
   branding: { appName: APP_NAME },
 };

@@ -82,6 +82,8 @@ const allFeaturesRuleset: RulesetDefinition = {
     map: true,
     influenceReport: true,
     relationshipGraph: true,
+    characterStats: true,
+    factionStats: true,
   },
 };
 
@@ -108,6 +110,8 @@ describe('AppNavigator — a ruleset with every feature enabled', () => {
       'Quests',
       'InfluenceReport',
       'RelationshipGraph',
+      'CharacterStats',
+      'FactionStats',
       'DataManagement',
       'DiscordConfig',
       'DiscordServers',
@@ -124,8 +128,6 @@ describe('AppNavigator — a ruleset with every feature enabled', () => {
       'CharacterDetail',
       'CharacterForm',
       'AdvancedSearch',
-      'CharacterStats',
-      'FactionStats',
       'FactionDetails',
       'FactionForm',
       'LocationDetails',
@@ -155,6 +157,8 @@ describe('AppNavigator — a ruleset with every feature enabled', () => {
       'Quests',
       'Influence Report',
       'Relationship Graph',
+      'Character Statistics',
+      'Faction Statistics',
       'Data Management',
     ].forEach(label => expect(getByText(`item:${label}`)).toBeTruthy());
   });

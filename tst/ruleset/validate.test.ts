@@ -120,6 +120,8 @@ const baseRuleset = (): RulesetDefinition => ({
     map: true,
     influenceReport: true,
     relationshipGraph: true,
+    characterStats: true,
+    factionStats: true,
   },
   map: { imageKey: 'map' },
   branding: { appName: 'Fixture App' },

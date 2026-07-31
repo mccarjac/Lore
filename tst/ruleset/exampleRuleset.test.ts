@@ -57,9 +57,22 @@ describe('the example ruleset', () => {
     expect(exampleRuleset.features.map).toBe(false);
   });
 
-  it('enables every other feature, so the engine’s screens are reachable', () => {
-    const { map, ...rest } = exampleRuleset.features;
+  it('enables the core features, leaving reporting screens opt-in', () => {
+    const {
+      map,
+      influenceReport,
+      relationshipGraph,
+      characterStats,
+      factionStats,
+      ...rest
+    } = exampleRuleset.features;
     expect(map).toBe(false);
+    // Reporting/statistics screens are opt-in, so they default off even
+    // though the engine ships fully able to reach them.
+    expect(influenceReport).toBe(false);
+    expect(relationshipGraph).toBe(false);
+    expect(characterStats).toBe(false);
+    expect(factionStats).toBe(false);
     expect(Object.values(rest).every(Boolean)).toBe(true);
   });
 

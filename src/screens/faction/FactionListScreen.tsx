@@ -26,7 +26,6 @@ import { useCommonStyles } from '@/styles/commonStyles';
 import {
   BaseListScreen,
   HeaderAddButton,
-  HeaderStatsButton,
   ActiveFiltersBar,
   useEntitySearch,
   type FilterFieldConfig,
@@ -334,7 +333,6 @@ export const FactionListScreen: React.FC = () => {
 
   const renderHeaderRight = () => (
     <View style={styles.headerRight}>
-      <HeaderStatsButton onPress={() => navigation.navigate('FactionStats')} />
       <HeaderAddButton onPress={() => navigation.navigate('FactionForm', {})} />
     </View>
   );
