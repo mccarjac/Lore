@@ -3,7 +3,12 @@
  * to minimize diff noise in version control systems.
  */
 
-import type { GameCharacter, GameLocation, GameEvent } from '@models/types';
+import type {
+  AuthoredFacetEntry,
+  GameCharacter,
+  GameLocation,
+  GameEvent,
+} from '@models/types';
 import type { StoredFaction } from './characterStorage';
 
 /**
@@ -73,23 +78,23 @@ const sortCharacterNestedArrays = (character: GameCharacter): GameCharacter => {
     );
   }
 
-  // Sort traitIds alphabetically
-  if (sorted.traitIds && sorted.traitIds.length > 0) {
-    sorted.traitIds = [...sorted.traitIds].sort((a, b) => a.localeCompare(b));
-  }
-
-  // Sort qualityIds alphabetically
-  if (sorted.qualityIds && sorted.qualityIds.length > 0) {
-    sorted.qualityIds = [...sorted.qualityIds].sort((a, b) =>
-      a.localeCompare(b)
-    );
-  }
-
-  // Sort modifications by name
-  if (sorted.modifications && sorted.modifications.length > 0) {
-    sorted.modifications = [...sorted.modifications].sort((a, b) =>
-      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
-    );
+  // Sort each facet collection's selections: catalog ids alphabetically by
+  // id, authored entries alphabetically by name — same determinism guarantee
+  // the pre-#51 per-field sorts gave traitIds/qualityIds/modifications, now
+  // applying uniformly across however many collections a ruleset declares.
+  if (sorted.facets) {
+    const sortedFacets: Record<string, (string | AuthoredFacetEntry)[]> = {};
+    Object.keys(sorted.facets)
+      .sort((a, b) => a.localeCompare(b))
+      .forEach(collectionId => {
+        const values = sorted.facets![collectionId];
+        sortedFacets[collectionId] = [...values].sort((a, b) => {
+          const aKey = typeof a === 'string' ? a : a.name.toLowerCase();
+          const bKey = typeof b === 'string' ? b : b.name.toLowerCase();
+          return aKey.localeCompare(bKey);
+        });
+      });
+    sorted.facets = sortedFacets;
   }
 
   // Sort imageUris alphabetically

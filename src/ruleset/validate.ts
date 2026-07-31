@@ -2,10 +2,11 @@ import {
   roleOf,
   validateAttributeBag,
   validateAttributeDeltas,
+  type AttributeBag,
   type AttributeDefinition,
-  type RefCollection,
 } from './attributes';
 import { FEATURE_KEYS } from './features';
+import type { FacetCollection } from './facets';
 import type { RulesetDefinition } from './types';
 
 export interface ValidationIssue {
@@ -125,6 +126,240 @@ const checkAttributeDefinitions = (
   });
 };
 
+/**
+ * Checks one facet collection: its own id/entry/category/group uniqueness,
+ * every cross-reference it can make (`categoryId`, `groups`, `links`,
+ * `requires`, `categoryBonuses`, `scoreExclusions`, `defaultEntryId`), and —
+ * for a `stage: 'base'` collection — that every entry supplies a value for
+ * each resource/cap attribute, the generalized form of the old "every
+ * archetype must carry a value for each declared resource and cap".
+ *
+ * `entryIdsByCollection` (and its group/category counterparts) are built
+ * once across every collection before this runs, so an entry can validly
+ * reference another collection's ids (`links`, `requires`,
+ * `scoreExclusions.whenCollectionId`) as well as its own.
+ */
+const checkFacetCollection = (
+  collection: FacetCollection,
+  index: number,
+  ruleset: RulesetDefinition,
+  entryIdsByCollection: Map<string, Set<string>>,
+  groupIdsByCollection: Map<string, Set<string>>,
+  categoryIdsByCollection: Map<string, Set<string>>,
+  resolveRef: (collectionId: string, id: string) => boolean,
+  issues: ValidationIssue[]
+): void => {
+  const path = `facets[${index}]`;
+
+  if (!collection.id) {
+    issues.push({ path: `${path}.id`, message: 'id must be non-empty' });
+  }
+  if (!collection.singular) {
+    issues.push({
+      path: `${path}.singular`,
+      message: 'singular must be non-empty',
+    });
+  }
+  if (!collection.plural) {
+    issues.push({
+      path: `${path}.plural`,
+      message: 'plural must be non-empty',
+    });
+  }
+
+  checkUniqueIds(collection.entries, `${path}.entries`, issues);
+  if (collection.categories) {
+    checkUniqueIds(collection.categories, `${path}.categories`, issues);
+  }
+  if (collection.groups) {
+    checkUniqueIds(collection.groups, `${path}.groups`, issues);
+  }
+
+  if (collection.authored && collection.entries.length > 0) {
+    issues.push({
+      path: `${path}.entries`,
+      message: 'an authored collection must declare no catalog entries',
+    });
+  }
+  if (collection.selection === 'catalog' && collection.contributes) {
+    issues.push({
+      path: `${path}.contributes`,
+      message:
+        'a catalog collection is never held by a character, so it cannot contribute to derived stats',
+    });
+  }
+
+  const categoryIds = categoryIdsByCollection.get(collection.id) ?? new Set();
+  const groupIds = groupIdsByCollection.get(collection.id) ?? new Set();
+  const stage = collection.contributes?.stage ?? 'preBonus';
+
+  // Every 'base' entry must carry a value for each declared resource and
+  // cap. (Capability and freeform attributes may be omitted.)
+  const requiredAttributes =
+    stage === 'base'
+      ? ruleset.attributes
+          .filter(d => roleOf(d) === 'resource' || roleOf(d) === 'cap')
+          .map(d => d.id)
+      : [];
+
+  collection.entries.forEach((entry, i) => {
+    const entryPath = `${path}.entries[${i}]`;
+
+    if (!entry.id) {
+      issues.push({ path: `${entryPath}.id`, message: 'id must be non-empty' });
+    }
+    if (!entry.label) {
+      issues.push({
+        path: `${entryPath}.label`,
+        message: 'label must be non-empty',
+      });
+    }
+
+    if (entry.categoryId && !categoryIds.has(entry.categoryId)) {
+      issues.push({
+        path: `${entryPath}.categoryId`,
+        message: `Unknown category id '${entry.categoryId}' in facet collection '${collection.id}'`,
+      });
+    }
+    entry.groups?.forEach((groupId, gi) => {
+      if (!groupIds.has(groupId)) {
+        issues.push({
+          path: `${entryPath}.groups[${gi}]`,
+          message: `Unknown group id '${groupId}' in facet collection '${collection.id}'`,
+        });
+      }
+    });
+
+    if (stage === 'base') {
+      issues.push(
+        ...validateAttributeBag(
+          entry.attributes,
+          ruleset.attributes,
+          `${entryPath}.attributes`,
+          { required: requiredAttributes, resolveRef }
+        )
+      );
+    }
+
+    issues.push(
+      ...validateAttributeDeltas(
+        entry.modifier?.attributeDeltas,
+        ruleset.attributes,
+        `${entryPath}.modifier.attributeDeltas`
+      )
+    );
+
+    Object.entries(entry.modifier?.categoryDeltas ?? {}).forEach(
+      ([targetCollectionId, deltas]) => {
+        const targetCategoryIds =
+          categoryIdsByCollection.get(targetCollectionId);
+        if (!targetCategoryIds) {
+          issues.push({
+            path: `${entryPath}.modifier.categoryDeltas.${targetCollectionId}`,
+            message: `Unknown facet collection id '${targetCollectionId}'`,
+          });
+          return;
+        }
+        Object.keys(deltas).forEach(categoryId => {
+          if (!targetCategoryIds.has(categoryId)) {
+            issues.push({
+              path: `${entryPath}.modifier.categoryDeltas.${targetCollectionId}.${categoryId}`,
+              message: `Unknown category id '${categoryId}' in facet collection '${targetCollectionId}'`,
+            });
+          }
+        });
+      }
+    );
+
+    Object.entries(entry.links ?? {}).forEach(([targetCollectionId, ids]) => {
+      const targetIds = entryIdsByCollection.get(targetCollectionId);
+      ids.forEach((id, li) => {
+        if (!targetIds?.has(id)) {
+          issues.push({
+            path: `${entryPath}.links.${targetCollectionId}[${li}]`,
+            message: `Unknown entry id '${id}' in facet collection '${targetCollectionId}'`,
+          });
+        }
+      });
+    });
+
+    Object.entries(entry.requires ?? {}).forEach(
+      ([targetCollectionId, ids]) => {
+        const targetIds = entryIdsByCollection.get(targetCollectionId);
+        ids.forEach((id, ri) => {
+          if (!targetIds?.has(id)) {
+            issues.push({
+              path: `${entryPath}.requires.${targetCollectionId}[${ri}]`,
+              message: `Unknown entry id '${id}' in facet collection '${targetCollectionId}'`,
+            });
+          }
+        });
+      }
+    );
+  });
+
+  (collection.categoryBonuses ?? []).forEach((rule, bi) => {
+    const bonusPath = `${path}.categoryBonuses[${bi}]`;
+    if (!categoryIds.has(rule.categoryId)) {
+      issues.push({
+        path: `${bonusPath}.categoryId`,
+        message: `Unknown category id '${rule.categoryId}' in facet collection '${collection.id}'`,
+      });
+    }
+    if (!Number.isInteger(rule.requiredScore) || rule.requiredScore <= 0) {
+      issues.push({
+        path: `${bonusPath}.requiredScore`,
+        message: 'requiredScore must be a positive integer',
+      });
+    }
+    issues.push(
+      ...validateAttributeDeltas(
+        rule.grants.attributeDeltas,
+        ruleset.attributes,
+        `${bonusPath}.grants.attributeDeltas`
+      )
+    );
+  });
+
+  (collection.scoreExclusions ?? []).forEach((rule, ei) => {
+    const exclusionPath = `${path}.scoreExclusions[${ei}]`;
+    const whenIds = entryIdsByCollection.get(rule.whenCollectionId);
+    if (!whenIds) {
+      issues.push({
+        path: `${exclusionPath}.whenCollectionId`,
+        message: `Unknown facet collection id '${rule.whenCollectionId}'`,
+      });
+    } else if (!whenIds.has(rule.whenEntryId)) {
+      issues.push({
+        path: `${exclusionPath}.whenEntryId`,
+        message: `Unknown entry id '${rule.whenEntryId}' in facet collection '${rule.whenCollectionId}'`,
+      });
+    }
+    // The group lives on `whenCollectionId`, not on this collection —
+    // `derived.ts`'s `isRestrictedToGroup` looks up `groupId` against
+    // `ruleset.facets.find(c => c.id === rule.whenCollectionId)`'s own
+    // `groups`, since a scoreExclusion is about restriction to a group of
+    // the *other* collection's entries (e.g. an archetype group).
+    const whenGroupIds = groupIdsByCollection.get(rule.whenCollectionId);
+    if (!whenGroupIds?.has(rule.groupId)) {
+      issues.push({
+        path: `${exclusionPath}.groupId`,
+        message: `Unknown group id '${rule.groupId}' in facet collection '${rule.whenCollectionId}'`,
+      });
+    }
+  });
+
+  if (
+    collection.defaultEntryId !== undefined &&
+    !entryIdsByCollection.get(collection.id)?.has(collection.defaultEntryId)
+  ) {
+    issues.push({
+      path: `${path}.defaultEntryId`,
+      message: `Unknown entry id '${collection.defaultEntryId}' in facet collection '${collection.id}'`,
+    });
+  }
+};
+
 export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
   const issues: ValidationIssue[] = [];
 
@@ -137,164 +372,46 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
   }
 
   checkUniqueIds(ruleset.attributes, 'attributes', issues);
-  checkUniqueIds(ruleset.groups, 'groups', issues);
-  checkUniqueIds(ruleset.archetypes, 'archetypes', issues);
-  checkUniqueIds(ruleset.traitCategories, 'traitCategories', issues);
-  checkUniqueIds(ruleset.traits, 'traits', issues);
-  checkUniqueIds(ruleset.qualities, 'qualities', issues);
-  if (ruleset.recipes) checkUniqueIds(ruleset.recipes, 'recipes', issues);
-
   checkAttributeDefinitions(ruleset.attributes, issues);
+  checkUniqueIds(ruleset.facets, 'facets', issues);
 
-  const groupIds = new Set(ruleset.groups.map(g => g.id));
-  const categoryIds = new Set(ruleset.traitCategories.map(c => c.id));
-  const archetypeIds = new Set(ruleset.archetypes.map(a => a.id));
-  const recipeIds = new Set((ruleset.recipes ?? []).map(r => r.id));
-  const traitIds = new Set(ruleset.traits.map(t => t.id));
-  const qualityIds = new Set(ruleset.qualities.map(q => q.id));
+  // Every collection's own entry/group/category ids, built once so an entry
+  // in one collection can validly cross-reference another's (`links`,
+  // `requires`, `scoreExclusions.whenCollectionId`).
+  const entryIdsByCollection = new Map<string, Set<string>>();
+  const groupIdsByCollection = new Map<string, Set<string>>();
+  const categoryIdsByCollection = new Map<string, Set<string>>();
+  ruleset.facets.forEach(collection => {
+    entryIdsByCollection.set(
+      collection.id,
+      new Set(collection.entries.map(e => e.id))
+    );
+    groupIdsByCollection.set(
+      collection.id,
+      new Set((collection.groups ?? []).map(g => g.id))
+    );
+    categoryIdsByCollection.set(
+      collection.id,
+      new Set((collection.categories ?? []).map(c => c.id))
+    );
+  });
 
   /** Generic `ref` resolution, so a ref attribute needs no bespoke check. */
-  const resolveRef = (collection: RefCollection, id: string): boolean => {
-    switch (collection) {
-      case 'archetypes':
-        return archetypeIds.has(id);
-      case 'traits':
-        return traitIds.has(id);
-      case 'qualities':
-        return qualityIds.has(id);
-      case 'traitCategories':
-        return categoryIds.has(id);
-      case 'groups':
-        return groupIds.has(id);
-      case 'recipes':
-        return recipeIds.has(id);
-    }
-  };
+  const resolveRef = (collectionId: string, id: string): boolean =>
+    entryIdsByCollection.get(collectionId)?.has(id) ?? false;
 
-  // Every archetype must carry a value for each declared resource and cap.
-  // (Capability and freeform attributes may be omitted.)
-  const requiredArchetypeAttributes = ruleset.attributes
-    .filter(d => roleOf(d) === 'resource' || roleOf(d) === 'cap')
-    .map(d => d.id);
-
-  ruleset.archetypes.forEach((archetype, index) => {
-    archetype.groups.forEach((groupId, i) => {
-      if (!groupIds.has(groupId)) {
-        issues.push({
-          path: `archetypes[${index}].groups[${i}]`,
-          message: `Unknown group id '${groupId}'`,
-        });
-      }
-    });
-
-    issues.push(
-      ...validateAttributeBag(
-        archetype.attributes,
-        ruleset.attributes,
-        `archetypes[${index}].attributes`,
-        { required: requiredArchetypeAttributes, resolveRef }
-      )
-    );
-  });
-
-  ruleset.traits.forEach((trait, index) => {
-    if (!categoryIds.has(trait.categoryId)) {
-      issues.push({
-        path: `traits[${index}].categoryId`,
-        message: `Unknown traitCategory id '${trait.categoryId}'`,
-      });
-    }
-    trait.allowedArchetypeIds?.forEach((id, i) => {
-      if (!archetypeIds.has(id)) {
-        issues.push({
-          path: `traits[${index}].allowedArchetypeIds[${i}]`,
-          message: `Unknown archetype id '${id}'`,
-        });
-      }
-    });
-    trait.recipeIds?.forEach((id, i) => {
-      if (!recipeIds.has(id)) {
-        issues.push({
-          path: `traits[${index}].recipeIds[${i}]`,
-          message: `Unknown recipe id '${id}'`,
-        });
-      }
-    });
-
-    issues.push(
-      ...validateAttributeDeltas(
-        trait.modifier?.attributeDeltas,
-        ruleset.attributes,
-        `traits[${index}].modifier.attributeDeltas`
-      )
-    );
-    Object.keys(trait.modifier?.categoryDeltas ?? {}).forEach(id => {
-      if (!categoryIds.has(id)) {
-        issues.push({
-          path: `traits[${index}].modifier.categoryDeltas.${id}`,
-          message: `Unknown traitCategory id '${id}'`,
-        });
-      }
-    });
-  });
-
-  ruleset.qualities.forEach((quality, index) => {
-    quality.allowedArchetypeIds?.forEach((id, i) => {
-      if (!archetypeIds.has(id)) {
-        issues.push({
-          path: `qualities[${index}].allowedArchetypeIds[${i}]`,
-          message: `Unknown archetype id '${id}'`,
-        });
-      }
-    });
-  });
-
-  ruleset.categoryBonuses.forEach((rule, index) => {
-    if (!categoryIds.has(rule.categoryId)) {
-      issues.push({
-        path: `categoryBonuses[${index}].categoryId`,
-        message: `Unknown traitCategory id '${rule.categoryId}'`,
-      });
-    }
-    if (!Number.isInteger(rule.requiredScore) || rule.requiredScore <= 0) {
-      issues.push({
-        path: `categoryBonuses[${index}].requiredScore`,
-        message: 'requiredScore must be a positive integer',
-      });
-    }
-    issues.push(
-      ...validateAttributeDeltas(
-        rule.grants.attributeDeltas,
-        ruleset.attributes,
-        `categoryBonuses[${index}].grants.attributeDeltas`
-      )
-    );
-  });
-
-  ruleset.archetypeRules?.forEach((rule, index) => {
-    if (!archetypeIds.has(rule.archetypeId)) {
-      issues.push({
-        path: `archetypeRules[${index}].archetypeId`,
-        message: `Unknown archetype id '${rule.archetypeId}'`,
-      });
-    }
-    if (!groupIds.has(rule.groupId)) {
-      issues.push({
-        path: `archetypeRules[${index}].groupId`,
-        message: `Unknown group id '${rule.groupId}'`,
-      });
-    }
-  });
-
-  if (
-    ruleset.defaultArchetypeId !== undefined &&
-    !archetypeIds.has(ruleset.defaultArchetypeId)
-  ) {
-    issues.push({
-      path: 'defaultArchetypeId',
-      message: `Unknown archetype id '${ruleset.defaultArchetypeId}'`,
-    });
-  }
+  ruleset.facets.forEach((collection, index) =>
+    checkFacetCollection(
+      collection,
+      index,
+      ruleset,
+      entryIdsByCollection,
+      groupIdsByCollection,
+      categoryIdsByCollection,
+      resolveRef,
+      issues
+    )
+  );
 
   // Flags gate navigation registration (#10), so a missing one would silently
   // hide a whole subsystem rather than fail loudly.
@@ -338,7 +455,7 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
  * the whole ruleset.
  */
 export function validateCharacterAttributes(
-  attributes: RulesetDefinition['archetypes'][number]['attributes'] | undefined,
+  attributes: AttributeBag | undefined,
   ruleset: RulesetDefinition,
   path = 'character.attributes'
 ): ValidationResult {

@@ -51,7 +51,7 @@ describe('QuestFormScreen — team preferences come from the ruleset', () => {
     picker: { props: { items?: { label: string }[] } } | undefined
   ): string[] => (picker?.props.items ?? []).map(item => item.label);
 
-  it('offers the active ruleset’s categories, archetypes, traits and qualities', async () => {
+  it('offers the active ruleset’s facet categories and entries', async () => {
     const view = renderWithRuleset(<QuestFormScreen />, {
       ruleset: genericRuleset,
     });
@@ -64,15 +64,15 @@ describe('QuestFormScreen — team preferences come from the ruleset', () => {
       .UNSAFE_getAllByType('RNCPicker' as never)
       .flatMap(pickerLabels);
 
-    // Fixture content, on every axis the form offers.
-    expect(allLabels).toEqual(expect.arrayContaining(['Lore', 'Might']));
+    // Fixture content, on every axis the form offers: lineages and virtues
+    // entries, talents entries, and talents' categories (its own field).
     expect(allLabels).toEqual(
       expect.arrayContaining(['Wanderer', 'Scholar', 'Patient'])
     );
-    // Traits are labelled with their category, looked up rather than assumed.
     expect(allLabels).toEqual(
-      expect.arrayContaining(['Well Read (Lore)', 'Strong Back (Might)'])
+      expect.arrayContaining(['Well Read', 'Strong Back'])
     );
+    expect(allLabels).toEqual(expect.arrayContaining(['Lore', 'Might']));
 
     // Nothing from the bundled Afterworlds tables leaks through. Asserted one
     // at a time: `not.arrayContaining([a, b])` passes when only one is absent.

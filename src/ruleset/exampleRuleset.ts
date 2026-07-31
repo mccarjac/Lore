@@ -1,5 +1,6 @@
 import { APP_NAME } from '@/branding';
 import { flag, num, text, type AttributeDefinition } from './attributes';
+import type { FacetCollection } from './facets';
 import type { RulesetDefinition } from './types';
 
 /**
@@ -11,9 +12,11 @@ import type { RulesetDefinition } from './types';
  *
  * Two choices here are load-bearing rather than arbitrary:
  *
- * - **It overrides no terminology at all.** Every noun therefore comes from
- *   `DEFAULT_TERMINOLOGY` — "Archetype", "Trait", "Category", "Quality",
- *   "Modification", "Sponsor", "Map". That makes "the app boots with generic
+ * - **It overrides no terminology at all.** Every engine-core noun therefore
+ *   comes from `DEFAULT_TERMINOLOGY` ("Character", "Faction", "Quest",
+ *   "Resource", "Sponsor", "Map"), and every facet noun comes from the
+ *   collection's own `singular`/`plural` below ("Archetype", "Trait",
+ *   "Quality", "Modification"). That makes "the app boots with generic
  *   labels" literally checkable, and it is the only place the `useLabels` /
  *   `getLabel` fallback path is exercised in a running app rather than only
  *   under test.
@@ -22,6 +25,10 @@ import type { RulesetDefinition } from './types';
  *   placeholder PNG in the engine would put an asset in every fork's way for
  *   no benefit. Every other feature is on, so the engine's screens are all
  *   reachable out of the box.
+ *
+ * Five facet collections are declared — one more than the four the engine
+ * used to hardcode, plus a catalog — proving the point of #51: a ruleset
+ * says how many facet kinds its game needs, not the engine.
  */
 const attributes: AttributeDefinition[] = [
   {
@@ -45,15 +52,17 @@ const attributes: AttributeDefinition[] = [
   { id: 'background', label: 'Background', type: 'text', role: 'freeform' },
 ];
 
-export const exampleRuleset: RulesetDefinition = {
-  id: 'example',
-  name: 'Lore Example',
-  version: '1.0.0',
-  // Intentionally empty — see the note above.
-  terminology: {},
-  attributes,
+/** The old `archetypes` collection: single-select, seeds base attributes. */
+const archetypes: FacetCollection = {
+  id: 'archetypes',
+  singular: 'Archetype',
+  plural: 'Archetypes',
+  selection: 'single',
+  defaultEntryId: 'drifter',
+  legacyField: 'archetypeId',
   groups: [{ id: 'folk', label: 'Folk' }],
-  archetypes: [
+  contributes: { stage: 'base' },
+  entries: [
     {
       id: 'drifter',
       label: 'Drifter',
@@ -94,51 +103,25 @@ export const exampleRuleset: RulesetDefinition = {
       },
     },
   ],
-  defaultArchetypeId: 'drifter',
-  traitCategories: [
+};
+
+/**
+ * The old `traits` collection: multi-select, categorized, contributes
+ * resource deltas and category score, and grants category bonuses.
+ * `warden_kit` exercises both `requires` (restricted to the `warden`
+ * archetype) and `links` (into the `recipes` catalog below).
+ */
+const traits: FacetCollection = {
+  id: 'traits',
+  singular: 'Trait',
+  plural: 'Traits',
+  selection: 'multi',
+  legacyField: 'traitIds',
+  categories: [
     { id: 'body', label: 'Body', color: '#C0392B' },
     { id: 'mind', label: 'Mind', color: '#2980B9' },
   ],
-  traits: [
-    {
-      id: 'tough',
-      name: 'Tough',
-      description: 'Shrugs off what would stop most people.',
-      categoryId: 'body',
-      modifier: { attributeDeltas: { stamina: 1 } },
-    },
-    {
-      id: 'studied',
-      name: 'Studied',
-      description: 'Has read about this exact situation.',
-      categoryId: 'mind',
-      modifier: { attributeDeltas: { resolve: 1 } },
-    },
-    {
-      id: 'warden_kit',
-      name: "Warden's Kit",
-      description: 'Carries the tools of the post.',
-      categoryId: 'body',
-      allowedArchetypeIds: ['warden'],
-      recipeIds: ['field_kit'],
-    },
-  ],
-  qualities: [
-    { id: 'curious', name: 'Curious', description: 'Asks the next question.' },
-    {
-      id: 'stubborn',
-      name: 'Stubborn',
-      description: 'Asks the same question again.',
-    },
-  ],
-  recipes: [
-    {
-      id: 'field_kit',
-      name: 'Field Kit',
-      description: 'Enough to get someone back on their feet.',
-      materials: ['Bandage', 'Splint'],
-    },
-  ],
+  contributes: { deltaRoles: ['resource'], categoryScore: true },
   categoryBonuses: [
     {
       categoryId: 'body',
@@ -151,15 +134,96 @@ export const exampleRuleset: RulesetDefinition = {
       grants: { attributeDeltas: { resolve: 1 } },
     },
   ],
+  entries: [
+    {
+      id: 'tough',
+      label: 'Tough',
+      description: 'Shrugs off what would stop most people.',
+      categoryId: 'body',
+      modifier: { attributeDeltas: { stamina: 1 } },
+    },
+    {
+      id: 'studied',
+      label: 'Studied',
+      description: 'Has read about this exact situation.',
+      categoryId: 'mind',
+      modifier: { attributeDeltas: { resolve: 1 } },
+    },
+    {
+      id: 'warden_kit',
+      label: "Warden's Kit",
+      description: 'Carries the tools of the post.',
+      categoryId: 'body',
+      requires: { archetypes: ['warden'] },
+      links: { recipes: ['field_kit'] },
+    },
+  ],
+};
+
+/** The old `qualities` collection: multi-select, purely descriptive. */
+const qualities: FacetCollection = {
+  id: 'qualities',
+  singular: 'Quality',
+  plural: 'Qualities',
+  selection: 'multi',
+  maxSelections: 2,
+  legacyField: 'qualityIds',
+  entries: [
+    { id: 'curious', label: 'Curious', description: 'Asks the next question.' },
+    {
+      id: 'stubborn',
+      label: 'Stubborn',
+      description: 'Asks the same question again.',
+    },
+  ],
+};
+
+/**
+ * The old `modifications` collection: authored per character rather than
+ * picked from a catalog, contributing after category bonuses so a
+ * modification's category deltas never retroactively unlock one.
+ */
+const modifications: FacetCollection = {
+  id: 'modifications',
+  singular: 'Modification',
+  plural: 'Modifications',
+  selection: 'multi',
+  authored: true,
+  legacyField: 'modifications',
+  contributes: { stage: 'postBonus', deltaRoles: ['resource', 'cap'] },
+  entries: [],
+};
+
+/** The old `recipes` collection: a catalog, only ever reached via `links`. */
+const recipes: FacetCollection = {
+  id: 'recipes',
+  singular: 'Recipe',
+  plural: 'Recipes',
+  selection: 'catalog',
+  entries: [
+    {
+      id: 'field_kit',
+      label: 'Field Kit',
+      description: 'Enough to get someone back on their feet.',
+      materials: ['Bandage', 'Splint'],
+    },
+  ],
+};
+
+export const exampleRuleset: RulesetDefinition = {
+  id: 'example',
+  name: 'Lore Example',
+  version: '1.0.0',
+  // Intentionally empty — see the note above.
+  terminology: {},
+  attributes,
+  facets: [archetypes, traits, qualities, modifications, recipes],
   features: {
     quests: true,
-    recipes: true,
     discord: true,
     map: false,
-    modifications: true,
     influenceReport: true,
     relationshipGraph: true,
   },
-  limits: { maxQualities: 2 },
   branding: { appName: APP_NAME },
 };

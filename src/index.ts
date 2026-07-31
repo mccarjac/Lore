@@ -44,6 +44,7 @@ export {
 export { jsonDataStore } from './datastores/json';
 export { pdfDataStore } from './datastores/pdf';
 export { githubDataStore } from './datastores/github';
+export { seedDataStore } from './datastores/seed';
 export { getActiveDataStores } from './datastores/registry';
 export { createDataStoreContext } from './datastores/context';
 
@@ -52,22 +53,31 @@ export { createDataStoreContext } from './datastores/context';
 export {
   // schema
   type RulesetDefinition,
-  type Archetype,
-  type ArchetypeGroup,
-  type ArchetypeRule,
-  type CategoryBonusRule,
   type FeatureFlags,
   type Modifier,
-  type Quality,
-  type Recipe,
-  type RulesetLimits,
   type ColorPaletteOverrides,
   type TermKey,
   type TerminologyMap,
-  type Trait,
-  type TraitCategory,
   type AttributeBag,
   type AttributeDefinition,
+  // facets (#51) — a ruleset declares however many of these it needs;
+  // the engine no longer names any collection itself.
+  type FacetCollection,
+  type FacetEntry,
+  type FacetGroup,
+  type FacetCategory,
+  type FacetBonusRule,
+  type FacetScoreExclusion,
+  type FacetSelection,
+  type FacetStage,
+  findFacetCollection,
+  getFacetIds,
+  getAuthoredFacets,
+  getSingleFacetId,
+  setFacetIds,
+  resolveFacetEntries,
+  getPrimaryFacetLabel,
+  getCategoryScore,
   // assets
   type RulesetAssets,
   resolveAsset,
@@ -92,7 +102,6 @@ export {
   type AttributeRole,
   type AttributeType,
   type AttributeValue,
-  type RefCollection,
   num,
   text,
   flag,
@@ -104,6 +113,12 @@ export {
 } from './ruleset/attributes';
 
 export { exampleRuleset } from './ruleset/exampleRuleset';
+export {
+  exampleSeedDataset,
+  type SeedDataset,
+  type SeedFaction,
+  type SeedFactionRelationship,
+} from './ruleset/exampleSeedData';
 
 // --- Domain types -----------------------------------------------------------
 
@@ -112,9 +127,14 @@ export type {
   GameEvent,
   GameLocation,
   GameQuest,
-  // A character's modifications — the flavor's own content transforms into
-  // these, so a ruleset module needs the type even though the engine owns it.
-  Modification,
+  // A character's facet selections — the flavor's own content transforms
+  // into these, so a ruleset module needs the types even though the engine
+  // owns them. `AuthoredFacetEntry` is the inline shape (the old
+  // `Modification`); `FacetValue` is what `GameCharacter.facets` actually
+  // stores per collection (a catalog id, or one of these).
+  AuthoredFacetEntry,
+  FacetValue,
+  QuestFacetPreferences,
   Relationship,
   RelationshipStanding,
   QuestStatus,
@@ -152,7 +172,6 @@ export {
   normalizeCharactersRulesetFields,
   normalizeQuestRulesetFields,
   normalizeQuestsRulesetFields,
-  UNKNOWN_ARCHETYPE_ID,
 } from './utils/rulesetFieldMigration';
 
 // --- Presentation -----------------------------------------------------------

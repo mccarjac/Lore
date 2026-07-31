@@ -5,10 +5,10 @@ import { genericRuleset } from './genericRuleset';
 import { mechanicsRuleset } from './mechanicsRuleset';
 
 const identifiersOf = (ruleset: RulesetDefinition): string[] => [
-  ...ruleset.archetypes.map(a => a.id),
-  ...ruleset.traits.map(t => t.id),
-  ...ruleset.qualities.map(q => q.id),
-  ...ruleset.traitCategories.map(c => c.id),
+  ...ruleset.facets.map(c => c.id),
+  ...ruleset.facets.flatMap(c => c.entries.map(e => e.id)),
+  ...ruleset.facets.flatMap(c => (c.categories ?? []).map(cat => cat.id)),
+  ...ruleset.facets.flatMap(c => (c.groups ?? []).map(g => g.id)),
   ...ruleset.attributes.map(a => a.id),
 ];
 

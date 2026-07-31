@@ -19,11 +19,16 @@ import { commonStyles } from '@/styles/commonStyles';
 import { useLabels, useRuleset } from '@/ruleset';
 import { colorsForKeys } from '@/styles/chartPalette';
 
+/** How many entries a "Most Common" list shows, per collection. */
+const TOP_ENTRIES_LIMIT = 5;
+
 export const CharacterStatsScreen = () => {
   const label = useLabels();
   const { ruleset } = useRuleset();
   const [stats, setStats] = useState<CharacterStats | null>(null);
-  const [selectedSlice, setSelectedSlice] = useState<string | null>(null);
+  const [selectedSlices, setSelectedSlices] = useState<
+    Record<string, string | null>
+  >({});
   const [showOnlyPresent, setShowOnlyPresent] = useState<boolean>(false);
   const [includeRetired, setIncludeRetired] = useState<boolean>(false);
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
@@ -83,39 +88,17 @@ export const CharacterStatsScreen = () => {
     }, [loadStats])
   );
 
-  const archetypeLabel = (id: string): string =>
-    ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
-
-  /**
-   * One assignment shared by the chart and its legend, so the two cannot
-   * disagree — they used to build the same palette array independently.
-   */
-  const archetypeColors = React.useMemo(
-    () => colorsForKeys(Object.keys(stats?.archetypeDistribution ?? {})),
-    [stats]
-  );
-
-  const getArchetypePieChartData = () => {
-    if (!stats) return [];
-
-    return Object.entries(stats.archetypeDistribution).map(
-      ([archetypeId, count]) => ({
-        value: count,
-        color: archetypeColors[archetypeId],
-        text: `${count}`, // Show count on slice
-        label: archetypeLabel(archetypeId),
-        onPress: () => handleSlicePress(archetypeId, count),
-      })
-    );
-  };
-
-  const handleSlicePress = (archetypeId: string, _count: number) => {
-    setSelectedSlice(selectedSlice === archetypeId ? null : archetypeId);
+  const handleSlicePress = (collectionId: string, entryId: string) => {
+    const isSame = selectedSlices[collectionId] === entryId;
+    setSelectedSlices(prev => ({
+      ...prev,
+      [collectionId]: isSame ? null : entryId,
+    }));
 
     // Show a temporary alert or tooltip-like behavior
-    if (selectedSlice !== archetypeId) {
+    if (!isSame) {
       setTimeout(() => {
-        setSelectedSlice(null);
+        setSelectedSlices(prev => ({ ...prev, [collectionId]: null }));
       }, 3000); // Auto-hide after 3 seconds
     }
   };
@@ -188,127 +171,153 @@ export const CharacterStatsScreen = () => {
               </Text>
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionHeader}>
-                {label('archetype.plural')} Distribution
-              </Text>
-              {getArchetypePieChartData().length > 0 && (
-                <View style={styles.chartContainer}>
-                  <PieChart
-                    data={getArchetypePieChartData()}
-                    donut
-                    showText
-                    textColor="white"
-                    textSize={14}
-                    fontWeight="bold"
-                    radius={100}
-                    innerRadius={40}
-                    innerCircleColor={themeColors.surface}
-                    strokeColor={themeColors.border}
-                    strokeWidth={2}
-                    sectionAutoFocus
-                    focusOnPress
-                    toggleFocusOnPress
-                    centerLabelComponent={() => {
-                      if (selectedSlice && stats) {
-                        const count =
-                          stats.archetypeDistribution[selectedSlice];
+            {/*
+              One section per facet collection — a pie chart for a
+              `single`-selection collection (the old hardcoded archetype
+              chart) and a "Most Common" list for a `multi` one (the old
+              hardcoded commonPerks/commonDistinctions blocks). A ruleset
+              with more or fewer collections renders more or fewer sections;
+              nothing here names a specific collection.
+            */}
+            {stats.facetCollections.map(collectionStats => {
+              const selectedSlice =
+                selectedSlices[collectionStats.collectionId] ?? null;
+
+              if (collectionStats.selection === 'single') {
+                const colorMap = colorsForKeys(
+                  collectionStats.entries.map(entry => entry.id)
+                );
+                const pieData = collectionStats.entries.map(entry => ({
+                  value: entry.count,
+                  color: colorMap[entry.id],
+                  text: `${entry.count}`,
+                  label: entry.label,
+                  onPress: () =>
+                    handleSlicePress(collectionStats.collectionId, entry.id),
+                }));
+                const selectedEntry = collectionStats.entries.find(
+                  entry => entry.id === selectedSlice
+                );
+
+                return (
+                  <View
+                    key={collectionStats.collectionId}
+                    style={styles.section}
+                  >
+                    <Text style={styles.sectionHeader}>
+                      {collectionStats.plural} Distribution
+                    </Text>
+                    {pieData.length > 0 && (
+                      <View style={styles.chartContainer}>
+                        <PieChart
+                          data={pieData}
+                          donut
+                          showText
+                          textColor="white"
+                          textSize={14}
+                          fontWeight="bold"
+                          radius={100}
+                          innerRadius={40}
+                          innerCircleColor={themeColors.surface}
+                          strokeColor={themeColors.border}
+                          strokeWidth={2}
+                          sectionAutoFocus
+                          focusOnPress
+                          toggleFocusOnPress
+                          centerLabelComponent={() => {
+                            if (selectedEntry) {
+                              const percentage = (
+                                (selectedEntry.count / stats.totalCharacters) *
+                                100
+                              ).toFixed(1);
+                              return (
+                                <View style={styles.centerLabel}>
+                                  <Text style={styles.centerLabelArchetype}>
+                                    {selectedEntry.label}
+                                  </Text>
+                                  <Text style={styles.centerLabelNumber}>
+                                    {selectedEntry.count}
+                                  </Text>
+                                  <Text style={styles.centerLabelText}>
+                                    {percentage}%
+                                  </Text>
+                                </View>
+                              );
+                            }
+                            return (
+                              <View style={styles.centerLabel}>
+                                <Text style={styles.centerLabelNumber}>
+                                  {stats.totalCharacters}
+                                </Text>
+                                <Text style={styles.centerLabelText}>
+                                  Characters
+                                </Text>
+                              </View>
+                            );
+                          }}
+                        />
+                        {selectedEntry && (
+                          <View style={styles.tooltip}>
+                            <Text style={styles.tooltipText}>
+                              Tap slice again or wait to return to overview
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                    <View style={styles.archetypeLegend}>
+                      {collectionStats.entries.map(entry => {
                         const percentage = (
-                          (count / stats.totalCharacters) *
+                          (entry.count / stats.totalCharacters) *
                           100
                         ).toFixed(1);
+                        const isSelected = selectedSlice === entry.id;
                         return (
-                          <View style={styles.centerLabel}>
-                            <Text style={styles.centerLabelArchetype}>
-                              {archetypeLabel(selectedSlice)}
-                            </Text>
-                            <Text style={styles.centerLabelNumber}>
-                              {count}
-                            </Text>
-                            <Text style={styles.centerLabelText}>
-                              {percentage}%
+                          <View
+                            key={entry.id}
+                            style={[
+                              styles.legendItem,
+                              isSelected && styles.legendItemSelected,
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.legendColorBox,
+                                { backgroundColor: colorMap[entry.id] },
+                                isSelected && styles.legendColorBoxSelected,
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.legendText,
+                                isSelected && styles.legendTextSelected,
+                              ]}
+                            >
+                              {entry.label}: {entry.count} ({percentage}%)
                             </Text>
                           </View>
                         );
-                      }
-                      return (
-                        <View style={styles.centerLabel}>
-                          <Text style={styles.centerLabelNumber}>
-                            {stats?.totalCharacters}
-                          </Text>
-                          <Text style={styles.centerLabelText}>Characters</Text>
-                        </View>
-                      );
-                    }}
-                  />
-                  {selectedSlice && (
-                    <View style={styles.tooltip}>
-                      <Text style={styles.tooltipText}>
-                        Tap slice again or wait to return to overview
-                      </Text>
+                      })}
                     </View>
-                  )}
+                  </View>
+                );
+              }
+
+              return (
+                <View key={collectionStats.collectionId} style={styles.section}>
+                  <Text style={styles.sectionHeader}>
+                    Most Common {collectionStats.plural}
+                  </Text>
+                  {collectionStats.entries
+                    .slice(0, TOP_ENTRIES_LIMIT)
+                    .map(entry => (
+                      <Text key={entry.id} style={styles.listItemText}>
+                        {entry.label}: {entry.count} characters
+                      </Text>
+                    ))}
                 </View>
-              )}
-              <View style={styles.archetypeLegend}>
-                {Object.entries(stats.archetypeDistribution).map(
-                  ([archetypeId, count]) => {
-                    const percentage = (
-                      (count / stats.totalCharacters) *
-                      100
-                    ).toFixed(1);
-                    const isSelected = selectedSlice === archetypeId;
-                    return (
-                      <View
-                        key={archetypeId}
-                        style={[
-                          styles.legendItem,
-                          isSelected && styles.legendItemSelected,
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.legendColorBox,
-                            { backgroundColor: archetypeColors[archetypeId] },
-                            isSelected && styles.legendColorBoxSelected,
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.legendText,
-                            isSelected && styles.legendTextSelected,
-                          ]}
-                        >
-                          {archetypeLabel(archetypeId)}: {count} ({percentage}%)
-                        </Text>
-                      </View>
-                    );
-                  }
-                )}
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionHeader}>
-                Most Common {label('trait.plural')}
-              </Text>
-              {stats.commonPerks.map(({ name, count }) => (
-                <Text key={name} style={styles.listItemText}>
-                  {name}: {count} characters
-                </Text>
-              ))}
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionHeader}>
-                Most Common {label('quality.plural')}
-              </Text>
-              {stats.commonDistinctions.map(({ name, count }) => (
-                <Text key={name} style={styles.listItemText}>
-                  {name}: {count} characters
-                </Text>
-              ))}
-            </View>
+              );
+            })}
           </>
         )}
       </ScrollView>

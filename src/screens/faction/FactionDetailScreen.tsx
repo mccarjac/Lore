@@ -42,7 +42,8 @@ import {
 } from '@/components';
 import { Picker } from '@react-native-picker/picker';
 import Markdown from 'react-native-markdown-display';
-import { useLabels } from '@/ruleset';
+import { useLabels, useRuleset } from '@/ruleset';
+import { getPrimaryFacetLabel } from '@/ruleset/facets';
 
 type FactionDetailsRouteProp = RouteProp<RootStackParamList, 'FactionDetails'>;
 type FactionDetailsNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -56,6 +57,7 @@ export const FactionDetailsScreen: React.FC = () => {
   const route = useRoute<FactionDetailsRouteProp>();
   const navigation = useNavigation<FactionDetailsNavigationProp>();
   const label = useLabels();
+  const { ruleset } = useRuleset();
   const { factionName } = route.params || {};
 
   const [members, setMembers] = useState<FactionMemberInfo[]>([]);
@@ -1029,7 +1031,7 @@ export const FactionDetailsScreen: React.FC = () => {
                 {nonMembers.map(character => (
                   <Picker.Item
                     key={character.id}
-                    label={`${character.name} (${character.archetypeId})`}
+                    label={`${character.name} (${getPrimaryFacetLabel(character, ruleset) ?? '—'})`}
                     value={character.id}
                   />
                 ))}

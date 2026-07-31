@@ -11,10 +11,8 @@ export type FeatureKey = keyof FeatureFlags;
  */
 export const FEATURE_KEYS: readonly FeatureKey[] = [
   'quests',
-  'recipes',
   'discord',
   'map',
-  'modifications',
   'influenceReport',
   'relationshipGraph',
 ];

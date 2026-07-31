@@ -17,9 +17,6 @@ export const makeCharacter = (
 ): GameCharacter => ({
   id: 'character-1',
   name: 'Test Character',
-  archetypeId: 'Human',
-  traitIds: [],
-  qualityIds: [],
   factions: [],
   relationships: [],
   createdAt: TEST_TIMESTAMP,

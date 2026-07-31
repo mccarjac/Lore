@@ -2,28 +2,39 @@
  * A neutral ruleset for testing the **engine's computation**, as distinct from
  * `genericRuleset.ts`, which tests that a **screen reads the provider**.
  *
- * They cannot be one fixture. `genericRuleset` deliberately has
- * `categoryBonuses: []`, no recipes and no `archetypeRules`, and several
- * screen tests depend on its exact shape — adding mechanics to it would move
- * numbers in the stats screens for reasons unrelated to what they assert.
+ * They cannot be one fixture. `genericRuleset` deliberately has empty
+ * `categoryBonuses` and no `scoreExclusions`, and several screen tests depend
+ * on its exact shape — adding mechanics to it would move numbers in the
+ * stats screens for reasons unrelated to what they assert.
  *
- * So this one carries exactly what `derived.ts`'s five-step pipeline needs to
+ * So this one carries exactly what `derived.ts`'s six-step pipeline needs to
  * be exercised without Afterworlds:
  *
  * - two capped resources (`grit`, `spark`) plus one uncapped (`fate`), since
  *   only resources declaring a `capAttributeId` clamp at step 5
- * - category bonuses at two different thresholds (step 3)
- * - a trait declaring a **cap** delta (`overclock`), which the engine must
- *   ignore — traits touch `role: 'resource'` only. Afterworlds' `smarts_20`
- *   is the real-world case; this proves the rule holds generally.
- * - an `archetypeRules` carve-out whose group membership exactly matches one
- *   trait's `allowedArchetypeIds`, which is the only way
- *   `excludeCategoryScoreFromGroupRestrictedTraits` fires
+ * - category bonuses at two different thresholds (step 3), across **two**
+ *   separately-scored collections (`knacks` and `bonds`) — the direct proof
+ *   that a ruleset may declare more scored collections than the engine used
+ *   to hardcode (#51), not just more categories within one
+ * - a `knacks` entry declaring a **cap** delta (`overclock`), which the
+ *   engine must ignore — `knacks` only applies `role: 'resource'` deltas.
+ *   Afterworlds' `smarts_20` is the real-world case; this proves the rule
+ *   holds generally.
+ * - a `scoreExclusions` carve-out whose group membership exactly matches one
+ *   `knacks` entry's `requires`, which is the only way the exclusion fires
+ * - `rigs`, an `authored: true`, `postBonus` collection (the old
+ *   "modifications"), to exercise steps 4 and the "may raise a cap, unlike a
+ *   `preBonus` entry" rule
+ * - `charms`, a `selection: 'catalog'` collection (the old "recipes"), never
+ *   held directly
  *
- * Every id here is disjoint from `genericRuleset` and from the engine's
- * example ruleset — asserted in `genericRuleset.test.ts`.
+ * Five facet-bearing collections plus one catalog — one more than the four
+ * the engine used to hardcode. Every id here is disjoint from
+ * `genericRuleset` and from the engine's example ruleset — asserted in
+ * `genericRuleset.test.ts`.
  */
 import { num, flag, type AttributeDefinition } from '@/ruleset/attributes';
+import type { FacetCollection } from '@/ruleset/facets';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const attributes: AttributeDefinition[] = [
@@ -57,24 +68,21 @@ const baseAttributes = {
   attuned: flag(false),
 };
 
-export const mechanicsRuleset: RulesetDefinition = {
-  id: 'mechanics',
-  name: 'Mechanics Fixture',
-  version: '1.0.0',
-  terminology: {
-    'archetype.singular': 'Calling',
-    'archetype.plural': 'Callings',
-    'trait.singular': 'Knack',
-    'trait.plural': 'Knacks',
-  },
-  attributes,
-  // `kin` membership is exactly [tinker, revenant] — `kin_secret` below is
-  // restricted to precisely that set, which is what arms the carve-out.
+// `kin` membership is exactly [tinker, revenant] — `kin_secret` below is
+// restricted to precisely that set, which is what arms the carve-out.
+const callings: FacetCollection = {
+  id: 'callings',
+  singular: 'Calling',
+  plural: 'Callings',
+  selection: 'single',
+  defaultEntryId: 'tinker',
+  legacyField: 'archetypeId',
   groups: [
     { id: 'kin', label: 'Kin' },
     { id: 'construct', label: 'Construct' },
   ],
-  archetypes: [
+  contributes: { stage: 'base' },
+  entries: [
     {
       id: 'tinker',
       label: 'Tinker',
@@ -94,70 +102,19 @@ export const mechanicsRuleset: RulesetDefinition = {
       attributes: { ...baseAttributes },
     },
   ],
-  defaultArchetypeId: 'tinker',
-  traitCategories: [
+};
+
+const knacks: FacetCollection = {
+  id: 'knacks',
+  singular: 'Knack',
+  plural: 'Knacks',
+  selection: 'multi',
+  legacyField: 'traitIds',
+  categories: [
     { id: 'forge', label: 'Forge', color: '#8E44AD' },
     { id: 'wit', label: 'Wit', color: '#16A085' },
   ],
-  traits: [
-    {
-      id: 'hammer_hand',
-      name: 'Hammer Hand',
-      description: 'Hits things until they work.',
-      categoryId: 'forge',
-      modifier: { attributeDeltas: { grit: 1 } },
-    },
-    {
-      id: 'quick_read',
-      name: 'Quick Read',
-      description: 'Skims and retains.',
-      categoryId: 'wit',
-      modifier: { attributeDeltas: { spark: 1 } },
-    },
-    {
-      // Restricted to exactly the `kin` group's membership. Carries a delta
-      // as well, so the carve-out can be shown to suppress the *category
-      // score* without suppressing the attribute change.
-      id: 'kin_secret',
-      name: 'Kin Secret',
-      description: 'Passed down, never written.',
-      categoryId: 'forge',
-      allowedArchetypeIds: ['tinker', 'revenant'],
-      modifier: { attributeDeltas: { fate: 1 } },
-    },
-    {
-      id: 'steady_hand',
-      name: 'Steady Hand',
-      description: 'Does not shake.',
-      categoryId: 'wit',
-    },
-    {
-      // Declares a cap delta the engine must NOT apply — traits are
-      // `role: 'resource'` only.
-      id: 'overclock',
-      name: 'Overclock',
-      description: 'Claims to raise the ceiling. It does not.',
-      categoryId: 'wit',
-      modifier: { attributeDeltas: { sparkCap: 2 } },
-    },
-  ],
-  qualities: [
-    { id: 'steadfast', name: 'Steadfast', description: 'Does not budge.' },
-    {
-      id: 'reckless',
-      name: 'Reckless',
-      description: 'Budges far too easily.',
-      allowedArchetypeIds: ['revenant'],
-    },
-  ],
-  recipes: [
-    {
-      id: 'ward_charm',
-      name: 'Ward Charm',
-      description: 'Keeps the worst of it off.',
-      materials: ['Salt', 'Iron Filing'],
-    },
-  ],
+  contributes: { deltaRoles: ['resource'], categoryScore: true },
   categoryBonuses: [
     {
       categoryId: 'forge',
@@ -170,22 +127,151 @@ export const mechanicsRuleset: RulesetDefinition = {
       grants: { attributeDeltas: { spark: 2 } },
     },
   ],
-  archetypeRules: [
+  scoreExclusions: [
     {
-      archetypeId: 'revenant',
-      kind: 'excludeCategoryScoreFromGroupRestrictedTraits',
+      whenCollectionId: 'callings',
+      whenEntryId: 'revenant',
       groupId: 'kin',
     },
   ],
+  entries: [
+    {
+      id: 'hammer_hand',
+      label: 'Hammer Hand',
+      description: 'Hits things until they work.',
+      categoryId: 'forge',
+      modifier: { attributeDeltas: { grit: 1 } },
+    },
+    {
+      id: 'quick_read',
+      label: 'Quick Read',
+      description: 'Skims and retains.',
+      categoryId: 'wit',
+      modifier: { attributeDeltas: { spark: 1 } },
+    },
+    {
+      // Restricted to exactly the `kin` group's membership. Carries a delta
+      // as well, so the carve-out can be shown to suppress the *category
+      // score* without suppressing the attribute change.
+      id: 'kin_secret',
+      label: 'Kin Secret',
+      description: 'Passed down, never written.',
+      categoryId: 'forge',
+      requires: { callings: ['tinker', 'revenant'] },
+      modifier: { attributeDeltas: { fate: 1 } },
+    },
+    {
+      id: 'steady_hand',
+      label: 'Steady Hand',
+      description: 'Does not shake.',
+      categoryId: 'wit',
+    },
+    {
+      // Declares a cap delta the engine must NOT apply — `knacks` is
+      // `deltaRoles: ['resource']` only.
+      id: 'overclock',
+      label: 'Overclock',
+      description: 'Claims to raise the ceiling. It does not.',
+      categoryId: 'wit',
+      modifier: { attributeDeltas: { sparkCap: 2 } },
+    },
+  ],
+};
+
+// A second scored collection, entirely independent of `knacks` — proof a
+// ruleset may declare more scored collections than the engine used to
+// hardcode, not just more categories within the one it named.
+const bonds: FacetCollection = {
+  id: 'bonds',
+  singular: 'Bond',
+  plural: 'Bonds',
+  selection: 'multi',
+  categories: [
+    { id: 'duty', label: 'Duty' },
+    { id: 'kinship', label: 'Kinship' },
+  ],
+  contributes: { deltaRoles: ['resource'], categoryScore: true },
+  categoryBonuses: [
+    {
+      categoryId: 'duty',
+      requiredScore: 1,
+      grants: { attributeDeltas: { fate: 1 } },
+    },
+  ],
+  entries: [
+    {
+      id: 'oath_kept',
+      label: 'Oath Kept',
+      description: 'A debt honored.',
+      categoryId: 'duty',
+    },
+    {
+      id: 'old_friend',
+      label: 'Old Friend',
+      description: 'Someone who remembers who you were.',
+      categoryId: 'kinship',
+      modifier: { attributeDeltas: { grit: 1 } },
+    },
+  ],
+};
+
+const temperaments: FacetCollection = {
+  id: 'temperaments',
+  singular: 'Temperament',
+  plural: 'Temperaments',
+  selection: 'multi',
+  maxSelections: 4,
+  legacyField: 'qualityIds',
+  entries: [
+    { id: 'steadfast', label: 'Steadfast', description: 'Does not budge.' },
+    {
+      id: 'reckless',
+      label: 'Reckless',
+      description: 'Budges far too easily.',
+      requires: { callings: ['revenant'] },
+    },
+  ],
+};
+
+const rigs: FacetCollection = {
+  id: 'rigs',
+  singular: 'Rig',
+  plural: 'Rigs',
+  selection: 'multi',
+  authored: true,
+  legacyField: 'modifications',
+  contributes: { stage: 'postBonus', deltaRoles: ['resource', 'cap'] },
+  entries: [],
+};
+
+const charms: FacetCollection = {
+  id: 'charms',
+  singular: 'Charm',
+  plural: 'Charms',
+  selection: 'catalog',
+  entries: [
+    {
+      id: 'ward_charm',
+      label: 'Ward Charm',
+      description: 'Keeps the worst of it off.',
+      materials: ['Salt', 'Iron Filing'],
+    },
+  ],
+};
+
+export const mechanicsRuleset: RulesetDefinition = {
+  id: 'mechanics',
+  name: 'Mechanics Fixture',
+  version: '1.0.0',
+  terminology: {},
+  attributes,
+  facets: [callings, knacks, bonds, temperaments, rigs, charms],
   features: {
     quests: true,
-    recipes: true,
     discord: false,
     map: false,
-    modifications: true,
     influenceReport: true,
     relationshipGraph: false,
   },
-  limits: { maxQualities: 4 },
   branding: { appName: 'Mechanics Fixture' },
 };

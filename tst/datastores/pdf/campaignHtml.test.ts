@@ -52,9 +52,18 @@ const fullDataset = (): CampaignDataset => ({
     makeCharacter({
       id: 'char-hale',
       name: 'Hale Winters',
-      archetypeId: 'wanderer',
-      traitIds: ['well_read', 'no_such_trait'],
-      qualityIds: ['patient'],
+      facets: {
+        lineages: ['wanderer'],
+        talents: ['well_read', 'no_such_trait'],
+        virtues: ['patient'],
+        augments: [
+          {
+            name: 'Grafted Lens',
+            description: 'Sees in the dark.',
+            modifier: { attributeDeltas: { focus: 2 } },
+          },
+        ],
+      },
       attributes: { vigor: num(5) },
       locationId: 'loc-vault',
       occupation: 'Courier',
@@ -74,18 +83,11 @@ const fullDataset = (): CampaignDataset => ({
           description: 'A bad trade.',
         },
       ],
-      modifications: [
-        {
-          name: 'Grafted Lens',
-          description: 'Sees in the dark.',
-          modifier: { attributeDeltas: { focus: 2 } },
-        },
-      ],
     }),
     makeCharacter({
       id: 'char-mara',
       name: 'Mara Voss',
-      archetypeId: 'scholar',
+      facets: { lineages: ['scholar'] },
     }),
   ],
   factions: [
@@ -132,7 +134,9 @@ const fullDataset = (): CampaignDataset => ({
       assignedCharacterIds: ['char-hale'],
       eventIds: ['evt-flood'],
       teamSize: 3,
-      desirable: { archetypeIds: ['wanderer'], traitIds: ['well_read'] },
+      desirable: {
+        entries: { lineages: ['wanderer'], talents: ['well_read'] },
+      },
       requiredMaterials: [
         {
           id: 'mat-1',
@@ -275,13 +279,13 @@ describe('renderCampaignHtml', () => {
     it('takes every domain noun from the ruleset', () => {
       const html = render(fullDataset());
 
-      expect(html).toContain('Lineage'); // archetype.singular
-      expect(html).toContain('Talents'); // trait.plural
-      expect(html).toContain('Virtues'); // quality.plural
-      expect(html).toContain('Augments'); // modification.plural
-      expect(html).toContain('Discipline Scores'); // traitCategory.singular
+      expect(html).toContain('Lineage'); // lineages.singular
+      expect(html).toContain('Talents'); // talents.plural
+      expect(html).toContain('Virtues'); // virtues.plural
+      expect(html).toContain('Augments'); // augments.plural
+      expect(html).toContain('Discipline Scores'); // talents.categorySingular
 
-      // The defaults the fixture overrides must not leak through.
+      // The generic engine defaults must not leak through.
       expect(html).not.toContain('Archetype');
       expect(html).not.toContain('>Traits<');
     });
@@ -310,12 +314,12 @@ describe('renderCampaignHtml', () => {
       expect(html).not.toContain('Vigor Cap');
     });
 
-    it('renders a trait with its category and its modifier', () => {
+    it('renders a talent with its category and its modifier', () => {
       const html = render(fullDataset());
 
       expect(html).toContain('Well Read');
       expect(html).toContain('Knows the old books.');
-      expect(html).toContain('Lore'); // the trait's category
+      expect(html).toContain('Lore'); // the talent's category
       expect(html).toContain('Focus +1');
     });
 
@@ -326,20 +330,20 @@ describe('renderCampaignHtml', () => {
       expect(html).toContain('class="unresolved"');
     });
 
-    it('renders a modification with its deltas', () => {
+    it('renders an authored augment with its deltas', () => {
       const html = render(fullDataset());
 
       expect(html).toContain('Grafted Lens');
       expect(html).toContain('Focus +2');
     });
 
-    it('omits modifications when the ruleset disables them', () => {
-      const noMods: RulesetDefinition = {
+    it('omits a collection entirely when the ruleset does not declare it', () => {
+      const noAugments: RulesetDefinition = {
         ...fullRuleset,
-        features: { ...fullRuleset.features, modifications: false },
+        facets: fullRuleset.facets.filter(c => c.id !== 'augments'),
       };
 
-      expect(render(fullDataset(), noMods)).not.toContain('Grafted Lens');
+      expect(render(fullDataset(), noAugments)).not.toContain('Grafted Lens');
     });
 
     it('marks a retired and a present character', () => {

@@ -26,58 +26,86 @@ const findField = <T extends { key: string }>(fields: T[], key: string): T => {
   return field;
 };
 
+/** A ruleset where `talents`' `well_read` entry links into a catalog collection. */
+const rulesetWithCatalogLink: RulesetDefinition = {
+  ...genericRuleset,
+  facets: genericRuleset.facets
+    .map(collection =>
+      collection.id === 'talents'
+        ? {
+            ...collection,
+            entries: collection.entries.map(entry =>
+              entry.id === 'well_read'
+                ? { ...entry, links: { recipes: ['stew'] } }
+                : entry
+            ),
+          }
+        : collection
+    )
+    .concat([
+      {
+        id: 'recipes',
+        singular: 'Recipe',
+        plural: 'Recipes',
+        selection: 'catalog',
+        entries: [
+          { id: 'stew', label: 'Stew', description: '', materials: ['Pot'] },
+        ],
+      },
+    ]),
+};
+
 describe('useCharacterFilterFields', () => {
   it('labels its fields using the ruleset terminology', () => {
     const fields = renderFields();
 
-    expect(findField(fields, 'perkId').label).toBe('Talent');
-    expect(findField(fields, 'distinctionId').label).toBe('Virtue');
+    expect(findField(fields, 'facet:talents').label).toBe('Talent');
+    expect(findField(fields, 'facet:virtues').label).toBe('Virtue');
 
-    const perkField = findField(fields, 'perkId') as SelectFilterField;
-    expect(perkField.options.map(o => o.label)).toEqual(
+    const talentField = findField(fields, 'facet:talents') as SelectFilterField;
+    expect(talentField.options.map(o => o.label)).toEqual(
       expect.arrayContaining(['Well Read', 'Strong Back'])
     );
   });
 
-  it('hides the recipe filter when the ruleset disables recipes', () => {
+  it('hides a catalog collection filter when nothing links into it', () => {
     const fields = renderFields();
-    expect(fields.find(f => f.key === 'recipeId')).toBeUndefined();
+    expect(fields.find(f => f.key.startsWith('facetLink:'))).toBeUndefined();
   });
 
-  it('shows the recipe filter, populated from the ruleset, when enabled', () => {
-    const withRecipes: RulesetDefinition = {
-      ...genericRuleset,
-      features: { ...genericRuleset.features, recipes: true },
-      recipes: [
-        { id: 'stew', name: 'Stew', description: '', materials: ['Pot'] },
-      ],
-    };
-    const fields = renderFields(withRecipes);
-    const recipeField = findField(fields, 'recipeId') as SelectFilterField;
+  it('shows a catalog collection filter, populated from the ruleset, when something links into it', () => {
+    const fields = renderFields(rulesetWithCatalogLink);
+    const recipeField = findField(
+      fields,
+      'facetLink:recipes'
+    ) as SelectFilterField;
     expect(recipeField.options.map(o => o.label)).toContain('Stew');
   });
 
-  it('matches a character by trait/quality id', () => {
+  it('matches a character by facet id', () => {
     const fields = renderFields();
-    const perkField = findField(fields, 'perkId') as SelectFilterField;
-    const character = makeCharacter({ traitIds: ['well_read'] });
+    const talentField = findField(fields, 'facet:talents') as SelectFilterField;
+    const character = makeCharacter({ facets: { talents: ['well_read'] } });
 
-    expect(perkField.matches(character, 'well_read', {})).toBe(true);
-    expect(perkField.matches(character, 'strong_back', {})).toBe(false);
+    expect(talentField.matches(character, 'well_read', {})).toBe(true);
+    expect(talentField.matches(character, 'strong_back', {})).toBe(false);
   });
 
-  it('scores trait categories using sibling field values', () => {
+  it('scores facet categories using the sibling category field value', () => {
     const fields = renderFields();
-    const minScoreField = findField(fields, 'minTagScore') as NumberFilterField;
-    const character = makeCharacter({ traitIds: ['well_read'] });
+    const minScoreField = findField(
+      fields,
+      'facetMinScore:talents'
+    ) as NumberFilterField;
+    const character = makeCharacter({ facets: { talents: ['well_read'] } });
 
     // 'lore' category: well_read counts, so a threshold of 1 passes.
-    expect(minScoreField.matches(character, 1, { traitCategory: 'lore' })).toBe(
-      true
-    );
+    expect(
+      minScoreField.matches(character, 1, { 'facetCategory:talents': 'lore' })
+    ).toBe(true);
     // 'might' category: well_read doesn't count.
     expect(
-      minScoreField.matches(character, 1, { traitCategory: 'might' })
+      minScoreField.matches(character, 1, { 'facetCategory:talents': 'might' })
     ).toBe(false);
     // No category selected — the field is a no-op until paired.
     expect(minScoreField.matches(character, 1, {})).toBe(true);

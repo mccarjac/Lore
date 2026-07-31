@@ -183,6 +183,12 @@ default; the one that needs a token is not.
   the branch, skipping the pull request review a manual export goes through.
   See [github-sync.md](./github-sync.md#automatic-sync-opt-in) and "Opting a
   store into automatic sync" below.
+- **`seedDataStore`** — loads `exampleSeedDataset`, a small example campaign,
+  so a fresh install of the engine's own example ruleset has real data on
+  every screen. Import-only, and its ids only resolve against
+  `exampleRuleset` — it refuses on any other ruleset. Registered
+  automatically under `__DEV__` when `dataStores` is omitted, so it never
+  reaches a shipped build; exported in case your own dev build wants it too.
 
 ### Writing your own
 
@@ -341,6 +347,46 @@ npm run check-all
 Read Lore's release notes for changes to `RulesetDefinition`, to derived-stat
 computation, or to the peer set — those are the three that can require work on
 your side. A peer-range change is treated as breaking.
+
+### v2: facet collections (#51)
+
+`RulesetDefinition` no longer names `archetypes`, `traits`, `traitCategories`,
+`qualities`, `recipes`, `categoryBonuses` or `archetypeRules` — a ruleset
+declares `facets: FacetCollection[]` instead, one entry per collection it
+needs. `GameCharacter` correspondingly lost `archetypeId`/`traitIds`/
+`qualityIds`/`modifications` in favor of a single `facets` map. This is a
+clean break, not a deprecation — there is no compatibility shim, because the
+whole point of the change is that the engine no longer knows what a
+"trait" or an "archetype" is. See
+[ruleset-authoring.md](./ruleset-authoring.md#facet-collections) for the full
+shape.
+
+What has to move, mechanically:
+
+| Before                                                                                                 | After                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `archetypes: Archetype[]`                                                                              | a `FacetCollection` with `selection: 'single'`, `contributes: { stage: 'base' }`                                              |
+| `traits: Trait[]` + `traitCategories`                                                                  | a `FacetCollection` with `selection: 'multi'`, `categories`, `contributes: { deltaRoles: ['resource'], categoryScore: true }` |
+| `qualities: Quality[]`                                                                                 | a `FacetCollection` with `selection: 'multi'`, no `contributes`                                                               |
+| `recipes: Recipe[]`                                                                                    | a `FacetCollection` with `selection: 'catalog'`                                                                               |
+| `categoryBonuses`                                                                                      | moves onto the scored collection, as `categoryBonuses`                                                                        |
+| `archetypeRules`                                                                                       | `scoreExclusions` on the scored collection                                                                                    |
+| `limits.maxQualities`                                                                                  | `maxSelections` on the qualities-equivalent collection                                                                        |
+| `defaultArchetypeId`                                                                                   | `defaultEntryId` on the single-selection collection                                                                           |
+| `Trait.allowedArchetypeIds` / `Quality.allowedArchetypeIds`                                            | `FacetEntry.requires: { [archetypeCollectionId]: [...] }`                                                                     |
+| `Trait.recipeIds`                                                                                      | `FacetEntry.links: { [recipeCollectionId]: [...] }`                                                                           |
+| `character.archetypeId` / `.traitIds` / `.qualityIds`                                                  | `character.facets[collectionId]` (catalog ids)                                                                                |
+| `character.modifications`                                                                              | `character.facets[collectionId]` (inline `AuthoredFacetEntry`s, on a collection declared `authored: true`)                    |
+| `features.recipes` / `features.modifications`                                                          | gone — a ruleset simply omits (or declares) the collection                                                                    |
+| `TermKey`s `archetype.*` / `trait.*` / `traitCategory.*` / `quality.*` / `modification.*` / `recipe.*` | `FacetCollection.singular`/`.plural`/`.categorySingular`/`.categoryPlural`                                                    |
+
+Existing stored data migrates automatically — `migrateRulesetFields()` reads
+`FacetCollection.legacyField` to know which collection each of the four old
+character fields folds into, so it works as long as your new ruleset's
+collections declare the right `legacyField`. Run your own derived-stat parity
+suite (the numbers your players would notice) after upgrading; the engine's
+suite runs on neutral fixtures and cannot catch a change to your ruleset's
+own numbers.
 
 ## Troubleshooting
 

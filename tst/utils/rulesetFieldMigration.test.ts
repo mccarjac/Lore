@@ -1,16 +1,16 @@
 /**
- * Unit tests for the pure shape normalizers behind the Phase 1 renames
- * (#3-#7). The storage-level `migrateRulesetFields()` is covered in
- * `characterStorage.test.ts`; this file pins the normalization rules
- * themselves, including the referential-equality contract that lets callers
- * skip a write when nothing changed.
+ * Unit tests for the pure shape normalizers behind the ruleset field renames
+ * (#3-#7) and the facet generalization (#51). The storage-level
+ * `migrateRulesetFields()` is covered in `migrateRulesetFields.test.ts`; this
+ * file pins the normalization rules themselves, including the
+ * referential-equality contract that lets callers skip a write when nothing
+ * changed.
  */
 import {
-  UNKNOWN_ARCHETYPE_ID,
   normalizeCharacterRulesetFields as normalizeCharacterWith,
   normalizeCharactersRulesetFields as normalizeCharactersWith,
-  normalizeQuestRulesetFields,
-  normalizeQuestsRulesetFields,
+  normalizeQuestRulesetFields as normalizeQuestWith,
+  normalizeQuestsRulesetFields as normalizeQuestsWith,
 } from '@utils/rulesetFieldMigration';
 import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
 import type { RulesetDefinition } from '@/ruleset/types';
@@ -22,9 +22,10 @@ import { QuestStatus, type GameCharacter, type GameQuest } from '@models/types';
  * that is what the normalizers exist to read. The *records* are historic; the
  * ruleset they are read against need not be, and pinning a flavor here would
  * make this suite one of the files that has to move when a flavor is
- * extracted. All the normalizers ask of a ruleset is `attributes`, for the
- * resource -> cap lookup, so a local fixture declaring the ids those legacy
- * records mention is the whole requirement.
+ * extracted. All the normalizers ask of a ruleset is `attributes` (for the
+ * resource -> cap lookup) and `facets[].legacyField` (for which collection
+ * each old field folds into), so a local fixture declaring both is the whole
+ * requirement.
  *
  * That the cap reshape is a ruleset rule rather than a property of these
  * particular ids is proved separately, against `mechanicsRuleset`, at the
@@ -51,7 +52,41 @@ const legacyShapedRuleset: RulesetDefinition = {
     { id: 'healthCap', label: 'Health Cap', type: 'number', role: 'cap' },
     { id: 'limitCap', label: 'Limit Cap', type: 'number', role: 'cap' },
   ],
-  archetypes: [],
+  facets: [
+    {
+      id: 'archetypes',
+      singular: 'Archetype',
+      plural: 'Archetypes',
+      selection: 'single',
+      legacyField: 'archetypeId',
+      entries: [],
+    },
+    {
+      id: 'traits',
+      singular: 'Trait',
+      plural: 'Traits',
+      selection: 'multi',
+      legacyField: 'traitIds',
+      entries: [],
+    },
+    {
+      id: 'qualities',
+      singular: 'Quality',
+      plural: 'Qualities',
+      selection: 'multi',
+      legacyField: 'qualityIds',
+      entries: [],
+    },
+    {
+      id: 'modifications',
+      singular: 'Modification',
+      plural: 'Modifications',
+      selection: 'multi',
+      authored: true,
+      legacyField: 'modifications',
+      entries: [],
+    },
+  ],
 };
 
 const normalizeCharacterRulesetFields = (
@@ -63,6 +98,16 @@ const normalizeCharactersRulesetFields = (
   characters: GameCharacter[],
   ruleset: RulesetDefinition = legacyShapedRuleset
 ): GameCharacter[] => normalizeCharactersWith(characters, ruleset);
+
+const normalizeQuestRulesetFields = (
+  quest: GameQuest,
+  ruleset: RulesetDefinition = legacyShapedRuleset
+): GameQuest => normalizeQuestWith(quest, ruleset);
+
+const normalizeQuestsRulesetFields = (
+  quests: GameQuest[],
+  ruleset: RulesetDefinition = legacyShapedRuleset
+): GameQuest[] => normalizeQuestsWith(quests, ruleset);
 
 const TS = '2026-01-01T00:00:00.000Z';
 
@@ -80,13 +125,12 @@ const legacyCharacter = (extra: Record<string, unknown> = {}): GameCharacter =>
     ...extra,
   }) as unknown as GameCharacter;
 
+/** Already fully current: post-#51 `facets`, no legacy top-level fields. */
 const currentCharacter = (extra: Partial<GameCharacter> = {}): GameCharacter =>
   ({
     id: 'c1',
     name: 'Current',
-    archetypeId: 'Mutant',
-    traitIds: ['agility_1'],
-    qualityIds: [],
+    facets: { archetypes: ['Mutant'], traits: ['agility_1'], qualities: [] },
     factions: [],
     relationships: [],
     createdAt: TS,
@@ -104,11 +148,12 @@ const quest = (extra: Partial<GameQuest> = {}): GameQuest => ({
 });
 
 describe('normalizeCharacterRulesetFields', () => {
-  it('rewrites species to archetypeId and drops the old key', () => {
+  it('folds species into facets.archetypes and drops every legacy key', () => {
     const result = normalizeCharacterRulesetFields(legacyCharacter());
 
-    expect(result.archetypeId).toBe('Mutant');
+    expect(result.facets?.archetypes).toEqual(['Mutant']);
     expect('species' in result).toBe(false);
+    expect('archetypeId' in result).toBe(false);
   });
 
   it('preserves every unrelated field', () => {
@@ -131,37 +176,51 @@ describe('normalizeCharacterRulesetFields', () => {
     const twice = normalizeCharacterRulesetFields(once);
 
     expect(twice).toBe(once);
-    expect(twice.archetypeId).toBe('Mutant');
+    expect(twice.facets?.archetypes).toEqual(['Mutant']);
   });
 
-  it('keeps archetypeId when a stale species field is also present', () => {
+  it('keeps the post-rename archetypeId when a stale species field is also present', () => {
     const result = normalizeCharacterRulesetFields(
       legacyCharacter({ archetypeId: 'Android', species: 'Mutant' })
     );
 
-    expect(result.archetypeId).toBe('Android');
+    expect(result.facets?.archetypes).toEqual(['Android']);
     expect('species' in result).toBe(false);
+    expect('archetypeId' in result).toBe(false);
   });
 
-  it('rewrites perkIds to traitIds (#4)', () => {
+  it('lets an already-populated facets collection win over a legacy field', () => {
+    // Mirrors applyRenames' "the current name always wins" — here the
+    // *current shape* (facets) wins over a legacy field folding into the
+    // same collection.
+    const result = normalizeCharacterRulesetFields(
+      legacyCharacter({ facets: { archetypes: ['Android'] } })
+    );
+
+    expect(result.facets?.archetypes).toEqual(['Android']);
+  });
+
+  it('folds perkIds into facets.traits (#4)', () => {
     const result = normalizeCharacterRulesetFields(legacyCharacter());
 
-    expect(result.traitIds).toEqual(['agility_1']);
+    expect(result.facets?.traits).toEqual(['agility_1']);
     expect('perkIds' in result).toBe(false);
+    expect('traitIds' in result).toBe(false);
   });
 
-  it('falls back to Unknown when neither field is present', () => {
+  it('leaves the single-selection collection unset when neither field is present', () => {
+    // No `UNKNOWN_ARCHETYPE_ID` fallback since #51 — a `single`-selection
+    // collection may legitimately have no held entry.
     const orphan = legacyCharacter();
     delete (orphan as unknown as Record<string, unknown>).species;
 
-    expect(normalizeCharacterRulesetFields(orphan).archetypeId).toBe(
-      UNKNOWN_ARCHETYPE_ID
-    );
+    const result = normalizeCharacterRulesetFields(orphan);
+    expect(result.facets?.archetypes).toBeUndefined();
   });
 });
 
 describe('normalizeQuestRulesetFields', () => {
-  it('rewrites desirable/undesirable species to archetypeIds', () => {
+  it('folds desirable/undesirable species into entries.archetypes', () => {
     const result = normalizeQuestRulesetFields(
       quest({
         desirable: { species: ['Human'] },
@@ -169,32 +228,34 @@ describe('normalizeQuestRulesetFields', () => {
       } as unknown as Partial<GameQuest>)
     );
 
-    expect(result.desirable?.archetypeIds).toEqual(['Human']);
-    expect(result.undesirable?.archetypeIds).toEqual(['Drone']);
+    expect(result.desirable?.entries?.archetypes).toEqual(['Human']);
+    expect(result.undesirable?.entries?.archetypes).toEqual(['Drone']);
     expect('species' in (result.desirable ?? {})).toBe(false);
+    expect('archetypeIds' in (result.desirable ?? {})).toBe(false);
   });
 
-  it('rewrites tags/perkIds to traitCategoryIds/traitIds (#4)', () => {
+  it('folds tags/perkIds into categories.traits/entries.traits (#4)', () => {
     const result = normalizeQuestRulesetFields(
       quest({
         desirable: { tags: ['Agility'], perkIds: ['agility_1'] },
       } as unknown as Partial<GameQuest>)
     );
 
-    expect(result.desirable?.traitCategoryIds).toEqual(['Agility']);
-    expect(result.desirable?.traitIds).toEqual(['agility_1']);
+    expect(result.desirable?.categories?.traits).toEqual(['Agility']);
+    expect(result.desirable?.entries?.traits).toEqual(['agility_1']);
     expect('tags' in (result.desirable ?? {})).toBe(false);
     expect('perkIds' in (result.desirable ?? {})).toBe(false);
+    expect('traitCategoryIds' in (result.desirable ?? {})).toBe(false);
   });
 
-  it('leaves other preference keys alone', () => {
+  it('folds distinctionIds into entries.qualities (#5)', () => {
     const result = normalizeQuestRulesetFields(
       quest({
-        desirable: { species: ['Human'], qualityIds: ['d1'] },
+        desirable: { species: ['Human'], distinctionIds: ['d1'] },
       } as unknown as Partial<GameQuest>)
     );
 
-    expect(result.desirable?.qualityIds).toEqual(['d1']);
+    expect(result.desirable?.entries?.qualities).toEqual(['d1']);
   });
 
   it('rewrites junktownOffice to sponsor (#7)', () => {
@@ -219,7 +280,7 @@ describe('normalizeQuestRulesetFields', () => {
   });
 
   it('returns the same reference when already migrated', () => {
-    const input = quest({ desirable: { archetypeIds: ['Human'] } });
+    const input = quest({ desirable: { entries: { archetypes: ['Human'] } } });
     expect(normalizeQuestRulesetFields(input)).toBe(input);
   });
 
@@ -250,7 +311,7 @@ describe('array normalizers', () => {
 
     expect(result).not.toBe(input);
     expect(result[0]).toBe(input[0]);
-    expect(result[1].archetypeId).toBe('Mutant');
+    expect(result[1].facets?.archetypes).toEqual(['Mutant']);
   });
 
   it('returns the original quest array when every entry is current', () => {
@@ -269,11 +330,11 @@ describe('array normalizers', () => {
     const result = normalizeQuestsRulesetFields(input);
 
     expect(result).not.toBe(input);
-    expect(result[1].desirable?.archetypeIds).toEqual(['Human']);
+    expect(result[1].desirable?.entries?.archetypes).toEqual(['Human']);
   });
 });
 
-describe('modification modifier reshape (#5 then #22)', () => {
+describe('modification modifier reshape (#5, #22, #51)', () => {
   const withModifications = (modifications: unknown[]): GameCharacter =>
     ({
       id: 'c1',
@@ -301,15 +362,24 @@ describe('modification modifier reshape (#5 then #22)', () => {
 
     // The non-obvious part: a cap keyed by a *resource* id lands under that
     // resource's capAttributeId, not under the resource itself.
-    expect(result.modifications?.[0].modifier).toEqual({
-      attributeDeltas: { health: 5, limit: 5, healthCap: 3, limitCap: 2 },
+    expect(result.facets?.modifications?.[0]).toMatchObject({
+      modifier: {
+        attributeDeltas: { health: 5, limit: 5, healthCap: 3, limitCap: 2 },
+      },
     });
-    expect('statModifiers' in (result.modifications?.[0] ?? {})).toBe(false);
+    expect(
+      'statModifiers' in
+        ((result.facets?.modifications?.[0] as unknown as Record<
+          string,
+          unknown
+        >) ?? {})
+    ).toBe(false);
   });
 
   it('flattens the post-#5 nested shape that shipped in #21', () => {
     // Anyone who ran the Phase 1 build has this vintage on disk, so it has to
-    // migrate as reliably as the original flat one.
+    // migrate as reliably as the original flat one. Category deltas end up
+    // nested under the collection whose `legacyField` is `'traitIds'`.
     const result = normalizeCharacterRulesetFields(
       withModifications([
         {
@@ -324,16 +394,22 @@ describe('modification modifier reshape (#5 then #22)', () => {
       ])
     );
 
-    expect(result.modifications?.[0].modifier).toEqual({
-      attributeDeltas: { health: 5, limitCap: 2 },
-      categoryDeltas: { Agility: 3 },
+    expect(result.facets?.modifications?.[0]).toMatchObject({
+      modifier: {
+        attributeDeltas: { health: 5, limitCap: 2 },
+        categoryDeltas: { traits: { Agility: 3 } },
+      },
     });
-    expect('resourceModifiers' in (result.modifications?.[0] ?? {})).toBe(
-      false
-    );
+    expect(
+      'resourceModifiers' in
+        ((result.facets?.modifications?.[0] as unknown as Record<
+          string,
+          unknown
+        >) ?? {})
+    ).toBe(false);
   });
 
-  it('renames tagModifiers to categoryDeltas', () => {
+  it('renames tagModifiers to categoryDeltas, nested under the traits collection', () => {
     const result = normalizeCharacterRulesetFields(
       withModifications([
         {
@@ -344,8 +420,8 @@ describe('modification modifier reshape (#5 then #22)', () => {
       ])
     );
 
-    expect(result.modifications?.[0].modifier).toEqual({
-      categoryDeltas: { Agility: 3 },
+    expect(result.facets?.modifications?.[0]).toMatchObject({
+      modifier: { categoryDeltas: { traits: { Agility: 3 } } },
     });
   });
 
@@ -356,8 +432,8 @@ describe('modification modifier reshape (#5 then #22)', () => {
       ])
     );
 
-    expect(result.modifications?.[0].modifier).toEqual({
-      attributeDeltas: { healthCap: 1 },
+    expect(result.facets?.modifications?.[0]).toMatchObject({
+      modifier: { attributeDeltas: { healthCap: 1 } },
     });
   });
 
@@ -378,8 +454,8 @@ describe('modification modifier reshape (#5 then #22)', () => {
       rulesetWithoutCaps
     );
 
-    expect(result.modifications?.[0].modifier).toEqual({
-      attributeDeltas: { health: 1 },
+    expect(result.facets?.modifications?.[0]).toMatchObject({
+      modifier: { attributeDeltas: { health: 1 } },
     });
   });
 
@@ -394,8 +470,8 @@ describe('modification modifier reshape (#5 then #22)', () => {
       ])
     );
 
-    expect(result.modifications?.[0].modifier).toEqual({
-      categoryDeltas: { Agility: 1 },
+    expect(result.facets?.modifications?.[0]).toMatchObject({
+      modifier: { categoryDeltas: { traits: { Agility: 1 } } },
     });
   });
 
@@ -418,19 +494,27 @@ describe('modification modifier reshape (#5 then #22)', () => {
     const result = normalizeCharacterRulesetFields(legacy);
 
     expect('cyberware' in result).toBe(false);
-    expect(result.modifications?.[0].modifier).toEqual({
-      attributeDeltas: { health: 2 },
+    expect('modifications' in result).toBe(false);
+    expect(result.facets?.modifications?.[0]).toMatchObject({
+      modifier: { attributeDeltas: { health: 2 } },
     });
   });
 
   it('is idempotent and preserves the reference when already current', () => {
-    const current = withModifications([
-      {
-        name: 'Frame',
-        description: '',
-        modifier: { attributeDeltas: { health: 2 } },
+    const current = currentCharacter({
+      facets: {
+        archetypes: ['Mutant'],
+        traits: [],
+        qualities: [],
+        modifications: [
+          {
+            name: 'Frame',
+            description: '',
+            modifier: { attributeDeltas: { health: 2 } },
+          },
+        ],
       },
-    ]);
+    });
 
     expect(normalizeCharacterRulesetFields(current)).toBe(current);
   });
@@ -448,19 +532,30 @@ describe('modification modifier reshape (#5 then #22)', () => {
       ])
     );
 
-    expect(result.modifications?.[0].modifier).toEqual({
-      attributeDeltas: { health: 9 },
+    expect(result.facets?.modifications?.[0]).toMatchObject({
+      modifier: { attributeDeltas: { health: 9 } },
     });
-    expect('statModifiers' in (result.modifications?.[0] ?? {})).toBe(false);
-    expect('resourceModifiers' in (result.modifications?.[0] ?? {})).toBe(
-      false
-    );
+    expect(
+      'statModifiers' in
+        ((result.facets?.modifications?.[0] as unknown as Record<
+          string,
+          unknown
+        >) ?? {})
+    ).toBe(false);
+    expect(
+      'resourceModifiers' in
+        ((result.facets?.modifications?.[0] as unknown as Record<
+          string,
+          unknown
+        >) ?? {})
+    ).toBe(false);
   });
 });
 
 describe('the cap reshape follows the ruleset, not the legacy ids', () => {
   it("maps a legacy cap key onto the resource's own cap attribute", () => {
-    // `mechanicsRuleset` declares grit -> gritCap, with no `health` anywhere.
+    // `mechanicsRuleset` declares grit -> gritCap, with no `health` anywhere,
+    // and its authored collection (legacyField 'modifications') is `rigs`.
     const legacy = {
       id: 'c1',
       name: 'Legacy',
@@ -482,8 +577,8 @@ describe('the cap reshape follows the ruleset, not the legacy ids', () => {
 
     const result = normalizeCharacterWith(legacy, mechanicsRuleset);
 
-    expect(result.modifications?.[0].modifier).toEqual({
-      attributeDeltas: { gritCap: 2 },
+    expect(result.facets?.rigs?.[0]).toMatchObject({
+      modifier: { attributeDeltas: { gritCap: 2 } },
     });
   });
 });

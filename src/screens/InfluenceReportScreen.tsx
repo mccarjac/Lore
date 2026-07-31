@@ -19,10 +19,12 @@ import {
   FactionInfluence,
 } from '@utils/influenceAnalysis';
 import { Card, Section } from '@components/index';
-import { useLabels } from '@/ruleset';
+import { useLabels, useRuleset } from '@/ruleset';
+import { getPrimaryFacetLabel } from '@/ruleset/facets';
 
 export const InfluenceReportScreen: React.FC = () => {
   const label = useLabels();
+  const { ruleset } = useRuleset();
   const [characters, setCharacters] = useState<GameCharacter[]>([]);
   const [topInfluencers, setTopInfluencers] = useState<CharacterInfluence[]>(
     []
@@ -164,7 +166,7 @@ export const InfluenceReportScreen: React.FC = () => {
                 <View style={styles.influencerInfo}>
                   <Text style={styles.characterName}>{inf.character.name}</Text>
                   <Text style={styles.characterSpecies}>
-                    {inf.character.archetypeId}
+                    {getPrimaryFacetLabel(inf.character, ruleset)}
                     {inf.character.occupation
                       ? ` • ${inf.character.occupation}`
                       : ''}

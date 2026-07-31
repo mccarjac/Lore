@@ -25,78 +25,110 @@ const baseRuleset = (): RulesetDefinition => ({
       refCollection: 'archetypes',
     },
   ],
-  groups: [{ id: 'organic', label: 'Organic' }],
-  archetypes: [
+  facets: [
     {
-      id: 'human',
-      label: 'Human',
-      groups: ['organic'],
-      attributes: {
-        health: { type: 'number', value: 2 },
-        healthCap: { type: 'number', value: 5 },
-        stamina: { type: 'number', value: 1 },
-        flight: { type: 'flag', value: false },
-      },
+      id: 'archetypes',
+      singular: 'Archetype',
+      plural: 'Archetypes',
+      selection: 'single',
+      defaultEntryId: 'human',
+      groups: [{ id: 'organic', label: 'Organic' }],
+      contributes: { stage: 'base' },
+      entries: [
+        {
+          id: 'human',
+          label: 'Human',
+          groups: ['organic'],
+          attributes: {
+            health: { type: 'number', value: 2 },
+            healthCap: { type: 'number', value: 5 },
+            stamina: { type: 'number', value: 1 },
+            flight: { type: 'flag', value: false },
+          },
+        },
+      ],
     },
-  ],
-  traitCategories: [{ id: 'strength', label: 'Strength' }],
-  traits: [
     {
-      id: 'trait_1',
-      name: 'Brawler',
-      description: '',
-      categoryId: 'strength',
-      allowedArchetypeIds: ['human'],
-      recipeIds: ['recipe_1'],
-      modifier: {
-        attributeDeltas: { health: 1, healthCap: 1 },
-        categoryDeltas: { strength: 1 },
-      },
+      id: 'traits',
+      singular: 'Trait',
+      plural: 'Traits',
+      selection: 'multi',
+      categories: [{ id: 'strength', label: 'Strength' }],
+      contributes: { deltaRoles: ['resource'], categoryScore: true },
+      categoryBonuses: [
+        {
+          categoryId: 'strength',
+          requiredScore: 3,
+          grants: { attributeDeltas: { health: 1 } },
+        },
+      ],
+      scoreExclusions: [
+        {
+          whenCollectionId: 'archetypes',
+          whenEntryId: 'human',
+          groupId: 'organic',
+        },
+      ],
+      entries: [
+        {
+          id: 'trait_1',
+          label: 'Brawler',
+          description: '',
+          categoryId: 'strength',
+          requires: { archetypes: ['human'] },
+          links: { recipes: ['recipe_1'] },
+          modifier: {
+            attributeDeltas: { health: 1, healthCap: 1 },
+            categoryDeltas: { traits: { strength: 1 } },
+          },
+        },
+      ],
     },
-  ],
-  qualities: [
     {
-      id: 'quality_1',
-      name: 'Stoic',
-      description: '',
-      allowedArchetypeIds: ['human'],
+      id: 'qualities',
+      singular: 'Quality',
+      plural: 'Qualities',
+      selection: 'multi',
+      maxSelections: 3,
+      entries: [
+        {
+          id: 'quality_1',
+          label: 'Stoic',
+          description: '',
+          requires: { archetypes: ['human'] },
+        },
+      ],
     },
-  ],
-  recipes: [
     {
-      id: 'recipe_1',
-      name: 'Bandage',
-      description: '',
-      materials: ['Cloth'],
-    },
-  ],
-  categoryBonuses: [
-    {
-      categoryId: 'strength',
-      requiredScore: 3,
-      grants: { attributeDeltas: { health: 1 } },
-    },
-  ],
-  archetypeRules: [
-    {
-      archetypeId: 'human',
-      kind: 'excludeCategoryScoreFromGroupRestrictedTraits',
-      groupId: 'organic',
+      id: 'recipes',
+      singular: 'Recipe',
+      plural: 'Recipes',
+      selection: 'catalog',
+      entries: [
+        {
+          id: 'recipe_1',
+          label: 'Bandage',
+          description: '',
+          materials: ['Cloth'],
+        },
+      ],
     },
   ],
   features: {
     quests: true,
-    recipes: true,
     discord: true,
     map: true,
-    modifications: true,
     influenceReport: true,
     relationshipGraph: true,
   },
-  limits: { maxQualities: 3 },
   map: { imageKey: 'map' },
   branding: { appName: 'Fixture App' },
 });
+
+/** Convenience accessors into `baseRuleset()`'s facet collections. */
+const archetypes = (ruleset: RulesetDefinition) => ruleset.facets[0];
+const traits = (ruleset: RulesetDefinition) => ruleset.facets[1];
+const qualities = (ruleset: RulesetDefinition) => ruleset.facets[2];
 
 describe('validateRuleset', () => {
   it('accepts a well-formed fixture ruleset', () => {
@@ -117,112 +149,140 @@ describe('validateRuleset', () => {
     );
   });
 
-  it('flags duplicate ids within a collection', () => {
+  it('flags duplicate category ids within a collection', () => {
     const ruleset = baseRuleset();
-    ruleset.traitCategories = [
-      ...ruleset.traitCategories,
+    traits(ruleset).categories = [
+      ...(traits(ruleset).categories ?? []),
       { id: 'strength', label: 'Strength Again' },
     ];
     const result = validateRuleset(ruleset);
     expect(result.valid).toBe(false);
     expect(result.issues).toContainEqual({
-      path: 'traitCategories[1].id',
-      message: "Duplicate id 'strength' in traitCategories",
+      path: 'facets[1].categories[1].id',
+      message: "Duplicate id 'strength' in facets[1].categories",
     });
   });
 
-  it('flags a trait with an unresolvable categoryId', () => {
+  it('flags duplicate facet collection ids', () => {
     const ruleset = baseRuleset();
-    ruleset.traits[0].categoryId = 'nonexistent';
+    ruleset.facets = [...ruleset.facets, { ...qualities(ruleset) }];
     const result = validateRuleset(ruleset);
+    expect(result.valid).toBe(false);
     expect(result.issues).toContainEqual({
-      path: 'traits[0].categoryId',
-      message: "Unknown traitCategory id 'nonexistent'",
+      path: 'facets[4].id',
+      message: "Duplicate id 'qualities' in facets",
     });
   });
 
-  it('flags a trait/quality with an unresolvable allowedArchetypeId', () => {
+  it('flags an entry with an unresolvable categoryId', () => {
     const ruleset = baseRuleset();
-    ruleset.traits[0].allowedArchetypeIds = ['nonexistent'];
-    ruleset.qualities[0].allowedArchetypeIds = ['nonexistent'];
+    traits(ruleset).entries[0].categoryId = 'nonexistent';
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'traits[0].allowedArchetypeIds[0]',
-      message: "Unknown archetype id 'nonexistent'",
-    });
-    expect(result.issues).toContainEqual({
-      path: 'qualities[0].allowedArchetypeIds[0]',
-      message: "Unknown archetype id 'nonexistent'",
+      path: 'facets[1].entries[0].categoryId',
+      message: "Unknown category id 'nonexistent' in facet collection 'traits'",
     });
   });
 
-  it('flags a trait with an unresolvable recipeId', () => {
+  it('flags an entry with an unresolvable requires id', () => {
     const ruleset = baseRuleset();
-    ruleset.traits[0].recipeIds = ['nonexistent'];
+    traits(ruleset).entries[0].requires = { archetypes: ['nonexistent'] };
+    qualities(ruleset).entries[0].requires = { archetypes: ['nonexistent'] };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'traits[0].recipeIds[0]',
-      message: "Unknown recipe id 'nonexistent'",
+      path: 'facets[1].entries[0].requires.archetypes[0]',
+      message:
+        "Unknown entry id 'nonexistent' in facet collection 'archetypes'",
+    });
+    expect(result.issues).toContainEqual({
+      path: 'facets[2].entries[0].requires.archetypes[0]',
+      message:
+        "Unknown entry id 'nonexistent' in facet collection 'archetypes'",
+    });
+  });
+
+  it('flags an entry with an unresolvable links id', () => {
+    const ruleset = baseRuleset();
+    traits(ruleset).entries[0].links = { recipes: ['nonexistent'] };
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'facets[1].entries[0].links.recipes[0]',
+      message: "Unknown entry id 'nonexistent' in facet collection 'recipes'",
     });
   });
 
   it('flags modifier keys that resolve to nothing', () => {
     const ruleset = baseRuleset();
-    ruleset.traits[0].modifier = {
+    traits(ruleset).entries[0].modifier = {
       attributeDeltas: { nonexistent: 1 },
-      categoryDeltas: { nonexistent: 1 },
+      categoryDeltas: { traits: { nonexistent: 1 } },
     };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'traits[0].modifier.attributeDeltas.nonexistent',
+      path: 'facets[1].entries[0].modifier.attributeDeltas.nonexistent',
       message: "Unknown attribute id 'nonexistent'",
     });
     expect(result.issues).toContainEqual({
-      path: 'traits[0].modifier.categoryDeltas.nonexistent',
-      message: "Unknown traitCategory id 'nonexistent'",
+      path: 'facets[1].entries[0].modifier.categoryDeltas.traits.nonexistent',
+      message: "Unknown category id 'nonexistent' in facet collection 'traits'",
+    });
+  });
+
+  it('flags a categoryDeltas key naming an unknown facet collection', () => {
+    const ruleset = baseRuleset();
+    traits(ruleset).entries[0].modifier = {
+      categoryDeltas: { nonexistent: { strength: 1 } },
+    };
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'facets[1].entries[0].modifier.categoryDeltas.nonexistent',
+      message: "Unknown facet collection id 'nonexistent'",
     });
   });
 
   it('flags a delta targeting a non-numeric attribute', () => {
     const ruleset = baseRuleset();
-    ruleset.traits[0].modifier = { attributeDeltas: { homeworld: 1 } };
+    traits(ruleset).entries[0].modifier = {
+      attributeDeltas: { homeworld: 1 },
+    };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'traits[0].modifier.attributeDeltas.homeworld',
+      path: 'facets[1].entries[0].modifier.attributeDeltas.homeworld',
       message:
         "Attribute 'homeworld' is 'text'; only 'number' attributes accept deltas",
     });
   });
 
-  it('flags an archetype group that does not resolve', () => {
+  it('flags an entry group that does not resolve', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].groups = ['nonexistent'];
+    archetypes(ruleset).entries[0].groups = ['nonexistent'];
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].groups[0]',
-      message: "Unknown group id 'nonexistent'",
+      path: 'facets[0].entries[0].groups[0]',
+      message:
+        "Unknown group id 'nonexistent' in facet collection 'archetypes'",
     });
   });
 
-  it('flags a missing value for a declared resource or cap', () => {
+  it('flags a missing value for a declared resource or cap on a base entry', () => {
     const ruleset = baseRuleset();
-    delete ruleset.archetypes[0].attributes.stamina;
+    delete archetypes(ruleset).entries[0].attributes!.stamina;
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].attributes.stamina',
+      path: 'facets[0].entries[0].attributes.stamina',
       message: "Missing required attribute 'stamina'",
     });
   });
 
-  it('flags an undeclared attribute id on an archetype', () => {
+  it('flags an undeclared attribute id on a base entry', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].attributes.nonexistent = {
+    archetypes(ruleset).entries[0].attributes!.nonexistent = {
       type: 'number',
       value: 1,
     };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].attributes.nonexistent',
+      path: 'facets[0].entries[0].attributes.nonexistent',
       message:
         "Unknown attribute id 'nonexistent' (not declared in ruleset.attributes)",
     });
@@ -230,23 +290,26 @@ describe('validateRuleset', () => {
 
   it('flags a value whose type contradicts its declaration', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].attributes.health = { type: 'text', value: 'lots' };
+    archetypes(ruleset).entries[0].attributes!.health = {
+      type: 'text',
+      value: 'lots',
+    };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].attributes.health',
+      path: 'facets[0].entries[0].attributes.health',
       message: "Attribute 'health' is declared as 'number' but holds 'text'",
     });
   });
 
   it('flags a ref attribute pointing at a nonexistent id', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].attributes.patron = {
+    archetypes(ruleset).entries[0].attributes!.patron = {
       type: 'ref',
       value: 'nonexistent',
     };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].attributes.patron',
+      path: 'facets[0].entries[0].attributes.patron',
       message:
         "Attribute 'patron' references unknown archetypes id 'nonexistent'",
     });
@@ -254,17 +317,23 @@ describe('validateRuleset', () => {
 
   it('accepts a ref attribute that resolves', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypes[0].attributes.patron = { type: 'ref', value: 'human' };
+    archetypes(ruleset).entries[0].attributes!.patron = {
+      type: 'ref',
+      value: 'human',
+    };
     expect(validateRuleset(ruleset).valid).toBe(true);
   });
 
   it('flags a number outside its declared bounds', () => {
     const ruleset = baseRuleset();
     ruleset.attributes[0] = { ...ruleset.attributes[0], min: 0, max: 10 };
-    ruleset.archetypes[0].attributes.health = { type: 'number', value: 99 };
+    archetypes(ruleset).entries[0].attributes!.health = {
+      type: 'number',
+      value: 99,
+    };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].attributes.health',
+      path: 'facets[0].entries[0].attributes.health',
       message: "Attribute 'health' is 99, above its maximum of 10",
     });
   });
@@ -285,70 +354,120 @@ describe('validateRuleset', () => {
 
   it('flags a category bonus with an unresolvable categoryId', () => {
     const ruleset = baseRuleset();
-    ruleset.categoryBonuses[0].categoryId = 'nonexistent';
+    traits(ruleset).categoryBonuses![0].categoryId = 'nonexistent';
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'categoryBonuses[0].categoryId',
-      message: "Unknown traitCategory id 'nonexistent'",
+      path: 'facets[1].categoryBonuses[0].categoryId',
+      message: "Unknown category id 'nonexistent' in facet collection 'traits'",
     });
   });
 
   it('flags a non-positive-integer requiredScore', () => {
     const ruleset = baseRuleset();
-    ruleset.categoryBonuses[0].requiredScore = 0;
+    traits(ruleset).categoryBonuses![0].requiredScore = 0;
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'categoryBonuses[0].requiredScore',
+      path: 'facets[1].categoryBonuses[0].requiredScore',
       message: 'requiredScore must be a positive integer',
     });
   });
 
   it('flags a category bonus grant key that does not resolve', () => {
     const ruleset = baseRuleset();
-    ruleset.categoryBonuses[0].grants = {
+    traits(ruleset).categoryBonuses![0].grants = {
       attributeDeltas: { nonexistent: 1 },
     };
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'categoryBonuses[0].grants.attributeDeltas.nonexistent',
+      path: 'facets[1].categoryBonuses[0].grants.attributeDeltas.nonexistent',
       message: "Unknown attribute id 'nonexistent'",
     });
   });
 
-  it('flags an archetypeRule with unresolvable ids', () => {
+  it('flags a scoreExclusion with unresolvable ids', () => {
     const ruleset = baseRuleset();
-    ruleset.archetypeRules = [
+    traits(ruleset).scoreExclusions = [
       {
-        archetypeId: 'nonexistent',
-        kind: 'excludeCategoryScoreFromGroupRestrictedTraits',
+        whenCollectionId: 'archetypes',
+        whenEntryId: 'nonexistent',
         groupId: 'nonexistent',
       },
     ];
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'archetypeRules[0].archetypeId',
-      message: "Unknown archetype id 'nonexistent'",
+      path: 'facets[1].scoreExclusions[0].whenEntryId',
+      message:
+        "Unknown entry id 'nonexistent' in facet collection 'archetypes'",
     });
     expect(result.issues).toContainEqual({
-      path: 'archetypeRules[0].groupId',
-      message: "Unknown group id 'nonexistent'",
+      path: 'facets[1].scoreExclusions[0].groupId',
+      message:
+        "Unknown group id 'nonexistent' in facet collection 'archetypes'",
     });
   });
 
-  it('flags a defaultArchetypeId that resolves to nothing', () => {
+  it('flags a scoreExclusion naming an unknown whenCollectionId', () => {
     const ruleset = baseRuleset();
-    ruleset.defaultArchetypeId = 'nonexistent';
+    traits(ruleset).scoreExclusions = [
+      {
+        whenCollectionId: 'nonexistent',
+        whenEntryId: 'x',
+        groupId: 'strength',
+      },
+    ];
     const result = validateRuleset(ruleset);
     expect(result.issues).toContainEqual({
-      path: 'defaultArchetypeId',
-      message: "Unknown archetype id 'nonexistent'",
+      path: 'facets[1].scoreExclusions[0].whenCollectionId',
+      message: "Unknown facet collection id 'nonexistent'",
     });
   });
 
-  it('accepts an omitted defaultArchetypeId', () => {
+  it('flags a defaultEntryId that resolves to nothing', () => {
     const ruleset = baseRuleset();
-    delete ruleset.defaultArchetypeId;
+    archetypes(ruleset).defaultEntryId = 'nonexistent';
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'facets[0].defaultEntryId',
+      message:
+        "Unknown entry id 'nonexistent' in facet collection 'archetypes'",
+    });
+  });
+
+  it('accepts an omitted defaultEntryId', () => {
+    const ruleset = baseRuleset();
+    delete archetypes(ruleset).defaultEntryId;
     expect(validateRuleset(ruleset).valid).toBe(true);
+  });
+
+  it('flags an authored collection that declares catalog entries', () => {
+    const ruleset = baseRuleset();
+    ruleset.facets.push({
+      id: 'modifications',
+      singular: 'Modification',
+      plural: 'Modifications',
+      selection: 'multi',
+      authored: true,
+      entries: [{ id: 'stray', label: 'Stray' }],
+    });
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'facets[4].entries',
+      message: 'an authored collection must declare no catalog entries',
+    });
+  });
+
+  it('flags a catalog collection that declares contributes', () => {
+    const ruleset = baseRuleset();
+    ruleset.facets[3] = {
+      ...ruleset.facets[3],
+      contributes: { deltaRoles: ['resource'] },
+    };
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'facets[3].contributes',
+      message:
+        'a catalog collection is never held by a character, so it cannot contribute to derived stats',
+    });
   });
 
   it('flags a missing feature flag rather than gating the feature off', () => {
@@ -400,11 +519,14 @@ describe('validateRuleset', () => {
       value = 1;
     }
     const ruleset = baseRuleset() as unknown as Record<string, unknown>;
-    (ruleset.archetypes as Array<Record<string, unknown>>)[0].weird =
-      new Weird();
+    (
+      (ruleset.facets as Array<Record<string, unknown>>)[0].entries as Array<
+        Record<string, unknown>
+      >
+    )[0].weird = new Weird();
     const result = validateRuleset(ruleset as unknown as RulesetDefinition);
     expect(result.issues).toContainEqual({
-      path: 'archetypes[0].weird',
+      path: 'facets[0].entries[0].weird',
       message: expect.stringContaining('JSON-serializable'),
     });
   });
@@ -489,31 +611,54 @@ describe('ref resolution across every collection', () => {
   it.each([
     ['traits', 'trait_1'],
     ['qualities', 'quality_1'],
-    ['traitCategories', 'strength'],
-    ['groups', 'organic'],
+    ['archetypes', 'human'],
     ['recipes', 'recipe_1'],
-  ] as const)('resolves a %s ref', (collection, validId) => {
+  ] as const)('resolves a %s ref', (collectionId, validId) => {
     const ruleset = baseRuleset();
     ruleset.attributes.push({
       id: 'pointer',
       label: 'Pointer',
       type: 'ref',
-      refCollection: collection,
+      refCollection: collectionId,
     });
 
-    ruleset.archetypes[0].attributes.pointer = {
+    archetypes(ruleset).entries[0].attributes!.pointer = {
       type: 'ref',
       value: validId,
     };
     expect(validateRuleset(ruleset).valid).toBe(true);
 
-    ruleset.archetypes[0].attributes.pointer = {
+    archetypes(ruleset).entries[0].attributes!.pointer = {
       type: 'ref',
       value: 'nonexistent',
     };
     expect(validateRuleset(ruleset).issues).toContainEqual({
-      path: 'archetypes[0].attributes.pointer',
-      message: `Attribute 'pointer' references unknown ${collection} id 'nonexistent'`,
+      path: 'facets[0].entries[0].attributes.pointer',
+      message: `Attribute 'pointer' references unknown ${collectionId} id 'nonexistent'`,
+    });
+  });
+
+  it('resolves a group ref', () => {
+    const ruleset = baseRuleset();
+    ruleset.attributes.push({
+      id: 'pointer',
+      label: 'Pointer',
+      type: 'ref',
+      refCollection: 'groups',
+    });
+
+    // `groups` is not a facet collection id itself; `resolveRef` only knows
+    // entry ids per collection, so a `groups`-typed ref has nothing to
+    // resolve against and is always reported unknown. This is a deliberate
+    // scope boundary: groups are validated structurally (via `entry.groups`)
+    // rather than through the generic `ref` mechanism.
+    archetypes(ruleset).entries[0].attributes!.pointer = {
+      type: 'ref',
+      value: 'organic',
+    };
+    expect(validateRuleset(ruleset).issues).toContainEqual({
+      path: 'facets[0].entries[0].attributes.pointer',
+      message: "Attribute 'pointer' references unknown groups id 'organic'",
     });
   });
 });

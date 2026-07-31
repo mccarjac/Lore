@@ -25,6 +25,8 @@ import { RootStackParamList } from '@/navigation/types';
 import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
+import { useRuleset } from '@/ruleset';
+import { getPrimaryFacetLabel } from '@/ruleset/facets';
 
 type LocationDetailsRouteProp = RouteProp<
   RootStackParamList,
@@ -41,6 +43,7 @@ export const LocationDetailsScreen: React.FC = () => {
   const [characters, setCharacters] = useState<GameCharacter[]>([]);
   const { colors: themeColors } = useTheme();
   const commonStyles = useCommonStyles();
+  const { ruleset } = useRuleset();
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -250,7 +253,9 @@ export const LocationDetailsScreen: React.FC = () => {
     >
       <View style={styles.characterInfo}>
         <Text style={styles.characterName}>{character.name}</Text>
-        <Text style={styles.characterSpecies}>{character.archetypeId}</Text>
+        <Text style={styles.characterSpecies}>
+          {getPrimaryFacetLabel(character, ruleset)}
+        </Text>
       </View>
       <View
         style={[

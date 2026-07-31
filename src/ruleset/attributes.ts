@@ -33,15 +33,6 @@ export type AttributeValue =
 
 export type AttributeType = AttributeValue['type'];
 
-/** Ruleset collections a `ref` attribute can point into. */
-export type RefCollection =
-  | 'archetypes'
-  | 'traits'
-  | 'qualities'
-  | 'traitCategories'
-  | 'groups'
-  | 'recipes';
-
 /**
  * What an attribute *means*, as opposed to what it stores.
  *
@@ -69,8 +60,12 @@ export interface AttributeDefinition {
   role?: AttributeRole;
   /** For role 'resource': the id of the `cap` attribute holding its ceiling. */
   capAttributeId?: string;
-  /** For type 'ref': which collection the id must resolve into. */
-  refCollection?: RefCollection;
+  /**
+   * For type 'ref': which ruleset facet collection the id must resolve into
+   * (a `RulesetDefinition.facets[].id`). A plain string rather than a closed
+   * union — a ruleset declares any number of collections under any ids.
+   */
+  refCollection?: string;
   /** For type 'number': inclusive bounds enforced by the validator. */
   min?: number;
   max?: number;
@@ -194,7 +189,7 @@ export const validateAttributeBag = (
   options: {
     /** Ids that must be present. Omit to require none. */
     required?: string[];
-    resolveRef?: (collection: RefCollection, id: string) => boolean;
+    resolveRef?: (collectionId: string, id: string) => boolean;
   } = {}
 ): AttributeIssue[] => {
   const issues: AttributeIssue[] = [];

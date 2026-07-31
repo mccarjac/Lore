@@ -46,9 +46,21 @@ describe('CharacterStatsScreen', () => {
     installFocusEffectOnce();
 
     storage.loadCharacters.mockResolvedValue([
-      makeCharacter({ id: 'c1', name: 'Bram', archetypeId: 'scholar' }),
-      makeCharacter({ id: 'c2', name: 'Wren', archetypeId: 'wanderer' }),
-      makeCharacter({ id: 'c3', name: 'Sela', archetypeId: 'wanderer' }),
+      makeCharacter({
+        id: 'c1',
+        name: 'Bram',
+        facets: { lineages: ['scholar'] },
+      }),
+      makeCharacter({
+        id: 'c2',
+        name: 'Wren',
+        facets: { lineages: ['wanderer'] },
+      }),
+      makeCharacter({
+        id: 'c3',
+        name: 'Sela',
+        facets: { lineages: ['wanderer'] },
+      }),
     ]);
   });
 
@@ -85,8 +97,8 @@ describe('CharacterStatsScreen', () => {
 
     // Slice colors come from the shared palette in declaration order.
     const slices = screen.getByTestId('pie-data').props.children as string;
-    expect(slices).toContain(`Scholar:${CHART_PALETTE[0]}`);
-    expect(slices).toContain(`Wanderer:${CHART_PALETTE[1]}`);
+    expect(slices).toContain(`Wanderer:${CHART_PALETTE[0]}`);
+    expect(slices).toContain(`Scholar:${CHART_PALETTE[1]}`);
 
     // The legend must agree — it used to rebuild the palette independently.
     const legendSwatches = screen

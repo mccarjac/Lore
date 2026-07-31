@@ -1,10 +1,15 @@
 /**
- * Storage-level tests for `migrateRulesetFields()` (issues #3-#7).
+ * Storage-level tests for `migrateRulesetFields()` (issues #3-#7, #51).
  *
  * The pure normalization rules live in `rulesetFieldMigration.test.ts`; this
  * file covers what the storage wrapper adds — that it writes only when
  * something actually changed, is safe to re-run on every load, and
  * serializes against concurrent character writes via `runExclusive`.
+ *
+ * No test here calls `configureLore()`, so `migrateRulesetFields()` runs
+ * against the default active ruleset — `exampleRuleset` — whose
+ * `archetypes`/`traits`/`qualities`/`modifications` collections declare the
+ * `legacyField`s these fixtures rely on.
  */
 import {
   importDataset,
@@ -24,11 +29,11 @@ const TS = '2025-01-01T00:00:00.000Z';
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const legacyCharacter = (id: string, species = 'Mutant') => ({
+const legacyCharacter = (id: string, species = 'drifter') => ({
   id,
   name: `Character ${id}`,
   species,
-  perkIds: ['agility_1'],
+  perkIds: ['tough'],
   qualityIds: [],
   factions: [],
   relationships: [],
@@ -38,12 +43,10 @@ const legacyCharacter = (id: string, species = 'Mutant') => ({
   updatedAt: TS,
 });
 
-const currentCharacter = (id: string, archetypeId = 'Mutant') => ({
+const currentCharacter = (id: string, archetypeId = 'drifter') => ({
   id,
   name: `Character ${id}`,
-  archetypeId,
-  traitIds: ['agility_1'],
-  qualityIds: [],
+  facets: { archetypes: [archetypeId], traits: ['tough'], qualities: [] },
   factions: [],
   relationships: [],
   present: false,
@@ -98,9 +101,9 @@ describe('migrateRulesetFields', () => {
     await migrateRulesetFields();
 
     const saved = store[CHARACTER_KEY] as { characters: GameCharacter[] };
-    expect(saved.characters.map(c => c.archetypeId)).toEqual([
-      'Mutant',
-      'Mutant',
+    expect(saved.characters.map(c => c.facets?.archetypes)).toEqual([
+      ['drifter'],
+      ['drifter'],
     ]);
     expect(saved.characters.some(c => 'species' in c)).toBe(false);
   });
@@ -112,7 +115,7 @@ describe('migrateRulesetFields', () => {
           id: 'q1',
           name: 'Quest',
           status: 'NOTSTARTED',
-          desirable: { species: ['Human'] },
+          desirable: { species: ['drifter'] },
           createdAt: TS,
           updatedAt: TS,
         },
@@ -122,9 +125,9 @@ describe('migrateRulesetFields', () => {
     await migrateRulesetFields();
 
     const saved = store[QUEST_KEY] as {
-      quests: { desirable?: { archetypeIds?: string[] } }[];
+      quests: { desirable?: { entries?: { archetypes?: string[] } } }[];
     };
-    expect(saved.quests[0].desirable?.archetypeIds).toEqual(['Human']);
+    expect(saved.quests[0].desirable?.entries?.archetypes).toEqual(['drifter']);
   });
 
   it('does not write when data is already migrated', async () => {
@@ -135,7 +138,7 @@ describe('migrateRulesetFields', () => {
           id: 'q1',
           name: 'Quest',
           status: 'NOTSTARTED',
-          desirable: { archetypeIds: ['Human'] },
+          desirable: { entries: { archetypes: ['drifter'] } },
           createdAt: TS,
           updatedAt: TS,
         },
@@ -202,13 +205,15 @@ describe('migrateRulesetFields', () => {
     const saved = store[CHARACTER_KEY] as { characters: GameCharacter[] };
     const a = saved.characters.find(c => c.id === 'a');
 
-    expect(saved.characters.every(c => c.archetypeId === 'Mutant')).toBe(true);
+    expect(
+      saved.characters.every(c => c.facets?.archetypes?.[0] === 'drifter')
+    ).toBe(true);
     expect(saved.characters.some(c => 'species' in c)).toBe(false);
     expect(a?.present).toBe(true);
   });
 });
 
-describe('import back-compat (issues #3-#7)', () => {
+describe('import back-compat (issues #3-#7, #51)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -217,7 +222,7 @@ describe('import back-compat (issues #3-#7)', () => {
     const store = installStatefulStore({});
 
     const legacyBackup = JSON.stringify({
-      characters: [legacyCharacter('a'), legacyCharacter('b', 'Android')],
+      characters: [legacyCharacter('a'), legacyCharacter('b', 'artisan')],
       factions: [],
       locations: [],
       events: [],
@@ -226,7 +231,7 @@ describe('import back-compat (issues #3-#7)', () => {
           id: 'q1',
           name: 'Quest',
           status: 'NOTSTARTED',
-          desirable: { species: ['Human'] },
+          desirable: { species: ['drifter'] },
           createdAt: TS,
           updatedAt: TS,
         },
@@ -239,15 +244,18 @@ describe('import back-compat (issues #3-#7)', () => {
 
     const characters = (store[CHARACTER_KEY] as { characters: GameCharacter[] })
       .characters;
-    expect(characters.map(c => c.archetypeId)).toEqual(['Mutant', 'Android']);
+    expect(characters.map(c => c.facets?.archetypes)).toEqual([
+      ['drifter'],
+      ['artisan'],
+    ]);
     expect(characters.some(c => 'species' in c)).toBe(false);
 
     const quests = (
       store[QUEST_KEY] as {
-        quests: { desirable?: { archetypeIds?: string[] } }[];
+        quests: { desirable?: { entries?: { archetypes?: string[] } } }[];
       }
     ).quests;
-    expect(quests[0].desirable?.archetypeIds).toEqual(['Human']);
+    expect(quests[0].desirable?.entries?.archetypes).toEqual(['drifter']);
   });
 
   it('importDataset leaves an already-migrated backup unchanged', async () => {
@@ -267,6 +275,6 @@ describe('import back-compat (issues #3-#7)', () => {
 
     const characters = (store[CHARACTER_KEY] as { characters: GameCharacter[] })
       .characters;
-    expect(characters[0].archetypeId).toBe('Mutant');
+    expect(characters[0].facets?.archetypes).toEqual(['drifter']);
   });
 });

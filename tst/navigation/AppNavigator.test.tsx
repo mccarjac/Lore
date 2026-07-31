@@ -78,10 +78,8 @@ const allFeaturesRuleset: RulesetDefinition = {
   ...mechanicsRuleset,
   features: {
     quests: true,
-    recipes: true,
     discord: true,
     map: true,
-    modifications: true,
     influenceReport: true,
     relationshipGraph: true,
   },

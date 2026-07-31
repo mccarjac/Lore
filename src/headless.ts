@@ -19,22 +19,32 @@
 
 export {
   type RulesetDefinition,
-  type Archetype,
-  type ArchetypeGroup,
-  type ArchetypeRule,
-  type CategoryBonusRule,
   type FeatureFlags,
   type Modifier,
-  type Quality,
-  type Recipe,
-  type RulesetLimits,
   type ColorPaletteOverrides,
   type TermKey,
   type TerminologyMap,
-  type Trait,
-  type TraitCategory,
   type AttributeBag,
   type AttributeDefinition,
+  // facets (#51) — a ruleset declares however many of these it needs; the
+  // engine no longer names any collection itself. Pure (no React), so it
+  // belongs in this entry alongside the rest of the schema.
+  type FacetCollection,
+  type FacetEntry,
+  type FacetGroup,
+  type FacetCategory,
+  type FacetBonusRule,
+  type FacetScoreExclusion,
+  type FacetSelection,
+  type FacetStage,
+  findFacetCollection,
+  getFacetIds,
+  getAuthoredFacets,
+  getSingleFacetId,
+  setFacetIds,
+  resolveFacetEntries,
+  getPrimaryFacetLabel,
+  getCategoryScore,
   type RulesetAssets,
   resolveAsset,
   getLabel,
@@ -62,7 +72,6 @@ export {
   type AttributeRole,
   type AttributeType,
   type AttributeValue,
-  type RefCollection,
   num,
   text,
   flag,
@@ -74,6 +83,12 @@ export {
 } from './ruleset/attributes';
 
 export { exampleRuleset } from './ruleset/exampleRuleset';
+export {
+  exampleSeedDataset,
+  type SeedDataset,
+  type SeedFaction,
+  type SeedFactionRelationship,
+} from './ruleset/exampleSeedData';
 
 export {
   configureLore,
@@ -110,7 +125,9 @@ export type {
   GameEvent,
   GameLocation,
   GameQuest,
-  Modification,
+  AuthoredFacetEntry,
+  FacetValue,
+  QuestFacetPreferences,
   Relationship,
   RelationshipStanding,
   QuestStatus,
@@ -125,7 +142,6 @@ export {
   normalizeCharactersRulesetFields,
   normalizeQuestRulesetFields,
   normalizeQuestsRulesetFields,
-  UNKNOWN_ARCHETYPE_ID,
 } from './utils/rulesetFieldMigration';
 
 export { parseDateString, formatEventDate } from './utils/dateUtils';

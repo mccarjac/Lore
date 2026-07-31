@@ -32,7 +32,6 @@ import {
   type GameEvent,
   type GameLocation,
   type GameQuest,
-  type Modification,
   type Relationship,
 } from '@models/types';
 import type { StoredFaction } from '@utils/characterStorage';
@@ -44,6 +43,12 @@ import {
   type AttributeDefinition,
 } from '@/ruleset/attributes';
 import { calculateDerivedStats } from '@/ruleset/derived';
+import {
+  getAuthoredFacets,
+  getFacetIds,
+  getPrimaryFacetLabel,
+  type FacetCollection,
+} from '@/ruleset/facets';
 import { getLabel } from '@/ruleset/terminology';
 import type { Modifier, RulesetDefinition } from '@/ruleset/types';
 import {
@@ -322,9 +327,6 @@ const factionRef = (name: string, lookups: Lookups): string =>
 
 // --- Ruleset-driven rendering -----------------------------------------------
 
-const archetypeLabel = (id: string, ruleset: RulesetDefinition): string =>
-  ruleset.archetypes.find(a => a.id === id)?.label ?? id;
-
 /** `+2` / `-1`, so a delta reads as a change rather than a value. */
 const signed = (delta: number): string =>
   delta > 0 ? `+${delta}` : String(delta);
@@ -339,10 +341,17 @@ const formatModifier = (
     const label = ruleset.attributes.find(a => a.id === id)?.label ?? id;
     parts.push(`${label} ${signed(delta)}`);
   });
-  Object.entries(modifier?.categoryDeltas ?? {}).forEach(([id, delta]) => {
-    const label = ruleset.traitCategories.find(c => c.id === id)?.label ?? id;
-    parts.push(`${label} ${signed(delta)}`);
-  });
+  Object.entries(modifier?.categoryDeltas ?? {}).forEach(
+    ([collectionId, deltas]) => {
+      const target = ruleset.facets.find(c => c.id === collectionId);
+      Object.entries(deltas).forEach(([categoryId, delta]) => {
+        const label =
+          target?.categories?.find(c => c.id === categoryId)?.label ??
+          categoryId;
+        parts.push(`${label} ${signed(delta)}`);
+      });
+    }
+  );
 
   return parts.join(', ');
 };
@@ -352,7 +361,9 @@ const formatModifier = (
  *
  * A `role: 'resource'` attribute is printed against its cap (`4 / 6`) and the
  * cap's own row suppressed — two rows for one pair reads as a bug. Non-numeric
- * attributes have no computed value and come from the resolved bag.
+ * attributes have no computed value and come from the resolved bag. One score
+ * block per facet collection that declares `categories` — the generalized
+ * form of the old single hardcoded trait-category scores block.
  */
 const attributeRows = (
   character: GameCharacter,
@@ -387,76 +398,81 @@ const attributeRows = (
     .filter(definition => !capIds.has(definition.id))
     .map(definition => row(definition.label, esc(valueOf(definition) ?? '')));
 
-  const scores = ruleset.traitCategories
-    .map(category => {
-      const score = derived.categoryScores.get(category.id);
-      return score ? row(category.label, esc(String(score))) : '';
+  const scoreFields = ruleset.facets
+    .filter(collection => (collection.categories?.length ?? 0) > 0)
+    .map(collection => {
+      const scores = derived.categoryScores[collection.id] ?? {};
+      const scoreRows = (collection.categories ?? [])
+        .map(category => {
+          const score = scores[category.id];
+          return score ? row(category.label, esc(String(score))) : '';
+        })
+        .filter(Boolean);
+      return field(
+        `${collection.categorySingular ?? 'Category'} Scores`,
+        facts(scoreRows)
+      );
     })
-    .filter(Boolean);
+    .join('');
 
-  return (
-    field('Attributes', facts(rows)) +
-    field(
-      `${getLabel(ruleset, 'traitCategory.singular')} Scores`,
-      facts(scores)
-    )
-  );
+  return field('Attributes', facts(rows)) + scoreFields;
 };
 
-const traitList = (
+/**
+ * A character's held entries in one facet collection, whether picked from a
+ * catalog or (for an `authored` collection) written per character. The
+ * generalized form of the old dedicated `traitList`/`qualityList`/
+ * `modificationList`, now driven by however many collections the ruleset
+ * declares rather than exactly those three.
+ */
+const facetList = (
+  collection: FacetCollection,
   character: GameCharacter,
   ruleset: RulesetDefinition
-): string =>
-  bullets(
-    character.traitIds.map(id => {
-      const trait = ruleset.traits.find(t => t.id === id);
-      if (!trait) {
-        return `<span class="unresolved">${esc(id)}</span>`;
-      }
-      const category = ruleset.traitCategories.find(
-        c => c.id === trait.categoryId
-      );
-      const modifier = formatModifier(trait.modifier, ruleset);
-      return [
-        `<strong>${esc(trait.name)}</strong>`,
-        category ? badge(category.label) : '',
-        trait.description ? `<br />${prose(trait.description)}` : '',
-        modifier ? `<br /><span class="delta">${esc(modifier)}</span>` : '',
-      ].join('');
-    })
-  );
+): string => {
+  const catalogItems = getFacetIds(character, collection.id).map(id => {
+    const entry = collection.entries.find(e => e.id === id);
+    if (!entry) {
+      return `<span class="unresolved">${esc(id)}</span>`;
+    }
+    const category = collection.categories?.find(
+      c => c.id === entry.categoryId
+    );
+    const modifier = formatModifier(entry.modifier, ruleset);
+    const linked = Object.entries(entry.links ?? {})
+      .map(([targetCollectionId, ids]) => {
+        const target = ruleset.facets.find(c => c.id === targetCollectionId);
+        if (!target) return '';
+        const names = ids
+          .map(linkedId => target.entries.find(e => e.id === linkedId)?.label)
+          .filter((name): name is string => Boolean(name));
+        return names.length
+          ? `<br /><em>${esc(target.plural)}:</em> ${esc(names.join(', '))}`
+          : '';
+      })
+      .join('');
+    return [
+      `<strong>${esc(entry.label)}</strong>`,
+      category ? badge(category.label) : '',
+      entry.description ? `<br />${prose(entry.description)}` : '',
+      modifier ? `<br /><span class="delta">${esc(modifier)}</span>` : '',
+      linked,
+    ].join('');
+  });
 
-const qualityList = (
-  character: GameCharacter,
-  ruleset: RulesetDefinition
-): string =>
-  bullets(
-    character.qualityIds.map(id => {
-      const quality = ruleset.qualities.find(q => q.id === id);
-      return quality
-        ? `<strong>${esc(quality.name)}</strong>${
-            quality.description ? `<br />${prose(quality.description)}` : ''
-          }`
-        : `<span class="unresolved">${esc(id)}</span>`;
-    })
-  );
+  const authoredItems = collection.authored
+    ? getAuthoredFacets(character, collection.id).map(entry => {
+        const modifier = formatModifier(entry.modifier, ruleset);
+        return [
+          `<strong>${esc(entry.name)}</strong>`,
+          entry.description ? `<br />${prose(entry.description)}` : '',
+          modifier ? `<br /><span class="delta">${esc(modifier)}</span>` : '',
+        ].join('');
+      })
+    : [];
 
-const modificationList = (
-  modifications: Modification[],
-  ruleset: RulesetDefinition
-): string =>
-  bullets(
-    modifications.map(modification => {
-      const modifier = formatModifier(modification.modifier, ruleset);
-      return [
-        `<strong>${esc(modification.name)}</strong>`,
-        modification.description
-          ? `<br />${prose(modification.description)}`
-          : '',
-        modifier ? `<br /><span class="delta">${esc(modifier)}</span>` : '',
-      ].join('');
-    })
-  );
+  return bullets([...catalogItems, ...authoredItems]);
+};
 
 const relationshipList = (
   relationships: Relationship[],
@@ -489,6 +505,7 @@ const characterEntry = (
 ): string => {
   const appearsIn = lookups.eventsByCharacter.get(character.id) ?? [];
   const assigned = lookups.questsByCharacter.get(character.id) ?? [];
+  const primaryCollection = ruleset.facets.find(c => c.selection === 'single');
 
   return `<div class="entry" id="${esc(anchor('character', character.id))}">
     <h2>${esc(character.name)}${character.retired ? badge('Retired') : ''}${
@@ -496,10 +513,12 @@ const characterEntry = (
     }</h2>
     ${gallery(character, images, character.name)}
     ${facts([
-      row(
-        getLabel(ruleset, 'archetype.singular'),
-        esc(archetypeLabel(character.archetypeId, ruleset))
-      ),
+      primaryCollection
+        ? row(
+            primaryCollection.singular,
+            esc(getPrimaryFacetLabel(character, ruleset) ?? '')
+          )
+        : '',
       row('Occupation', character.occupation ? esc(character.occupation) : ''),
       row(
         'Location',
@@ -509,16 +528,15 @@ const characterEntry = (
       ),
     ])}
     ${attributeRows(character, ruleset)}
-    ${field(getLabel(ruleset, 'trait.plural'), traitList(character, ruleset))}
-    ${field(getLabel(ruleset, 'quality.plural'), qualityList(character, ruleset))}
-    ${
-      ruleset.features.modifications
-        ? field(
-            getLabel(ruleset, 'modification.plural'),
-            modificationList(character.modifications ?? [], ruleset)
-          )
-        : ''
-    }
+    ${ruleset.facets
+      .filter(
+        collection =>
+          collection.selection !== 'catalog' && collection !== primaryCollection
+      )
+      .map(collection =>
+        field(collection.plural, facetList(collection, character, ruleset))
+      )
+      .join('')}
     ${field(
       'Factions',
       bullets(
@@ -697,8 +715,9 @@ const eventEntry = (
   </div>`;
 
 /**
- * The desirable/undesirable attribute preferences on a quest, resolved to
- * labels. Four parallel id lists, each into a different ruleset collection.
+ * The desirable/undesirable facet preferences on a quest, resolved to
+ * labels. Two maps — entries and categories — each keyed by collection id,
+ * the generalized form of the old four parallel id lists.
  */
 const preferenceList = (
   preferences: GameQuest['desirable'],
@@ -708,34 +727,25 @@ const preferenceList = (
     return '';
   }
 
-  const resolve = <T extends { id: string }>(
-    ids: string[] | undefined,
-    collection: T[],
-    labelOf: (item: T) => string
-  ): string[] =>
-    (ids ?? []).map(id => {
-      const item = collection.find(candidate => candidate.id === id);
-      return item ? labelOf(item) : id;
-    });
+  const entryNames = Object.entries(preferences.entries ?? {}).flatMap(
+    ([collectionId, ids]) => {
+      const collection = ruleset.facets.find(c => c.id === collectionId);
+      return ids.map(
+        id => collection?.entries.find(e => e.id === id)?.label ?? id
+      );
+    }
+  );
 
-  const named = [
-    ...resolve(
-      preferences.archetypeIds,
-      ruleset.archetypes,
-      archetype => archetype.label
-    ),
-    ...resolve(
-      preferences.traitCategoryIds,
-      ruleset.traitCategories,
-      category => category.label
-    ),
-    ...resolve(preferences.traitIds, ruleset.traits, trait => trait.name),
-    ...resolve(
-      preferences.qualityIds,
-      ruleset.qualities,
-      quality => quality.name
-    ),
-  ];
+  const categoryNames = Object.entries(preferences.categories ?? {}).flatMap(
+    ([collectionId, ids]) => {
+      const collection = ruleset.facets.find(c => c.id === collectionId);
+      return ids.map(
+        id => collection?.categories?.find(c => c.id === id)?.label ?? id
+      );
+    }
+  );
+
+  const named = [...entryNames, ...categoryNames];
 
   return named.length ? esc(named.join(', ')) : '';
 };

@@ -36,21 +36,29 @@ export const FactionStatsScreen: React.FC = () => {
   const [includeRetired, setIncludeRetired] = useState<boolean>(false);
 
   /**
-   * Built once per ruleset rather than per bar. A category may declare its own
+   * Built once per ruleset rather than per bar, one color map per facet
+   * collection that declares `categories`. A category may declare its own
    * `color`; anything that doesn't gets a cycled palette entry, so a ruleset
-   * with more categories than the old twelve-entry map still renders them all
+   * with more categories than the old twelve-entry map — or more scored
+   * collections than the old single hardcoded one — still renders them all
    * distinctly instead of collapsing onto one accent color.
    */
-  const categoryColors = React.useMemo(
-    () =>
-      new Map(
-        ruleset.traitCategories.map((category, index) => [
-          category.id,
-          category.color ?? colorForIndex(index),
-        ])
-      ),
-    [ruleset]
-  );
+  const categoryColors = React.useMemo(() => {
+    const map = new Map<string, Map<string, string>>();
+    ruleset.facets.forEach(collection => {
+      if (!collection.categories) return;
+      map.set(
+        collection.id,
+        new Map(
+          collection.categories.map((category, index) => [
+            category.id,
+            category.color ?? colorForIndex(index),
+          ])
+        )
+      );
+    });
+    return map;
+  }, [ruleset]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -133,20 +141,30 @@ export const FactionStatsScreen: React.FC = () => {
     }
   };
 
-  const renderPerkTagBar = (tag: string, count: number, maxCount: number) => {
+  const getCategoryColor = (collectionId: string, categoryId: string): string =>
+    categoryColors.get(collectionId)?.get(categoryId) ??
+    themeColors.accent.primary;
+
+  const renderCategoryBar = (
+    collectionId: string,
+    categoryId: string,
+    categoryLabel: string,
+    count: number,
+    maxCount: number
+  ) => {
     const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
     const widthPercentage = `${Math.max(percentage, 5)}%` as const; // Minimum 5% width for visibility
 
     return (
-      <View key={tag} style={styles.perkTagRow}>
-        <Text style={styles.perkTagLabel}>{categoryLabel(tag)}</Text>
+      <View key={`${collectionId}:${categoryId}`} style={styles.perkTagRow}>
+        <Text style={styles.perkTagLabel}>{categoryLabel}</Text>
         <View style={styles.perkTagBarContainer}>
           <View
             style={[
               styles.perkTagBar,
               {
                 width: widthPercentage,
-                backgroundColor: getCategoryColor(tag),
+                backgroundColor: getCategoryColor(collectionId, categoryId),
               },
             ]}
           >
@@ -156,13 +174,6 @@ export const FactionStatsScreen: React.FC = () => {
       </View>
     );
   };
-
-  const getCategoryColor = (categoryId: string): string =>
-    categoryColors.get(categoryId) ?? themeColors.accent.primary;
-
-  const categoryLabel = (categoryId: string): string =>
-    ruleset.traitCategories.find(category => category.id === categoryId)
-      ?.label ?? categoryId;
 
   const renderFactionCard = (stats: FactionStats) => {
     const isSelected = selectedFaction === stats.factionName;
@@ -207,125 +218,72 @@ export const FactionStatsScreen: React.FC = () => {
 
         {isSelected && (
           <View style={styles.expandedContent}>
-            {/* Perk Tags Analysis */}
-            <View style={styles.sectionWithInfo}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  {label('trait.singular')} {label('traitCategory.singular')}{' '}
-                  Analysis
-                </Text>
-                <InfoButton
-                  title={`${label('trait.singular')} ${label(
-                    'traitCategory.singular'
-                  )} Analysis`}
-                  content={`This graph shows the distribution of ${label(
-                    'trait.singular',
-                    'lower'
-                  )} ${label(
-                    'traitCategory.plural',
-                    'lower'
-                  )} among faction members. Each bar represents the total count of ${label(
-                    'trait.plural',
-                    'lower'
-                  )} with that ${label(
-                    'traitCategory.singular',
-                    'lower'
-                  )} across all members. For example, if 5 members each have 2 Strength ${label(
-                    'trait.plural',
-                    'lower'
-                  )}, the Strength bar would show 10. This helps identify the faction's collective strengths and specializations.`}
-                />
-              </View>
-              {stats.topPerkTags.length > 0 ? (
-                <View style={styles.perkTagsContainer}>
-                  {stats.topPerkTags.map(item =>
-                    renderPerkTagBar(
-                      item.tag,
-                      item.count,
-                      stats.topPerkTags[0].count
-                    )
+            {/*
+              One category-analysis bar chart per facet collection that
+              declares `categories`, and one "Common X" list per non-catalog
+              collection — the generalized form of the old hardcoded Perk
+              Tags Analysis / Common Perks / Common Distinctions / Species
+              Distribution blocks. A ruleset with more or fewer scored
+              collections renders more or fewer sections.
+            */}
+            {stats.facetCollections.map(collectionStats => (
+              <React.Fragment key={collectionStats.collectionId}>
+                {collectionStats.topCategories.length > 0 && (
+                  <View style={styles.sectionWithInfo}>
+                    <View style={styles.sectionHeader}>
+                      <Text style={styles.sectionTitle}>
+                        {collectionStats.singular}{' '}
+                        {collectionStats.categorySingular ?? 'Category'}{' '}
+                        Analysis
+                      </Text>
+                      <InfoButton
+                        title={`${collectionStats.singular} ${
+                          collectionStats.categorySingular ?? 'Category'
+                        } Analysis`}
+                        content={`This graph shows the distribution of ${collectionStats.singular.toLowerCase()} ${(
+                          collectionStats.categoryPlural ?? 'categories'
+                        ).toLowerCase()} among faction members. Each bar represents the total count of ${collectionStats.plural.toLowerCase()} with that ${(
+                          collectionStats.categorySingular ?? 'category'
+                        ).toLowerCase()} across all members. This helps identify the faction's collective strengths and specializations.`}
+                      />
+                    </View>
+                    <View style={styles.perkTagsContainer}>
+                      {collectionStats.topCategories.map(item =>
+                        renderCategoryBar(
+                          collectionStats.collectionId,
+                          item.categoryId,
+                          item.label,
+                          item.count,
+                          collectionStats.topCategories[0].count
+                        )
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                <CollapsibleSection
+                  title={`Common ${collectionStats.plural}`}
+                  defaultCollapsed={true}
+                >
+                  {collectionStats.topEntries.length > 0 ? (
+                    <View style={styles.listContainer}>
+                      {collectionStats.topEntries.map((entry, index) => (
+                        <View key={index} style={styles.listItem}>
+                          <Text style={styles.listItemName}>{entry.label}</Text>
+                          <Text style={styles.listItemValue}>
+                            {entry.count} ({entry.percentage.toFixed(0)}%)
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.emptyText}>
+                      No {collectionStats.plural.toLowerCase()} found
+                    </Text>
                   )}
-                </View>
-              ) : (
-                <Text style={styles.emptyText}>
-                  No {label('trait.singular', 'lower')}{' '}
-                  {label('traitCategory.plural', 'lower')} found for this
-                  faction
-                </Text>
-              )}
-            </View>
-
-            {/* Common Perks */}
-            <CollapsibleSection
-              title={`Common ${label('trait.plural')}`}
-              defaultCollapsed={true}
-            >
-              {stats.commonPerks.length > 0 ? (
-                <View style={styles.listContainer}>
-                  {stats.commonPerks.map((perk, index) => (
-                    <View key={index} style={styles.listItem}>
-                      <Text style={styles.listItemName}>{perk.name}</Text>
-                      <Text style={styles.listItemValue}>
-                        {perk.count} ({perk.percentage.toFixed(0)}%)
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.emptyText}>
-                  No {label('trait.plural', 'lower')} found
-                </Text>
-              )}
-            </CollapsibleSection>
-
-            {/* Common Distinctions */}
-            <CollapsibleSection
-              title={`Common ${label('quality.plural')}`}
-              defaultCollapsed={true}
-            >
-              {stats.commonDistinctions.length > 0 ? (
-                <View style={styles.listContainer}>
-                  {stats.commonDistinctions.map((distinction, index) => (
-                    <View key={index} style={styles.listItem}>
-                      <Text style={styles.listItemName}>
-                        {distinction.name}
-                      </Text>
-                      <Text style={styles.listItemValue}>
-                        {distinction.count} ({distinction.percentage.toFixed(0)}
-                        %)
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.emptyText}>
-                  No {label('quality.plural', 'lower')} found
-                </Text>
-              )}
-            </CollapsibleSection>
-
-            {/* Species Distribution */}
-            <CollapsibleSection
-              title={`${label('archetype.plural')} Distribution`}
-              defaultCollapsed={true}
-            >
-              {Object.keys(stats.archetypeDistribution).length > 0 ? (
-                <View style={styles.listContainer}>
-                  {Object.entries(stats.archetypeDistribution)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([species, count]) => (
-                      <View key={species} style={styles.listItem}>
-                        <Text style={styles.listItemName}>{species}</Text>
-                        <Text style={styles.listItemValue}>{count}</Text>
-                      </View>
-                    ))}
-                </View>
-              ) : (
-                <Text style={styles.emptyText}>
-                  No {label('archetype.singular', 'lower')} data available
-                </Text>
-              )}
-            </CollapsibleSection>
+                </CollapsibleSection>
+              </React.Fragment>
+            ))}
 
             {/* Relationships */}
             {(stats.alliedFactions.length > 0 ||
@@ -396,13 +354,7 @@ export const FactionStatsScreen: React.FC = () => {
                     </Text>
                     <InfoButton
                       title="Combined Force Analysis"
-                      content={`This analysis shows the total military strength when a faction and its allies work together. 'Direct Members' are the faction's own members. 'Allied Members' are members from allied factions. 'Total Combined' is the sum of all members. 'Strength Multiplier' shows how much stronger the faction is with allies compared to fighting alone. The ${label(
-                        'trait.singular',
-                        'lower'
-                      )} ${label(
-                        'traitCategory.singular',
-                        'lower'
-                      )} bars below show the combined capabilities of all allied forces.`}
+                      content="This analysis shows the total military strength when a faction and its allies work together. 'Direct Members' are the faction's own members. 'Allied Members' are members from allied factions. 'Total Combined' is the sum of all members. 'Strength Multiplier' shows how much stronger the faction is with allies compared to fighting alone. The bars below show the combined capabilities of all allied forces, category by category."
                     />
                   </View>
                   <View style={styles.combinedAnalysisCard}>
@@ -452,21 +404,42 @@ export const FactionStatsScreen: React.FC = () => {
                   </View>
 
                   <Text style={styles.combinedAnalysisNote}>
-                    Combined perk tags with allies show total capability when
-                    working together
+                    Combined category scores with allies show total capability
+                    when working together
                   </Text>
 
-                  <View style={styles.perkTagsContainer}>
-                    {Object.entries(combinedAnalysis.combinedPerkTags)
-                      .filter(([, count]) => count > 0)
-                      .sort((a, b) => b[1] - a[1])
-                      .slice(0, 8)
-                      .map(([tag, count], index, array) => {
-                        // Use the highest count from the sorted array, or default to 1
-                        const maxCount = array.length > 0 ? array[0][1] : 1;
-                        return renderPerkTagBar(tag, count, maxCount);
-                      })}
-                  </View>
+                  {Object.entries(combinedAnalysis.combinedCategoryCounts).map(
+                    ([collectionId, counts]) => {
+                      const collection = ruleset.facets.find(
+                        c => c.id === collectionId
+                      );
+                      const entries = Object.entries(counts)
+                        .filter(([, count]) => count > 0)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 8);
+                      if (entries.length === 0) return null;
+                      const maxCount = entries[0][1];
+
+                      return (
+                        <View
+                          key={collectionId}
+                          style={styles.perkTagsContainer}
+                        >
+                          {entries.map(([categoryId, count]) =>
+                            renderCategoryBar(
+                              collectionId,
+                              categoryId,
+                              collection?.categories?.find(
+                                c => c.id === categoryId
+                              )?.label ?? categoryId,
+                              count,
+                              maxCount
+                            )
+                          )}
+                        </View>
+                      );
+                    }
+                  )}
                 </View>
               )}
 
