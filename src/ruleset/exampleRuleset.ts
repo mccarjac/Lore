@@ -222,7 +222,6 @@ export const exampleRuleset: RulesetDefinition = {
     quests: true,
     discord: true,
     map: false,
-    modifications: true,
     influenceReport: false,
     relationshipGraph: false,
     characterStats: false,
