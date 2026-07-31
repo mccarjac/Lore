@@ -19,6 +19,7 @@
 import { getConfiguredDataStores } from '@/activeRuleset';
 import { jsonDataStore } from './json';
 import { pdfDataStore } from './pdf';
+import { seedDataStore } from './seed';
 import type { DataStore } from './types';
 
 /**
@@ -30,6 +31,15 @@ import type { DataStore } from './types';
  * matter in when something has gone wrong. GitHub needs a token and a
  * repository, so it — like any consumer-authored store — is an opt-in
  * registration.
+ *
+ * The example-campaign seed store (#51) is dev-only, appended last so it
+ * never precedes a consumer's real data stores. `__DEV__` is a React Native
+ * global, always defined in this build target, so no import is needed.
  */
-export const getActiveDataStores = (): DataStore[] =>
-  getConfiguredDataStores() ?? [jsonDataStore, pdfDataStore];
+export const getActiveDataStores = (): DataStore[] => {
+  const configured = getConfiguredDataStores();
+  if (configured) return configured;
+
+  const defaults = [jsonDataStore, pdfDataStore];
+  return __DEV__ ? [...defaults, seedDataStore] : defaults;
+};

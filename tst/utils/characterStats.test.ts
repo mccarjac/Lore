@@ -1,15 +1,21 @@
-import { calculateCharacterStats as calculateWith } from '@/utils/characterStats';
+import {
+  calculateCharacterStats as calculateWith,
+  type CharacterStats,
+} from '@/utils/characterStats';
 import { GameCharacter, RelationshipStanding } from '@/models/types';
 import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
 
 /**
  * Aggregation is ruleset-independent for counts and only consults the ruleset
- * to turn trait/quality ids into names — so this runs against the neutral
- * fixture. Asserting on Afterworlds ids here would have proved the util works
- * for exactly one ruleset.
+ * to turn facet ids into labels — so this runs against the neutral fixture.
+ * Asserting on Afterworlds ids here would have proved the util works for
+ * exactly one ruleset.
  */
 const calculateCharacterStats = (characters: GameCharacter[]) =>
   calculateWith(characters, mechanicsRuleset);
+
+const collectionStats = (stats: CharacterStats, collectionId: string) =>
+  stats.facetCollections.find(c => c.collectionId === collectionId)!;
 
 describe('characterStats', () => {
   describe('calculateCharacterStats', () => {
@@ -17,9 +23,7 @@ describe('characterStats', () => {
       {
         id: '1',
         name: 'Alice',
-        archetypeId: 'tinker',
-        traitIds: [],
-        qualityIds: [],
+        facets: { callings: ['tinker'] },
         factions: [
           { name: 'Brotherhood', standing: RelationshipStanding.Ally },
         ],
@@ -30,9 +34,7 @@ describe('characterStats', () => {
       {
         id: '2',
         name: 'Bob',
-        archetypeId: 'sentinel',
-        traitIds: [],
-        qualityIds: [],
+        facets: { callings: ['sentinel'] },
         factions: [
           { name: 'Brotherhood', standing: RelationshipStanding.Friend },
           { name: 'Raiders', standing: RelationshipStanding.Enemy },
@@ -44,9 +46,7 @@ describe('characterStats', () => {
       {
         id: '3',
         name: 'Charlie',
-        archetypeId: 'tinker',
-        traitIds: [],
-        qualityIds: [],
+        facets: { callings: ['tinker'] },
         factions: [{ name: 'Raiders', standing: RelationshipStanding.Ally }],
         relationships: [],
         createdAt: '2025-01-01',
@@ -66,10 +66,10 @@ describe('characterStats', () => {
       expect(stats.totalCharacters).toBe(3);
     });
 
-    it('should calculate species distribution', () => {
+    it('should calculate calling distribution', () => {
       const stats = calculateCharacterStats(mockCharacters);
 
-      expect(stats.archetypeDistribution).toEqual({
+      expect(collectionStats(stats, 'callings').counts).toEqual({
         tinker: 2,
         sentinel: 1,
       });
@@ -104,9 +104,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Loner',
-          archetypeId: 'artisan',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -126,9 +124,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Solo',
-          archetypeId: 'revenant',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['revenant'] },
           factions: [
             { name: 'Machines', standing: RelationshipStanding.Neutral },
           ],
@@ -141,7 +137,9 @@ describe('characterStats', () => {
       const stats = calculateCharacterStats(characters);
 
       expect(stats.totalCharacters).toBe(1);
-      expect(stats.archetypeDistribution).toEqual({ revenant: 1 });
+      expect(collectionStats(stats, 'callings').counts).toEqual({
+        revenant: 1,
+      });
       expect(stats.factionDistribution).toEqual({ Machines: 1 });
     });
 
@@ -150,9 +148,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Multi-faction',
-          archetypeId: 'tinker',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [
             { name: 'Faction A', standing: RelationshipStanding.Ally },
             { name: 'Faction B', standing: RelationshipStanding.Friend },
@@ -173,14 +169,12 @@ describe('characterStats', () => {
       });
     });
 
-    it('should handle diverse species distribution', () => {
+    it('should handle diverse calling distribution', () => {
       const characters: GameCharacter[] = [
         {
           id: '1',
           name: 'Char1',
-          archetypeId: 'tinker',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -189,9 +183,7 @@ describe('characterStats', () => {
         {
           id: '2',
           name: 'Char2',
-          archetypeId: 'sentinel',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['sentinel'] },
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -200,9 +192,7 @@ describe('characterStats', () => {
         {
           id: '3',
           name: 'Char3',
-          archetypeId: 'revenant',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['revenant'] },
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -211,9 +201,7 @@ describe('characterStats', () => {
         {
           id: '4',
           name: 'Char4',
-          archetypeId: 'tinker',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [],
           relationships: [],
           createdAt: '2025-01-01',
@@ -223,7 +211,7 @@ describe('characterStats', () => {
 
       const stats = calculateCharacterStats(characters);
 
-      expect(stats.archetypeDistribution).toEqual({
+      expect(collectionStats(stats, 'callings').counts).toEqual({
         tinker: 2,
         sentinel: 1,
         revenant: 1,
@@ -235,9 +223,7 @@ describe('characterStats', () => {
         {
           id: '1',
           name: 'Char1',
-          archetypeId: 'tinker',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [
             { name: 'TestFaction', standing: RelationshipStanding.Ally },
           ],
@@ -248,9 +234,7 @@ describe('characterStats', () => {
         {
           id: '2',
           name: 'Char2',
-          archetypeId: 'tinker',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [
             { name: 'TestFaction', standing: RelationshipStanding.Friend },
           ],
@@ -261,9 +245,7 @@ describe('characterStats', () => {
         {
           id: '3',
           name: 'Char3',
-          archetypeId: 'tinker',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [
             { name: 'TestFaction', standing: RelationshipStanding.Neutral },
           ],
@@ -274,9 +256,7 @@ describe('characterStats', () => {
         {
           id: '4',
           name: 'Char4',
-          archetypeId: 'tinker',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [
             { name: 'TestFaction', standing: RelationshipStanding.Hostile },
           ],
@@ -287,9 +267,7 @@ describe('characterStats', () => {
         {
           id: '5',
           name: 'Char5',
-          archetypeId: 'tinker',
-          traitIds: [],
-          qualityIds: [],
+          facets: { callings: ['tinker'] },
           factions: [
             { name: 'TestFaction', standing: RelationshipStanding.Enemy },
           ],
@@ -310,15 +288,16 @@ describe('characterStats', () => {
       });
     });
 
-    describe('Perk Statistics', () => {
-      it('should calculate most common perks', () => {
+    describe('Knack Statistics', () => {
+      it('should calculate most common knacks', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: ['hammer_hand', 'steady_hand', 'quick_read'],
-            qualityIds: [],
+            facets: {
+              callings: ['tinker'],
+              knacks: ['hammer_hand', 'steady_hand', 'quick_read'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -327,9 +306,10 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            archetypeId: 'tinker',
-            traitIds: ['hammer_hand', 'steady_hand'],
-            qualityIds: [],
+            facets: {
+              callings: ['tinker'],
+              knacks: ['hammer_hand', 'steady_hand'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -338,9 +318,7 @@ describe('characterStats', () => {
           {
             id: '3',
             name: 'Char3',
-            archetypeId: 'tinker',
-            traitIds: ['hammer_hand'],
-            qualityIds: [],
+            facets: { callings: ['tinker'], knacks: ['hammer_hand'] },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -349,24 +327,27 @@ describe('characterStats', () => {
         ];
 
         const stats = calculateCharacterStats(characters);
+        const knacks = collectionStats(stats, 'knacks');
 
-        expect(stats.commonPerks).toHaveLength(3);
-        expect(stats.commonPerks[0]).toEqual({
-          name: 'Hammer Hand',
+        expect(knacks.entries).toHaveLength(3);
+        expect(knacks.entries[0]).toEqual({
+          id: 'hammer_hand',
+          label: 'Hammer Hand',
           count: 3,
         });
-        expect(stats.commonPerks[1].count).toBe(2);
-        expect(stats.commonPerks[2].count).toBe(1);
+        expect(knacks.entries[1].count).toBe(2);
+        expect(knacks.entries[2].count).toBe(1);
       });
 
-      it('should handle unknown perk IDs', () => {
+      it('should handle unknown knack IDs', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: ['unknown_trait_id', 'hammer_hand'],
-            qualityIds: [],
+            facets: {
+              callings: ['tinker'],
+              knacks: ['unknown_trait_id', 'hammer_hand'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -375,31 +356,33 @@ describe('characterStats', () => {
         ];
 
         const stats = calculateCharacterStats(characters);
+        const knacks = collectionStats(stats, 'knacks');
 
-        expect(stats.commonPerks).toHaveLength(2);
-        const unknownPerk = stats.commonPerks.find(
-          p => p.name === 'Unknown Knack'
+        expect(knacks.entries).toHaveLength(2);
+        const unknownKnack = knacks.entries.find(
+          e => e.label === 'Unknown Knack'
         );
-        expect(unknownPerk).toBeDefined();
-        expect(unknownPerk?.count).toBe(1);
+        expect(unknownKnack).toBeDefined();
+        expect(unknownKnack?.count).toBe(1);
       });
 
-      it('should limit common perks to top 5', () => {
+      it('does not limit knacks to a top N — that is a UI concern', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: [
-              'hammer_hand',
-              'quick_read',
-              'kin_secret',
-              'steady_hand',
-              'overclock',
-              'unknown_trait_a',
-              'unknown_trait_b',
-            ],
-            qualityIds: [],
+            facets: {
+              callings: ['tinker'],
+              knacks: [
+                'hammer_hand',
+                'quick_read',
+                'kin_secret',
+                'steady_hand',
+                'overclock',
+                'unknown_trait_a',
+                'unknown_trait_b',
+              ],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -409,17 +392,15 @@ describe('characterStats', () => {
 
         const stats = calculateCharacterStats(characters);
 
-        expect(stats.commonPerks).toHaveLength(5);
+        expect(collectionStats(stats, 'knacks').entries).toHaveLength(7);
       });
 
-      it('should handle characters with no perks', () => {
+      it('should handle characters with no knacks', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: [],
+            facets: { callings: ['tinker'], knacks: [] },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -429,17 +410,18 @@ describe('characterStats', () => {
 
         const stats = calculateCharacterStats(characters);
 
-        expect(stats.commonPerks).toHaveLength(0);
+        expect(collectionStats(stats, 'knacks').entries).toHaveLength(0);
       });
 
-      it('should sort perks by count descending', () => {
+      it('should sort knacks by count descending', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: ['hammer_hand', 'steady_hand', 'steady_hand'],
-            qualityIds: [],
+            facets: {
+              callings: ['tinker'],
+              knacks: ['hammer_hand', 'steady_hand', 'steady_hand'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -448,9 +430,10 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            archetypeId: 'tinker',
-            traitIds: ['steady_hand', 'quick_read'],
-            qualityIds: [],
+            facets: {
+              callings: ['tinker'],
+              knacks: ['steady_hand', 'quick_read'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -459,28 +442,28 @@ describe('characterStats', () => {
         ];
 
         const stats = calculateCharacterStats(characters);
+        const entries = collectionStats(stats, 'knacks').entries;
 
-        // defense_1 appears 3 times, agility_1 once, strength_1 once
-        expect(stats.commonPerks[0].count).toBeGreaterThanOrEqual(
-          stats.commonPerks[1]?.count || 0
-        );
-        if (stats.commonPerks[1]) {
-          expect(stats.commonPerks[1].count).toBeGreaterThanOrEqual(
-            stats.commonPerks[2]?.count || 0
+        // steady_hand appears 3 times, hammer_hand once, quick_read once
+        expect(entries[0].count).toBeGreaterThanOrEqual(entries[1]?.count || 0);
+        if (entries[1]) {
+          expect(entries[1].count).toBeGreaterThanOrEqual(
+            entries[2]?.count || 0
           );
         }
       });
     });
 
-    describe('Distinction Statistics', () => {
-      it('should calculate most common distinctions', () => {
+    describe('Temperament Statistics', () => {
+      it('should calculate most common temperaments', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: ['steadfast', 'reckless', 'unknown_quality_id'],
+            facets: {
+              callings: ['tinker'],
+              temperaments: ['steadfast', 'reckless', 'unknown_quality_id'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -489,9 +472,10 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: ['steadfast', 'reckless'],
+            facets: {
+              callings: ['tinker'],
+              temperaments: ['steadfast', 'reckless'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -500,9 +484,7 @@ describe('characterStats', () => {
           {
             id: '3',
             name: 'Char3',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: ['steadfast'],
+            facets: { callings: ['tinker'], temperaments: ['steadfast'] },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -511,24 +493,27 @@ describe('characterStats', () => {
         ];
 
         const stats = calculateCharacterStats(characters);
+        const temperaments = collectionStats(stats, 'temperaments');
 
-        expect(stats.commonDistinctions).toHaveLength(3);
-        expect(stats.commonDistinctions[0]).toEqual({
-          name: 'Steadfast',
+        expect(temperaments.entries).toHaveLength(3);
+        expect(temperaments.entries[0]).toEqual({
+          id: 'steadfast',
+          label: 'Steadfast',
           count: 3,
         });
-        expect(stats.commonDistinctions[1].count).toBe(2);
-        expect(stats.commonDistinctions[2].count).toBe(1);
+        expect(temperaments.entries[1].count).toBe(2);
+        expect(temperaments.entries[2].count).toBe(1);
       });
 
-      it('should handle unknown distinction IDs', () => {
+      it('should handle unknown temperament IDs', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: ['unknown_quality_id', 'steadfast'],
+            facets: {
+              callings: ['tinker'],
+              temperaments: ['unknown_quality_id', 'steadfast'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -537,31 +522,33 @@ describe('characterStats', () => {
         ];
 
         const stats = calculateCharacterStats(characters);
+        const temperaments = collectionStats(stats, 'temperaments');
 
-        expect(stats.commonDistinctions).toHaveLength(2);
-        const unknownDistinction = stats.commonDistinctions.find(
-          d => d.name === 'Unknown Quality'
+        expect(temperaments.entries).toHaveLength(2);
+        const unknownTemperament = temperaments.entries.find(
+          e => e.label === 'Unknown Temperament'
         );
-        expect(unknownDistinction).toBeDefined();
-        expect(unknownDistinction?.count).toBe(1);
+        expect(unknownTemperament).toBeDefined();
+        expect(unknownTemperament?.count).toBe(1);
       });
 
-      it('should limit common distinctions to top 5', () => {
+      it('does not limit temperaments to a top N — that is a UI concern', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: [
-              'steadfast',
-              'reckless',
-              'unknown_a',
-              'unknown_b',
-              'unknown_c',
-              'unknown_d',
-              'unknown_e',
-            ],
+            facets: {
+              callings: ['tinker'],
+              temperaments: [
+                'steadfast',
+                'reckless',
+                'unknown_a',
+                'unknown_b',
+                'unknown_c',
+                'unknown_d',
+                'unknown_e',
+              ],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -571,17 +558,15 @@ describe('characterStats', () => {
 
         const stats = calculateCharacterStats(characters);
 
-        expect(stats.commonDistinctions).toHaveLength(5);
+        expect(collectionStats(stats, 'temperaments').entries).toHaveLength(7);
       });
 
-      it('should handle characters with no distinctions', () => {
+      it('should handle characters with no temperaments', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: [],
+            facets: { callings: ['tinker'], temperaments: [] },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -591,17 +576,18 @@ describe('characterStats', () => {
 
         const stats = calculateCharacterStats(characters);
 
-        expect(stats.commonDistinctions).toHaveLength(0);
+        expect(collectionStats(stats, 'temperaments').entries).toHaveLength(0);
       });
 
-      it('should sort distinctions by count descending', () => {
+      it('should sort temperaments by count descending', () => {
         const characters: GameCharacter[] = [
           {
             id: '1',
             name: 'Char1',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: ['steadfast', 'reckless', 'reckless'],
+            facets: {
+              callings: ['tinker'],
+              temperaments: ['steadfast', 'reckless', 'reckless'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -610,9 +596,10 @@ describe('characterStats', () => {
           {
             id: '2',
             name: 'Char2',
-            archetypeId: 'tinker',
-            traitIds: [],
-            qualityIds: ['reckless', 'unknown_quality_id'],
+            facets: {
+              callings: ['tinker'],
+              temperaments: ['reckless', 'unknown_quality_id'],
+            },
             factions: [],
             relationships: [],
             createdAt: '2025-01-01',
@@ -621,14 +608,13 @@ describe('characterStats', () => {
         ];
 
         const stats = calculateCharacterStats(characters);
+        const entries = collectionStats(stats, 'temperaments').entries;
 
-        // d2 appears 3 times, d1 once, d3 once
-        expect(stats.commonDistinctions[0].count).toBeGreaterThanOrEqual(
-          stats.commonDistinctions[1]?.count || 0
-        );
-        if (stats.commonDistinctions[1]) {
-          expect(stats.commonDistinctions[1].count).toBeGreaterThanOrEqual(
-            stats.commonDistinctions[2]?.count || 0
+        // reckless appears 3 times, steadfast once, unknown once
+        expect(entries[0].count).toBeGreaterThanOrEqual(entries[1]?.count || 0);
+        if (entries[1]) {
+          expect(entries[1].count).toBeGreaterThanOrEqual(
+            entries[2]?.count || 0
           );
         }
       });

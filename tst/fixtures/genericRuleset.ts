@@ -9,11 +9,14 @@
  * - three resources, not the health/limit pair — catches a hardcoded quartet
  * - three trait categories, two colored and one not — exercises the palette
  *   fallback that a twelve-entry Record could never reach
- * - `quests`, `discord`, `map` and `recipes` disabled — the flags that gate
- *   navigation
+ * - `quests`, `discord` and `map` disabled — the flags that gate navigation
  * - no `map` at all, so `resolveAsset` returns undefined
+ * - facet noun overrides live on each `FacetCollection` itself
+ *   (`singular`/`plural`), not in `terminology` — since #51 that map covers
+ *   only the engine's own core nouns
  */
 import { num, flag, type AttributeDefinition } from '@/ruleset/attributes';
+import type { FacetCollection } from '@/ruleset/facets';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const attributes: AttributeDefinition[] = [
@@ -40,26 +43,16 @@ const attributes: AttributeDefinition[] = [
   { id: 'canFly', label: 'Can Fly', type: 'flag', role: 'capability' },
 ];
 
-export const genericRuleset: RulesetDefinition = {
-  id: 'fixture',
-  name: 'Fixture Ruleset',
-  version: '1.0.0',
-  terminology: {
-    'archetype.singular': 'Lineage',
-    'archetype.plural': 'Lineages',
-    'trait.singular': 'Talent',
-    'trait.plural': 'Talents',
-    'traitCategory.singular': 'Discipline',
-    'traitCategory.plural': 'Disciplines',
-    'quality.singular': 'Virtue',
-    'quality.plural': 'Virtues',
-    'modification.singular': 'Augment',
-    'modification.plural': 'Augments',
-    'map.label': 'Realm Map',
-  },
-  attributes,
+const lineages: FacetCollection = {
+  id: 'lineages',
+  singular: 'Lineage',
+  plural: 'Lineages',
+  selection: 'single',
+  defaultEntryId: 'scholar',
+  legacyField: 'archetypeId',
   groups: [{ id: 'mortal', label: 'Mortal' }],
-  archetypes: [
+  contributes: { stage: 'base' },
+  entries: [
     {
       id: 'wanderer',
       label: 'Wanderer',
@@ -87,45 +80,81 @@ export const genericRuleset: RulesetDefinition = {
       },
     },
   ],
-  defaultArchetypeId: 'scholar',
-  traitCategories: [
+};
+
+const talents: FacetCollection = {
+  id: 'talents',
+  singular: 'Talent',
+  plural: 'Talents',
+  categorySingular: 'Discipline',
+  categoryPlural: 'Disciplines',
+  selection: 'multi',
+  legacyField: 'traitIds',
+  categories: [
     { id: 'lore', label: 'Lore', color: '#112233' },
     { id: 'might', label: 'Might', color: '#445566' },
     // Deliberately colorless — the screen must cycle a palette rather than
     // return undefined.
     { id: 'guile', label: 'Guile' },
   ],
-  traits: [
+  contributes: { deltaRoles: ['resource'], categoryScore: true },
+  categoryBonuses: [],
+  entries: [
     {
       id: 'well_read',
-      name: 'Well Read',
+      label: 'Well Read',
       description: 'Knows the old books.',
       categoryId: 'lore',
       modifier: { attributeDeltas: { focus: 1 } },
     },
     {
       id: 'strong_back',
-      name: 'Strong Back',
+      label: 'Strong Back',
       description: 'Carries more than seems wise.',
       categoryId: 'might',
-      allowedArchetypeIds: ['wanderer'],
+      requires: { lineages: ['wanderer'] },
     },
   ],
-  qualities: [
-    { id: 'patient', name: 'Patient', description: 'Waits things out.' },
+};
+
+const virtues: FacetCollection = {
+  id: 'virtues',
+  singular: 'Virtue',
+  plural: 'Virtues',
+  selection: 'multi',
+  maxSelections: 1,
+  legacyField: 'qualityIds',
+  entries: [
+    { id: 'patient', label: 'Patient', description: 'Waits things out.' },
   ],
-  categoryBonuses: [],
+};
+
+const augments: FacetCollection = {
+  id: 'augments',
+  singular: 'Augment',
+  plural: 'Augments',
+  selection: 'multi',
+  authored: true,
+  legacyField: 'modifications',
+  contributes: { stage: 'postBonus', deltaRoles: ['resource', 'cap'] },
+  entries: [],
+};
+
+export const genericRuleset: RulesetDefinition = {
+  id: 'fixture',
+  name: 'Fixture Ruleset',
+  version: '1.0.0',
+  terminology: { 'map.label': 'Realm Map' },
+  attributes,
+  facets: [lineages, talents, virtues, augments],
   features: {
     quests: false,
-    recipes: false,
     discord: false,
     map: false,
-    modifications: true,
     influenceReport: false,
     relationshipGraph: true,
     characterStats: false,
     factionStats: false,
   },
-  limits: { maxQualities: 1 },
   branding: { appName: 'Fixture' },
 };

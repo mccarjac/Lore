@@ -51,35 +51,45 @@ export interface Relationship {
 }
 
 /**
- * A free-text, per-character entry that attaches resource modifiers — the
- * generic form of what the Afterworlds ruleset calls Cyberware. Authored per
- * character rather than picked from a ruleset catalog, which is how it has
- * always worked; a catalog could come later.
+ * An inline, per-character facet entry — the shape of a hand-authored
+ * catalog entry (`authored: true` on its `FacetCollection`), such as what the
+ * Afterworlds ruleset calls Cyberware. Authored per character rather than
+ * picked from a ruleset catalog, which is how it has always worked for
+ * modifications; a catalog could come later for other collections.
  */
-export interface Modification {
+export interface AuthoredFacetEntry {
   name: string;
-  description: string;
+  description?: string;
   modifier?: Modifier;
 }
+
+/**
+ * A character's selections in one facet collection: catalog entry ids for a
+ * `FacetCollection` picked from `entries`, or inline `AuthoredFacetEntry`
+ * objects for one declared `authored: true`. A `selection: 'single'`
+ * collection stores an array of 0 or 1 id.
+ */
+export type FacetValue = string | AuthoredFacetEntry;
 
 export interface GameCharacter {
   id: string;
   name: string;
   /**
-   * Ruleset archetype id (RulesetDefinition.archetypes[].id). Was the closed
-   * `species` union before #3; migrateRulesetFields() rewrites stored data.
+   * collectionId -> the character's selections in that
+   * `RulesetDefinition.facets[]` entry. Replaces the pre-#51 `archetypeId` /
+   * `traitIds` / `qualityIds` / `modifications` fields — one shape for
+   * however many facet collections a ruleset declares.
+   * `migrateRulesetFields()` rewrites stored data from the old shape, driven
+   * by each collection's `legacyField`.
    */
-  archetypeId: string;
-  /** Ruleset trait ids (RulesetDefinition.traits[].id). Was `perkIds`. */
-  traitIds: string[];
-  /** Ruleset quality ids (RulesetDefinition.qualities[].id). Was `distinctionIds`. */
-  qualityIds: string[];
+  facets?: Record<string, FacetValue[]>;
   /**
    * Character-specific attribute values, keyed by
    * `RulesetDefinition.attributes[].id` (#22). These are *absolute* values
-   * that override the archetype's base — a GM-defined "Corruption" counter,
-   * or a per-character base stat. Deltas are what traits and modifications
-   * are for. Optional: a ruleset need declare no character attributes.
+   * that override a `stage: 'base'` facet entry's own — a GM-defined
+   * "Corruption" counter, or a per-character base stat. Deltas are what
+   * facet entries are for. Optional: a ruleset need declare no character
+   * attributes.
    */
   attributes?: AttributeBag;
   factions: Faction[];
@@ -88,7 +98,6 @@ export interface GameCharacter {
   notes?: string;
   locationId?: string; // Reference to GameLocation.id
   occupation?: string;
-  modifications?: Modification[];
   present?: boolean;
   retired?: boolean;
   createdAt: string;
@@ -147,11 +156,17 @@ export interface QuestMaterial {
   quantityProvided: number;
 }
 
-export interface QuestAttributePreferences {
-  traitCategoryIds?: string[];
-  archetypeIds?: string[];
-  qualityIds?: string[];
-  traitIds?: string[];
+/**
+ * A quest's preferred (or unwanted) facet selections — the generalized form
+ * of the pre-#51 four parallel id lists (`archetypeIds`/`traitIds`/
+ * `qualityIds`/`traitCategoryIds`), now one map per collection instead of one
+ * field per collection kind.
+ */
+export interface QuestFacetPreferences {
+  /** collectionId -> entry ids. */
+  entries?: Record<string, string[]>;
+  /** collectionId -> category ids (for a collection with `categories`). */
+  categories?: Record<string, string[]>;
 }
 
 export interface GameQuest {
@@ -162,8 +177,8 @@ export interface GameQuest {
   time?: string; // Optional time in HH:MM format
   status: QuestStatus;
   assignedCharacterIds?: string[]; // References to GameCharacter.id
-  desirable?: QuestAttributePreferences;
-  undesirable?: QuestAttributePreferences;
+  desirable?: QuestFacetPreferences;
+  undesirable?: QuestFacetPreferences;
   locationId?: string; // Reference to GameLocation.id
   factionNames?: string[]; // Faction names related to the quest
   eventIds?: string[]; // References to GameEvent.id

@@ -9,7 +9,7 @@ import { GameCharacter, GameQuest, QuestStatus } from '@/models/types';
 import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
 
 /**
- * Scoring resolves trait categories through the ruleset, so it runs against
+ * Scoring resolves facet categories through the ruleset, so it runs against
  * the neutral fixture — the weights being tested are engine behavior, not
  * anything Afterworlds-specific.
  */
@@ -29,9 +29,7 @@ const makeCharacter = (
 ): GameCharacter => ({
   id,
   name: `Character ${id}`,
-  archetypeId: 'tinker',
-  traitIds: [],
-  qualityIds: [],
+  facets: { callings: ['tinker'], knacks: [], temperaments: [] },
   factions: [],
   relationships: [],
   present: true,
@@ -56,82 +54,101 @@ const makeQuest = (
 describe('questProposal', () => {
   describe('scoreCharacterForQuest', () => {
     it('scores 0 when the quest has no preferences', () => {
-      const character = makeCharacter('a', { traitIds: ['hammer_hand'] });
+      const character = makeCharacter('a', {
+        facets: { callings: ['tinker'], knacks: ['hammer_hand'] },
+      });
       const quest = makeQuest('q1');
 
       expect(scoreCharacterForQuest(character, quest)).toBe(0);
     });
 
-    it('rewards a desirable tag proportional to the tag score', () => {
+    it('rewards a desirable category proportional to the category score', () => {
       const character = makeCharacter('a', {
-        traitIds: ['hammer_hand', 'kin_secret'],
+        facets: {
+          callings: ['tinker'],
+          knacks: ['hammer_hand', 'kin_secret'],
+        },
       });
       const quest = makeQuest('q1', {
-        desirable: { traitCategoryIds: ['forge'] },
+        desirable: { categories: { knacks: ['forge'] } },
       });
 
-      // 2 agility perks => tagScores.get(Agility) === 2, weight 1 each.
+      // 2 forge knacks => categoryScore(knacks, forge) === 2, weight 1 each.
       expect(scoreCharacterForQuest(character, quest)).toBe(2);
     });
 
-    it('penalizes an undesirable tag proportional to the tag score', () => {
-      const character = makeCharacter('a', { traitIds: ['hammer_hand'] });
+    it('penalizes an undesirable category proportional to the category score', () => {
+      const character = makeCharacter('a', {
+        facets: { callings: ['tinker'], knacks: ['hammer_hand'] },
+      });
       const quest = makeQuest('q1', {
-        undesirable: { traitCategoryIds: ['forge'] },
+        undesirable: { categories: { knacks: ['forge'] } },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBe(-1);
     });
 
-    it('rewards a desirable species match', () => {
-      const character = makeCharacter('a', { archetypeId: 'revenant' });
+    it('rewards a desirable calling match', () => {
+      const character = makeCharacter('a', {
+        facets: { callings: ['revenant'] },
+      });
       const quest = makeQuest('q1', {
-        desirable: { archetypeIds: ['revenant'] },
+        desirable: { entries: { callings: ['revenant'] } },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeGreaterThan(0);
     });
 
-    it('penalizes an undesirable species match', () => {
-      const character = makeCharacter('a', { archetypeId: 'revenant' });
+    it('penalizes an undesirable calling match', () => {
+      const character = makeCharacter('a', {
+        facets: { callings: ['revenant'] },
+      });
       const quest = makeQuest('q1', {
-        undesirable: { archetypeIds: ['revenant'] },
+        undesirable: { entries: { callings: ['revenant'] } },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeLessThan(0);
     });
 
-    it('rewards a desirable perk match', () => {
-      const character = makeCharacter('a', { traitIds: ['hammer_hand'] });
+    it('rewards a desirable knack match', () => {
+      const character = makeCharacter('a', {
+        facets: { callings: ['tinker'], knacks: ['hammer_hand'] },
+      });
       const quest = makeQuest('q1', {
-        desirable: { traitIds: ['hammer_hand'] },
+        desirable: { entries: { knacks: ['hammer_hand'] } },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeGreaterThan(0);
     });
 
-    it('penalizes an undesirable perk match', () => {
-      const character = makeCharacter('a', { traitIds: ['hammer_hand'] });
+    it('penalizes an undesirable knack match', () => {
+      const character = makeCharacter('a', {
+        facets: { callings: ['tinker'], knacks: ['hammer_hand'] },
+      });
       const quest = makeQuest('q1', {
-        undesirable: { traitIds: ['hammer_hand'] },
+        undesirable: { entries: { knacks: ['hammer_hand'] } },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeLessThan(0);
     });
 
-    it('rewards a desirable distinction match', () => {
-      const character = makeCharacter('a', { qualityIds: ['d1'] });
+    it('rewards a desirable temperament match', () => {
+      const character = makeCharacter('a', {
+        facets: { callings: ['tinker'], temperaments: ['d1'] },
+      });
       const quest = makeQuest('q1', {
-        desirable: { qualityIds: ['d1'] },
+        desirable: { entries: { temperaments: ['d1'] } },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeGreaterThan(0);
     });
 
-    it('penalizes an undesirable distinction match', () => {
-      const character = makeCharacter('a', { qualityIds: ['d1'] });
+    it('penalizes an undesirable temperament match', () => {
+      const character = makeCharacter('a', {
+        facets: { callings: ['tinker'], temperaments: ['d1'] },
+      });
       const quest = makeQuest('q1', {
-        undesirable: { qualityIds: ['d1'] },
+        undesirable: { entries: { temperaments: ['d1'] } },
       });
 
       expect(scoreCharacterForQuest(character, quest)).toBeLessThan(0);
@@ -219,12 +236,17 @@ describe('questProposal', () => {
     it('prefers higher-scoring characters for a quest', () => {
       const quest = makeQuest('a', {
         teamSize: 1,
-        desirable: { traitCategoryIds: ['forge'] },
+        desirable: { categories: { knacks: ['forge'] } },
       });
       const strongMatch = makeCharacter('strong', {
-        traitIds: ['hammer_hand', 'kin_secret', 'quick_read'],
+        facets: {
+          callings: ['tinker'],
+          knacks: ['hammer_hand', 'kin_secret', 'quick_read'],
+        },
       });
-      const weakMatch = makeCharacter('weak', { traitIds: [] });
+      const weakMatch = makeCharacter('weak', {
+        facets: { callings: ['tinker'], knacks: [] },
+      });
 
       const [proposal] = generateQuestProposals(
         [quest],

@@ -19,6 +19,7 @@ import { RootStackParamList } from '@/navigation/types';
 import { calculateDerivedStats, type DerivedStats } from '@/ruleset/derived';
 import { useLabels, useRuleset, useFeature } from '@/ruleset';
 import { roleOf } from '@/ruleset/attributes';
+import { getPrimaryFacetLabel } from '@/ruleset/facets';
 import { GameCharacter, GameLocation, DiscordMessage } from '@/models/types';
 import {
   loadCharacters,
@@ -28,7 +29,13 @@ import {
 import { getDiscordMessagesForCharacter } from '@/utils/discordStorage';
 import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
-import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
+import {
+  BaseDetailScreen,
+  Section,
+  CollapsibleSection,
+  FacetCategoryScores,
+  FacetDetailSection,
+} from '@/components';
 
 type CharacterDetailRouteProp = RouteProp<
   RootStackParamList,
@@ -44,14 +51,9 @@ export const CharacterDetailScreen: React.FC = () => {
   const navigation = useNavigation<CharacterDetailNavigationProp>();
   const label = useLabels();
   const { ruleset } = useRuleset();
-  const attributeLabel = (attributeId: string): string =>
-    ruleset.attributes.find(a => a.id === attributeId)?.label ?? attributeId;
-  const archetypeLabel = (id: string): string =>
-    ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
-  const categoryLabel = (id: string): string =>
-    ruleset.traitCategories.find(category => category.id === id)?.label ?? id;
-  const modificationsEnabled = useFeature('modifications');
-  const recipesEnabled = useFeature('recipes');
+  const primaryFacetCollection = ruleset.facets.find(
+    c => c.selection === 'single'
+  );
   const discordEnabled = useFeature('discord');
   const { character } = route.params || {};
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
@@ -442,102 +444,10 @@ export const CharacterDetailScreen: React.FC = () => {
     // Return a safe minimal render instead of crashing
     derivedStats = {
       values: {},
-      categoryScores: new Map(),
+      categoryScores: {},
       attributes: {},
     };
   }
-
-  const renderTagScores = () => {
-    const tagScores = derivedStats.categoryScores;
-    if (!tagScores || tagScores.size === 0) return null;
-
-    return (
-      <Section title={`${label('traitCategory.plural')} Scores`}>
-        <View style={styles.tagScoresContainer}>
-          {Array.from(tagScores.entries()).map(([tag, score]) => (
-            <View key={tag} style={styles.tagScoreItem}>
-              <Text style={styles.tagName}>{tag}</Text>
-              <Text style={styles.tagScore}>{score}</Text>
-            </View>
-          ))}
-        </View>
-      </Section>
-    );
-  };
-
-  const renderPerks = () => {
-    if (!character.traitIds || character.traitIds.length === 0) {
-      return null;
-    }
-
-    return (
-      <CollapsibleSection title={label('trait.plural')} defaultCollapsed={true}>
-        {ruleset.traits
-          .filter(trait => character.traitIds.includes(trait.id))
-          .map(trait => (
-            <View key={trait.id} style={styles.itemContainer}>
-              <Text style={styles.titleText}>{trait.name}</Text>
-              <Text style={styles.descriptionText}>{trait.description}</Text>
-              {recipesEnabled &&
-                trait.recipeIds &&
-                trait.recipeIds.length > 0 && (
-                  <View style={styles.recipesContainer}>
-                    <Text style={styles.recipesTitle}>
-                      Known {label('recipe.plural')}:
-                    </Text>
-                    {trait.recipeIds.map(recipeId => {
-                      const recipe = (ruleset.recipes ?? []).find(
-                        r => r.id === recipeId
-                      );
-                      if (!recipe) return null;
-                      return (
-                        <View key={recipe.id} style={styles.recipeItem}>
-                          <View style={styles.recipeHeader}>
-                            <Text style={styles.recipeName}>{recipe.name}</Text>
-                          </View>
-                          <Text style={styles.recipeDescription}>
-                            {recipe.description}
-                          </Text>
-                          <Text style={styles.materialsTitle}>
-                            Materials Needed:
-                          </Text>
-                          {recipe.materials.map((material, index) => (
-                            <Text key={index} style={styles.materialItem}>
-                              • {material}
-                            </Text>
-                          ))}
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-            </View>
-          ))}
-      </CollapsibleSection>
-    );
-  };
-
-  const renderDistinctions = () => {
-    if (!character.qualityIds || character.qualityIds.length === 0) {
-      return null;
-    }
-
-    return (
-      <CollapsibleSection
-        title={label('quality.plural')}
-        defaultCollapsed={true}
-      >
-        {ruleset.qualities
-          .filter(quality => character.qualityIds.includes(quality.id))
-          .map(quality => (
-            <View key={quality.id} style={styles.itemContainer}>
-              <Text style={styles.titleText}>{quality.name}</Text>
-              <Text style={styles.descriptionText}>{quality.description}</Text>
-            </View>
-          ))}
-      </CollapsibleSection>
-    );
-  };
 
   const renderFactions = () => {
     if (!character.factions || character.factions.length === 0) {
@@ -615,55 +525,6 @@ export const CharacterDetailScreen: React.FC = () => {
           );
         })}
       </CollapsibleSection>
-    );
-  };
-
-  const renderCyberware = () => {
-    if (
-      !modificationsEnabled ||
-      !character.modifications ||
-      character.modifications.length === 0
-    ) {
-      return null;
-    }
-
-    return (
-      <Section title={label('modification.plural')}>
-        {character.modifications.map((cyber, index) => (
-          <View key={index} style={styles.itemContainer}>
-            <Text style={styles.titleText}>{cyber.name}</Text>
-            <Text style={styles.descriptionText}>{cyber.description}</Text>
-            {cyber.modifier && (
-              <View style={styles.cyberwareModifiersContainer}>
-                <Text style={styles.cyberwareModifiersTitle}>
-                  Stat Modifiers:
-                </Text>
-                {/* Driven by the ruleset's attribute definitions rather than
-                    a hardcoded health/limit/cap quartet — a ruleset with three
-                    resources renders all three (#22). */}
-                {Object.entries(cyber.modifier.attributeDeltas ?? {}).map(
-                  ([attributeId, delta]) => (
-                    <Text key={attributeId} style={styles.cyberwareModifier}>
-                      • {attributeLabel(attributeId)}: {delta > 0 ? '+' : ''}
-                      {delta}
-                    </Text>
-                  )
-                )}
-                {Object.entries(cyber.modifier.categoryDeltas ?? {}).map(
-                  ([categoryId, delta]) => (
-                    <Text key={categoryId} style={styles.cyberwareModifier}>
-                      • {categoryLabel(categoryId)}{' '}
-                      {label('traitCategory.singular')} Score:{' '}
-                      {delta > 0 ? '+' : ''}
-                      {delta}
-                    </Text>
-                  )
-                )}
-              </View>
-            )}
-          </View>
-        ))}
-      </Section>
     );
   };
 
@@ -759,8 +620,8 @@ export const CharacterDetailScreen: React.FC = () => {
         <Text style={styles.name}>{character.name}</Text>
         <View style={styles.headerInfo}>
           <Text style={styles.subheader}>
-            {ruleset.archetypes.length > 1
-              ? `${label('archetype.singular')}: ${archetypeLabel(character.archetypeId)} / `
+            {primaryFacetCollection && primaryFacetCollection.entries.length > 1
+              ? `${primaryFacetCollection.singular}: ${getPrimaryFacetLabel(character, ruleset) ?? '—'} / `
               : ''}
             Location: {getLocationName(character.locationId)}
           </Text>
@@ -788,10 +649,20 @@ export const CharacterDetailScreen: React.FC = () => {
           </View>
         </View>
       </View>
-      {renderTagScores()}
-      {renderPerks()}
-      {renderDistinctions()}
-      {renderCyberware()}
+      <FacetCategoryScores
+        ruleset={ruleset}
+        categoryScores={derivedStats.categoryScores}
+      />
+      {ruleset.facets
+        .filter(collection => collection.selection === 'multi')
+        .map(collection => (
+          <FacetDetailSection
+            key={collection.id}
+            collection={collection}
+            ruleset={ruleset}
+            character={character}
+          />
+        ))}
       {renderFactions()}
       {renderRelationships()}
       {renderDiscordConversations()}

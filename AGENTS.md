@@ -223,16 +223,25 @@ the images, and changes no tracked source at all.
   deadlocks). `characterStorage.applyMergedDataset` is the multi-key example:
   it sequences `runExclusive` across all five keys, one at a time.
 - **Ruleset field migration:** `src/utils/rulesetFieldMigration.ts` holds
-  pure, I/O-free normalizers that accept both the pre- and post-Phase-1
-  field names (`species`→`archetypeId`, `perkIds`→`traitIds`,
-  `distinctionIds`→`qualityIds`, `cyberware`→`modifications`,
-  `junktownOffice`→`sponsor`).
+  pure, I/O-free normalizers that accept every vintage of stored data and
+  return the current shape: pre-Phase-1 field names
+  (`species`→`archetypeId`, `perkIds`→`traitIds`, `distinctionIds`→
+  `qualityIds`, `cyberware`→`modifications`, `junktownOffice`→`sponsor`),
+  through to the post-#51 facet shape
+  (`archetypeId`/`traitIds`/`qualityIds`/`modifications` folding into
+  `character.facets: Record<collectionId, FacetValue[]>`, driven by each
+  `FacetCollection.legacyField` rather than by naming convention — a ruleset
+  that renamed its collection id still migrates correctly).
   It also reshapes modification modifiers, which have now been through
-  _three_ shapes: flat `statModifiers`, nested `resourceModifiers` (which
-  shipped in #21, so real user data has it), and the current flat
-  `modifier.attributeDeltas`. All three must stay readable. The non-obvious
-  rule there: a cap keyed by a _resource_ id maps onto that resource's
-  `capAttributeId` (`caps.health` → `attributeDeltas.healthCap`).
+  _four_ shapes: flat `statModifiers`, nested `resourceModifiers` (which
+  shipped in #21, so real user data has it), flat `modifier.attributeDeltas`
+  (#22), and `modifier.categoryDeltas` nested one level deeper by collection
+  id (#51, since category ids are now scoped per facet collection). All four
+  must stay readable. The non-obvious rule there: a cap keyed by a _resource_
+  id maps onto that resource's `capAttributeId` (`caps.health` →
+  `attributeDeltas.healthCap`), and a flat `categoryDeltas` nests under
+  whichever collection declared `legacyField: 'traitIds'` (or a synthetic
+  `'legacy'` bucket if none did).
   One implementation serves the storage
   migration, file import, and GitHub sync, so they cannot disagree. Each
   normalizer returns the **same object reference** when nothing needed
@@ -242,6 +251,9 @@ the images, and changes no tracked source at all.
   **Sync normalizes all three sides** (base, local, remote) before
   `computeSyncPlan` diffs them; normalizing only the written side would
   report every character as conflicting on the first sync after upgrade.
+  There is no `UNKNOWN_ARCHETYPE_ID` fallback any more: a `single`-selection
+  collection may legitimately be unset (empty `facets[collectionId]`), unlike
+  the old required `archetypeId: string`.
 - **Data stores are a plugin seam, not a fixed list (#29).** `src/datastores/`
   holds the `DataStore` contract, a registry, and the three built-ins. A store
   declares `actions` (the engine renders a button per action via
@@ -365,18 +377,27 @@ the images, and changes no tracked source at all.
 ## Ruleset layer
 
 This is the seam a genre-neutral fork plugs into. The core model is now
-ruleset-neutral: a character has an `archetypeId`, `traitIds`, `qualityIds`,
-and `modifications`, and a quest has a `sponsor` — all plain strings and ids,
-none of them a closed union. A ruleset supplies the actual archetypes,
-traits, categories, qualities, and attributes — and since #22 a character may
-also carry its own GM-defined attribute values.
+ruleset-neutral in a stronger sense than "no closed unions" — since #51 the
+engine does not even name the vocabulary. A character has one `facets` map
+(`Record<collectionId, FacetValue[]>`), and a quest has a `sponsor` and two
+facet-preference maps (`desirable`/`undesirable`); a ruleset supplies
+`facets: FacetCollection[]`, whatever set of collections its game needs, and
+attributes — and since #22 a character may also carry its own GM-defined
+attribute values. `RulesetDefinition` used to name `archetypes`, `traits`,
+`traitCategories`, `qualities`, `recipes`, `categoryBonuses` and
+`archetypeRules` as six separate fields with six separate element types; all
+six are now `FacetCollection` declarations, distinguished by `selection`
+(`'single'` / `'multi'` / `'catalog'`), `authored`, and `contributes`
+(`stage`, `deltaRoles`, `categoryScore`) rather than by which field they sat
+in. See "Facet collections" below and `docs/ruleset-authoring.md` for the
+full shape — that page is the authority on the schema; this section is the
+engine-internal "why".
 
-`qualityIds` was the last of those to be stated as `string`. It used to read
-`DistinctionId[]`, an alias derived from the Afterworlds distinction table —
-which is what forced `models/types.ts` to import a content _value_ and made
-`types.ts ↔ gameData.ts` circular. Note the alias already _denoted_ `string`
-(the `AVAILABLE_DISTINCTIONS: Distinction[]` annotation defeats its
-`as const`), so removing it changed no stored bytes and needed no migration.
+A flavor's own `content/` tables therefore transform into `FacetCollection[]`
+now, the same way they used to transform into `archetypes`/`traits`/etc.
+arrays — the pattern (content stays in its own vocabulary, a transform
+derives ruleset shapes at module load) is unchanged, only the target shape
+moved.
 
 A flavor's data lives in its own repository, deriving its `RulesetDefinition`
 from authored tables via a transform rather than a hand-written literal, so the
@@ -417,15 +438,27 @@ drag those override _values_ along with it.
   / etc. **directly, never the `@/ruleset` barrel** — the barrel re-exports
   `context.tsx`, which imports the seam.
 - `src/ruleset/exampleRuleset.ts` — what the engine ships as its default: a
-  small, complete, generic ruleset. Two things about it are deliberate.
-  It **overrides no terminology**, so every noun comes from
+  small, complete, generic ruleset. Three things about it are deliberate.
+  It **overrides no terminology**, so every core noun comes from
   `DEFAULT_TERMINOLOGY` and "the app boots with generic labels" is literally
   checkable — it is also the only place the `getLabel` fallback is exercised
-  in a running app. And it declares **no map, with `features.map: false`**,
+  in a running app. It declares **five facet collections** (archetypes,
+  traits, qualities, modifications, recipes — one more than the four the
+  engine used to hardcode, plus a catalog), which is the direct, running
+  proof that #51 did what it says: a ruleset states how many facet kinds its
+  game needs. And it declares **no map, with `features.map: false`**,
   because the map is the one feature needing a bundled binary and images
   belong to the ruleset that uses them; a placeholder PNG in the engine would
   be in every fork's way. Every other flag is on, so the engine's screens are
   reachable out of the box.
+  `src/ruleset/exampleSeedData.ts` pairs with it — a small example campaign
+  (`exampleSeedDataset`, structurally a `SyncDataset`) sized so every facet
+  collection, both trait categories' `categoryBonuses` threshold, and the
+  faction/relationship network all have real holders, loadable in a running
+  app via the dev-only `seedDataStore` (`src/datastores/seed/`, registered
+  only under `__DEV__` — see "Data stores are a plugin seam" above). It is
+  the only way to eyeball the stats/influence/graph screens without hand-
+  entering data, since those are otherwise empty on a fresh install.
 - `src/ruleset/attributes.ts` — the `AttributeValue` primitive (#22). A
   tagged union (`{ type, value }`) covering number/text/flag/ref/list/map,
   plus `AttributeDefinition`, typed accessors, and a generic bag validator.
@@ -440,10 +473,23 @@ drag those override _values_ along with it.
   validity rule: the Afterworlds ruleset declares a trait cap delta the
   engine ignores, and flagging that as invalid would make `RulesetProvider`
   throw under `__DEV__` for any build running it.
+- `src/ruleset/facets.ts` — the `FacetCollection`/`FacetEntry` primitive
+  (#51) and its accessors (`findFacetCollection`, `getFacetIds`,
+  `getAuthoredFacets`, `getSingleFacetId`, `setFacetIds`,
+  `resolveFacetEntries`, `getPrimaryFacetLabel`, `getCategoryScore`) — used
+  everywhere a screen or util used to reach for `character.archetypeId` /
+  `.traitIds` / `.qualityIds` / `.modifications` directly. Imports
+  `@models/types` for `GameCharacter`/`AuthoredFacetEntry` the same way
+  `derived.ts` already did; not a new layering exception.
+  `FacetCollection.selection` (`'single'`/`'multi'`/`'catalog'`) plus
+  `authored` plus `contributes.{stage,deltaRoles,categoryScore}` is what lets
+  one shape express all six of the old named collections — see
+  `exampleRuleset.ts`'s five collections for the mapping, and the module
+  doc-comment at the top of `facets.ts` for the exact correspondence.
 - `src/ruleset/types.ts` — the `RulesetDefinition` schema (attributes,
-  archetypes, traits, trait categories, qualities, category-bonus rules,
-  feature flags, terminology). **Must stay JSON-serializable** — no functions, no
-  `ImageSourcePropType`/`require()` results anywhere in the definition. That
+  `facets: FacetCollection[]`, feature flags, terminology). **Must stay
+  JSON-serializable** — no functions, no `ImageSourcePropType`/`require()`
+  results anywhere in the definition. That
   constraint is what keeps the backlogged in-app ruleset editor possible;
   `validate.ts` enforces it at runtime. Bundled images referenced by a
   ruleset (map, branding) go through the separate `RulesetAssets` map in
@@ -461,33 +507,43 @@ drag those override _values_ along with it.
   `tst/helpers/ruleset.tsx`'s `renderWithRuleset()`, whose own default is the
   neutral fixture.
 - `src/ruleset/derived.ts` — `calculateDerivedStats(character, ruleset?)`
-  returns `{ values, categoryScores, attributes }`. Order is load-bearing:
-  archetype base attributes → **character attribute overrides (absolute, not
-  deltas)** → trait deltas (`role: 'resource'` only) → category-bonus grants
-  → modification deltas (`'resource'` and `'cap'`) → clamp each resource to
-  its `capAttributeId`. Three behaviors are preserved deliberately and pinned
-  by the parity suite: **traits cannot raise caps** (Afterworlds' `smarts_20`
-  declares one and the engine has never honored it — now a consequence of the
-  role rule rather than a special case), **modification `categoryDeltas` do
-  not retroactively unlock category-bonus thresholds** since they land after
-  grants, and **only resources with a `capAttributeId` clamp**. All three are
-  arguably bugs; fixing any moves real users' numbers and is a rules change,
-  not a refactor.
+  returns `{ values, categoryScores, attributes }`, where `categoryScores` is
+  now `Record<collectionId, Record<categoryId, number>>` (nested, since
+  category ids are scoped per collection). Order is load-bearing: `stage:
+  'base'` collections seed attributes → **character attribute overrides
+  (absolute, not deltas)** → `stage: 'preBonus'` collections apply deltas
+  (gated by `contributes.deltaRoles`) and category scores (gated by
+  `contributes.categoryScore`) → every collection's `categoryBonuses` grants
+  → `stage: 'postBonus'` collections apply deltas and category deltas →
+  clamp each resource to its `capAttributeId`. Three behaviors are preserved
+  deliberately and pinned by the parity suite: **a `preBonus` collection
+  cannot raise a cap unless its `deltaRoles` includes `'cap'`** (the old
+  traits declared only `['resource']`; Afterworlds' `smarts_20` declares a
+  cap delta and the engine has never honored it — now a consequence of the
+  collection's declared roles rather than a special case), **a `postBonus`
+  collection's category deltas do not retroactively unlock category-bonus
+  thresholds** since they land after grants, and **only resources with a
+  `capAttributeId` clamp**. All three are arguably bugs; fixing any moves
+  real users' numbers and is a rules change, not a refactor.
   Note the parity fixture cannot cover the character-attribute layer —
   Afterworlds declares none, so it is a no-op there. `tst/ruleset/
 characterAttributes.test.ts` is the only proof that step 1b behaves.
 - `src/ruleset/terminology.ts` — `useLabels()` (components) and `getLabel()`
   (non-component code — pure utils like `factionStats.ts`/`characterStats.ts`
-  that take a `ruleset` parameter rather than importing one) look up a term
-  key (`'trait.plural'`) against the ruleset's `terminology` overrides,
-  falling back to a neutral default. Screens must not hardcode domain nouns
-  (Species/Perk/Tag/Distinction/Cyberware/Junktown Office) — look them up so
-  a different ruleset can say something else without a code change.
+  that take a `ruleset` parameter rather than importing one) look up a
+  `TermKey` against the ruleset's `terminology` overrides, falling back to a
+  neutral default. Since #51, `TermKey` covers only the engine's own core
+  nouns (`character`/`faction`/`quest`/`resource`/`questSponsor`/`map.label`)
+  — what used to be `archetype`/`trait`/`traitCategory`/`quality`/
+  `modification`/`recipe` `TermKey`s are now each a `FacetCollection`'s own
+  `singular`/`plural`/`categorySingular`/`categoryPlural`, declared with the
+  collection rather than as a separate terminology entry. Screens must not
+  hardcode a domain noun — look it up (`useLabels()` for a `TermKey`, the
+  collection object for a facet noun) so a different ruleset can say
+  something else without a code change.
   The map's display name is `terminology['map.label']`; `RulesetDefinition.map`
   carries only `imageKey`, since two sources for one string only drift.
-  **`character`/`faction`/`quest` are `TermKey`s too**, added alongside
-  `branding.colors` — the engine's own core domain nouns, not just ruleset
-  content. `location`/`event` are not yet in `TermKey`.
+  `location`/`event` are not yet in `TermKey`.
 - `src/styles/theme.ts` / `src/styles/commonStyles.ts` — colors are
   ruleset-configurable via `RulesetDefinition.branding.colors`
   (`ColorPaletteOverrides`, declared in `ruleset/types.ts` so the schema has
@@ -651,17 +707,24 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   the app works for exactly one ruleset. There are three to choose from, with
   different jobs:
   - **`tst/fixtures/genericRuleset.ts` — proves a _screen reads the
-    provider_.** Different archetypes, three resources instead of two, three
-    trait categories one of which has no color, and several `features` off,
-    so a screen reaching past the provider fails visibly rather than passing
-    by coincidence. This is `renderWithRuleset()`'s default
-    (`tst/helpers/ruleset.tsx`), so "no argument" means "any ruleset".
+    provider_.** Four facet collections (`lineages` single/base, `talents`
+    multi/categorized, `virtues` multi with a `maxSelections`, `augments`
+    authored/postBonus) named nothing like Afterworlds, three resources
+    instead of two, three talent categories one of which has no color, and
+    several `features` off, so a screen reaching past the provider fails
+    visibly rather than passing by coincidence. This is
+    `renderWithRuleset()`'s default (`tst/helpers/ruleset.tsx`), so "no
+    argument" means "any ruleset".
   - **`tst/fixtures/mechanicsRuleset.ts` — proves the _engine computes_.**
-    Carries what `derived.ts`'s pipeline needs and the generic fixture
-    deliberately lacks: category bonuses at two thresholds, an
-    `archetypeRules` carve-out whose group membership exactly matches a
-    trait's `allowedArchetypeIds`, a trait declaring a cap delta the engine
-    must ignore, and a resource with no cap.
+    Six facet collections (one more than the four the engine used to
+    hardcode) carrying what `derived.ts`'s pipeline needs and the generic
+    fixture deliberately lacks: category bonuses at two thresholds across
+    **two** independently-scored collections (`knacks` and `bonds`), a
+    `scoreExclusions` carve-out whose group membership exactly matches a
+    `knacks` entry's `requires`, a `knacks` entry declaring a cap delta the
+    engine must ignore, a resource with no cap, an authored/postBonus
+    collection (`rigs`), and a `catalog` collection (`charms`) never held
+    directly.
     There is deliberately no third option: **no flavor ships here**, so no test
     can assert on one. That was the point of the cleanup that preceded the
     extraction — the suite had drifted to thirteen files importing the bundled

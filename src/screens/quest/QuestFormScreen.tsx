@@ -47,18 +47,21 @@ const STATUS_LABELS: Record<QuestStatus, string> = {
   [QuestStatus.Failure]: 'Failure',
 };
 
-interface PreferenceLists {
-  traitCategoryIds: string[];
-  archetypeIds: string[];
-  qualityIds: string[];
-  traitIds: string[];
+/**
+ * The form's working copy of a quest's facet preferences — the generalized
+ * form of the old four hardcoded id lists (`traitCategoryIds`/
+ * `archetypeIds`/`qualityIds`/`traitIds`). Shaped exactly like
+ * `QuestFacetPreferences`, just with non-optional maps so the form doesn't
+ * juggle `undefined` while editing.
+ */
+interface FacetPreferenceState {
+  entries: Record<string, string[]>;
+  categories: Record<string, string[]>;
 }
 
-const emptyPreferenceLists = (): PreferenceLists => ({
-  traitCategoryIds: [],
-  archetypeIds: [],
-  qualityIds: [],
-  traitIds: [],
+const emptyFacetPreferences = (): FacetPreferenceState => ({
+  entries: {},
+  categories: {},
 });
 
 interface QuestFormData {
@@ -68,8 +71,8 @@ interface QuestFormData {
   time: string;
   status: QuestStatus;
   assignedCharacterIds: string[];
-  desirable: PreferenceLists;
-  undesirable: PreferenceLists;
+  desirable: FacetPreferenceState;
+  undesirable: FacetPreferenceState;
   locationId: string;
   factionNames: string[];
   eventIds: string[];
@@ -86,8 +89,8 @@ const emptyFormData = (): QuestFormData => ({
   time: '',
   status: QuestStatus.NotStarted,
   assignedCharacterIds: [],
-  desirable: emptyPreferenceLists(),
-  undesirable: emptyPreferenceLists(),
+  desirable: emptyFacetPreferences(),
+  undesirable: emptyFacetPreferences(),
   locationId: '',
   factionNames: [],
   eventIds: [],
@@ -173,28 +176,6 @@ export const QuestFormScreen: React.FC = () => {
   const { ruleset } = useRuleset();
   const { quest } = route.params || {};
 
-  // Built from the active ruleset rather than the bundled tables, so a
-  // different flavor offers its own categories/archetypes/traits/qualities.
-  const categoryLabel = (id: string): string =>
-    ruleset.traitCategories.find(category => category.id === id)?.label ?? id;
-  const tagOptions: Option<string>[] = ruleset.traitCategories.map(
-    category => ({
-      value: category.id,
-      label: category.label,
-    })
-  );
-  const archetypeOptions: Option<string>[] = ruleset.archetypes.map(
-    archetype => ({ value: archetype.id, label: archetype.label })
-  );
-  const traitOptions: Option<string>[] = ruleset.traits.map(trait => ({
-    value: trait.id,
-    label: `${trait.name} (${categoryLabel(trait.categoryId)})`,
-  }));
-  const qualityOptions: Option<string>[] = ruleset.qualities.map(quality => ({
-    value: quality.id,
-    label: quality.name,
-  }));
-
   const [formData, setFormData] = useState<QuestFormData>(emptyFormData());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -241,16 +222,12 @@ export const QuestFormScreen: React.FC = () => {
         status: quest.status,
         assignedCharacterIds: quest.assignedCharacterIds || [],
         desirable: {
-          traitCategoryIds: quest.desirable?.traitCategoryIds || [],
-          archetypeIds: quest.desirable?.archetypeIds || [],
-          qualityIds: quest.desirable?.qualityIds || [],
-          traitIds: quest.desirable?.traitIds || [],
+          entries: { ...(quest.desirable?.entries ?? {}) },
+          categories: { ...(quest.desirable?.categories ?? {}) },
         },
         undesirable: {
-          traitCategoryIds: quest.undesirable?.traitCategoryIds || [],
-          archetypeIds: quest.undesirable?.archetypeIds || [],
-          qualityIds: quest.undesirable?.qualityIds || [],
-          traitIds: quest.undesirable?.traitIds || [],
+          entries: { ...(quest.undesirable?.entries ?? {}) },
+          categories: { ...(quest.undesirable?.categories ?? {}) },
         },
         locationId: quest.locationId || '',
         factionNames: quest.factionNames || [],
@@ -310,44 +287,49 @@ export const QuestFormScreen: React.FC = () => {
     });
   };
 
-  const updatePreferenceList = <K extends keyof PreferenceLists>(
+  /**
+   * `field` is `'entries'` or `'categories'` — the two maps a
+   * `FacetPreferenceState` carries, each keyed by facet collection id. The
+   * generalized form of the old per-list-kind `updatePreferenceList`.
+   */
+  const updatePreferenceMap = (
     which: 'desirable' | 'undesirable',
-    key: K,
-    updater: (list: PreferenceLists[K]) => PreferenceLists[K]
+    field: 'entries' | 'categories',
+    collectionId: string,
+    updater: (ids: string[]) => string[]
   ): void => {
     setFormData(prev => ({
       ...prev,
       [which]: {
         ...prev[which],
-        [key]: updater(prev[which][key]),
+        [field]: {
+          ...prev[which][field],
+          [collectionId]: updater(prev[which][field][collectionId] ?? []),
+        },
       },
     }));
   };
 
-  const addPreference = <K extends keyof PreferenceLists>(
+  const addPreference = (
     which: 'desirable' | 'undesirable',
-    key: K,
-    value: PreferenceLists[K][number]
+    field: 'entries' | 'categories',
+    collectionId: string,
+    value: string
   ) => {
-    updatePreferenceList(which, key, list => {
-      const stringList = list as unknown as string[];
-      return stringList.includes(value as string)
-        ? list
-        : ([...stringList, value] as unknown as PreferenceLists[K]);
-    });
+    updatePreferenceMap(which, field, collectionId, ids =>
+      ids.includes(value) ? ids : [...ids, value]
+    );
   };
 
-  const removePreference = <K extends keyof PreferenceLists>(
+  const removePreference = (
     which: 'desirable' | 'undesirable',
-    key: K,
-    value: PreferenceLists[K][number]
+    field: 'entries' | 'categories',
+    collectionId: string,
+    value: string
   ) => {
-    updatePreferenceList(which, key, list => {
-      const stringList = list as unknown as string[];
-      return stringList.filter(
-        item => item !== value
-      ) as unknown as PreferenceLists[K];
-    });
+    updatePreferenceMap(which, field, collectionId, ids =>
+      ids.filter(id => id !== value)
+    );
   };
 
   const addMaterial = () => {
@@ -549,97 +531,82 @@ export const QuestFormScreen: React.FC = () => {
 
       {/* Team preferences */}
       <CollapsibleSection title="Team Preferences" defaultCollapsed>
-        <Text style={styles.sublabel}>Desirable</Text>
-        <MultiSelectField
-          label={label('traitCategory.plural')}
-          placeholder={`Select ${label(
-            'traitCategory.singular',
-            'lower'
-          )} to add...`}
-          options={tagOptions}
-          selected={formData.desirable.traitCategoryIds}
-          onAdd={value => addPreference('desirable', 'traitCategoryIds', value)}
-          onRemove={value =>
-            removePreference('desirable', 'traitCategoryIds', value)
-          }
-        />
-        <MultiSelectField
-          label={label('archetype.plural')}
-          placeholder={`Select ${label(
-            'archetype.singular',
-            'lower'
-          )} to add...`}
-          options={archetypeOptions}
-          selected={formData.desirable.archetypeIds}
-          onAdd={value => addPreference('desirable', 'archetypeIds', value)}
-          onRemove={value =>
-            removePreference('desirable', 'archetypeIds', value)
-          }
-        />
-        <MultiSelectField
-          label={label('trait.plural')}
-          placeholder={`Select ${label('trait.singular', 'lower')} to add...`}
-          options={traitOptions}
-          selected={formData.desirable.traitIds}
-          onAdd={value => addPreference('desirable', 'traitIds', value)}
-          onRemove={value => removePreference('desirable', 'traitIds', value)}
-        />
-        <MultiSelectField
-          label={label('quality.plural')}
-          placeholder={`Select ${label('quality.singular', 'lower')} to add...`}
-          options={qualityOptions}
-          selected={formData.desirable.qualityIds}
-          onAdd={value => addPreference('desirable', 'qualityIds', value)}
-          onRemove={value => removePreference('desirable', 'qualityIds', value)}
-        />
-
-        <Text style={[styles.sublabel, styles.labelMargin]}>Undesirable</Text>
-        <MultiSelectField
-          label={label('traitCategory.plural')}
-          placeholder={`Select ${label(
-            'traitCategory.singular',
-            'lower'
-          )} to add...`}
-          options={tagOptions}
-          selected={formData.undesirable.traitCategoryIds}
-          onAdd={value =>
-            addPreference('undesirable', 'traitCategoryIds', value)
-          }
-          onRemove={value =>
-            removePreference('undesirable', 'traitCategoryIds', value)
-          }
-        />
-        <MultiSelectField
-          label={label('archetype.plural')}
-          placeholder={`Select ${label(
-            'archetype.singular',
-            'lower'
-          )} to add...`}
-          options={archetypeOptions}
-          selected={formData.undesirable.archetypeIds}
-          onAdd={value => addPreference('undesirable', 'archetypeIds', value)}
-          onRemove={value =>
-            removePreference('undesirable', 'archetypeIds', value)
-          }
-        />
-        <MultiSelectField
-          label={label('trait.plural')}
-          placeholder={`Select ${label('trait.singular', 'lower')} to add...`}
-          options={traitOptions}
-          selected={formData.undesirable.traitIds}
-          onAdd={value => addPreference('undesirable', 'traitIds', value)}
-          onRemove={value => removePreference('undesirable', 'traitIds', value)}
-        />
-        <MultiSelectField
-          label={label('quality.plural')}
-          placeholder={`Select ${label('quality.singular', 'lower')} to add...`}
-          options={qualityOptions}
-          selected={formData.undesirable.qualityIds}
-          onAdd={value => addPreference('undesirable', 'qualityIds', value)}
-          onRemove={value =>
-            removePreference('undesirable', 'qualityIds', value)
-          }
-        />
+        {/*
+          One entry-preference field per non-catalog facet collection, plus a
+          category-preference field for any collection that declares
+          `categories` — the generalized form of the old four hardcoded
+          traitCategory/archetype/trait/quality field pairs, rendered once for
+          "Desirable" and once for "Undesirable".
+        */}
+        {(['desirable', 'undesirable'] as const).map(which => (
+          <React.Fragment key={which}>
+            <Text
+              style={
+                which === 'undesirable'
+                  ? [styles.sublabel, styles.labelMargin]
+                  : styles.sublabel
+              }
+            >
+              {which === 'desirable' ? 'Desirable' : 'Undesirable'}
+            </Text>
+            {ruleset.facets
+              .filter(
+                collection =>
+                  collection.selection !== 'catalog' && !collection.authored
+              )
+              .map(collection => (
+                <React.Fragment key={collection.id}>
+                  <MultiSelectField
+                    label={collection.plural}
+                    placeholder={`Select ${collection.singular.toLowerCase()} to add...`}
+                    options={collection.entries.map(entry => ({
+                      value: entry.id,
+                      label: entry.label,
+                    }))}
+                    selected={formData[which].entries[collection.id] ?? []}
+                    onAdd={value =>
+                      addPreference(which, 'entries', collection.id, value)
+                    }
+                    onRemove={value =>
+                      removePreference(which, 'entries', collection.id, value)
+                    }
+                  />
+                  {collection.categories &&
+                    collection.categories.length > 0 && (
+                      <MultiSelectField
+                        label={collection.categoryPlural ?? 'Categories'}
+                        placeholder={`Select ${(
+                          collection.categorySingular ?? 'category'
+                        ).toLowerCase()} to add...`}
+                        options={collection.categories.map(category => ({
+                          value: category.id,
+                          label: category.label,
+                        }))}
+                        selected={
+                          formData[which].categories[collection.id] ?? []
+                        }
+                        onAdd={value =>
+                          addPreference(
+                            which,
+                            'categories',
+                            collection.id,
+                            value
+                          )
+                        }
+                        onRemove={value =>
+                          removePreference(
+                            which,
+                            'categories',
+                            collection.id,
+                            value
+                          )
+                        }
+                      />
+                    )}
+                </React.Fragment>
+              ))}
+          </React.Fragment>
+        ))}
       </CollapsibleSection>
 
       {/* Location */}

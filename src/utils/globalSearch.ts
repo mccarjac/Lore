@@ -16,6 +16,8 @@ import {
   GameQuest,
 } from '@models/types';
 import type { StoredFaction } from './characterStorage';
+import { getActiveRuleset } from '@/activeRuleset';
+import { getFacetIds, getPrimaryFacetLabel } from '@/ruleset/facets';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 export type SearchDomain =
@@ -128,18 +130,31 @@ const rankAndCap = <T extends GlobalSearchResult>(results: T[]): T[] =>
     })
     .slice(0, MAX_RESULTS_PER_DOMAIN);
 
+/** Every catalog-entry label a character holds, across every collection. */
+const allFacetLabels = (
+  character: GameCharacter,
+  ruleset: RulesetDefinition
+): string[] =>
+  ruleset.facets.flatMap(collection => {
+    const heldIds = new Set(getFacetIds(character, collection.id));
+    return collection.entries
+      .filter(entry => heldIds.has(entry.id))
+      .map(entry => entry.label);
+  });
+
 const searchCharacters = (
   characters: GameCharacter[],
-  query: string
+  query: string,
+  ruleset: RulesetDefinition
 ): CharacterSearchResult[] => {
   const results: CharacterSearchResult[] = [];
   for (const character of characters) {
     const match = matchFields(
       character.name,
-      character.occupation ?? character.archetypeId,
+      character.occupation ?? getPrimaryFacetLabel(character, ruleset),
       [
         character.occupation,
-        character.archetypeId,
+        ...allFacetLabels(character, ruleset),
         character.notes,
         ...(character.factions ?? []).map(faction => faction.name),
       ],
@@ -282,7 +297,11 @@ export const searchAllDomains = (
   // every domain, which is what a caller with no ruleset in hand wants.
   const questsEnabled = ruleset ? ruleset.features.quests : true;
   return [
-    ...searchCharacters(data.characters, normalized),
+    ...searchCharacters(
+      data.characters,
+      normalized,
+      ruleset ?? getActiveRuleset()
+    ),
     ...searchFactions(data.factions, normalized),
     ...searchLocations(data.locations, normalized),
     ...searchEvents(data.events, normalized),

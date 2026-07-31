@@ -1,6 +1,7 @@
 import { GameCharacter, GameQuest, QuestStatus } from '@models/types';
 import { calculateDerivedStats } from '@/ruleset/derived';
 import { getActiveRuleset } from '@/activeRuleset';
+import { getCategoryScore, getFacetIds } from '@/ruleset/facets';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 export interface QuestProposal {
@@ -12,18 +13,19 @@ export interface QuestProposal {
  * explicit `teamSize` set. */
 export const DEFAULT_TEAM_SIZE = 4;
 
-/** Tunable weights for the match score. Each point of a desirable tag score
- * contributes `TAG_SCORE_WEIGHT`; an exact species/perk/distinction match
- * contributes its respective weight (and undesirable matches subtract it). */
-const TAG_SCORE_WEIGHT = 1;
-const SPECIES_WEIGHT = 5;
-const PERK_WEIGHT = 3;
-const DISTINCTION_WEIGHT = 3;
-
 /**
  * Scores how well a character fits a quest's desirable/undesirable
  * preferences. Higher is better; the score is unbounded and only meaningful
  * relative to other characters being compared for the same quest.
+ *
+ * Loops every facet collection rather than four hardcoded id lists (the old
+ * `SPECIES_WEIGHT`/`PERK_WEIGHT`/`DISTINCTION_WEIGHT`/`TAG_SCORE_WEIGHT`
+ * constants): an exact entry match contributes `collection.matchWeight`
+ * (defaulting to 5 for a `single`-selection collection, matching the old
+ * species weight, or 3 otherwise, matching the old perk/distinction
+ * weights), and a category-score match contributes
+ * `collection.categoryMatchWeight` per point (defaulting to 1, matching the
+ * old tag-score weight). Undesirable matches subtract the same weight.
  */
 export const scoreCharacterForQuest = (
   character: GameCharacter,
@@ -35,36 +37,29 @@ export const scoreCharacterForQuest = (
   const undesirable = quest.undesirable;
   let score = 0;
 
-  desirable?.traitCategoryIds?.forEach(categoryId => {
-    score += (categoryScores.get(categoryId) ?? 0) * TAG_SCORE_WEIGHT;
-  });
-  undesirable?.traitCategoryIds?.forEach(categoryId => {
-    score -= (categoryScores.get(categoryId) ?? 0) * TAG_SCORE_WEIGHT;
-  });
+  ruleset.facets.forEach(collection => {
+    const matchWeight =
+      collection.matchWeight ?? (collection.selection === 'single' ? 5 : 3);
+    const categoryMatchWeight = collection.categoryMatchWeight ?? 1;
+    const heldIds = getFacetIds(character, collection.id);
 
-  if (desirable?.archetypeIds?.includes(character.archetypeId)) {
-    score += SPECIES_WEIGHT;
-  }
-  if (undesirable?.archetypeIds?.includes(character.archetypeId)) {
-    score -= SPECIES_WEIGHT;
-  }
+    desirable?.entries?.[collection.id]?.forEach(id => {
+      if (heldIds.includes(id)) score += matchWeight;
+    });
+    undesirable?.entries?.[collection.id]?.forEach(id => {
+      if (heldIds.includes(id)) score -= matchWeight;
+    });
 
-  desirable?.traitIds?.forEach(perkId => {
-    if (character.traitIds.includes(perkId)) score += PERK_WEIGHT;
-  });
-  undesirable?.traitIds?.forEach(perkId => {
-    if (character.traitIds.includes(perkId)) score -= PERK_WEIGHT;
-  });
-
-  desirable?.qualityIds?.forEach(distinctionId => {
-    if (character.qualityIds.includes(distinctionId)) {
-      score += DISTINCTION_WEIGHT;
-    }
-  });
-  undesirable?.qualityIds?.forEach(distinctionId => {
-    if (character.qualityIds.includes(distinctionId)) {
-      score -= DISTINCTION_WEIGHT;
-    }
+    desirable?.categories?.[collection.id]?.forEach(categoryId => {
+      score +=
+        getCategoryScore(categoryScores, collection.id, categoryId) *
+        categoryMatchWeight;
+    });
+    undesirable?.categories?.[collection.id]?.forEach(categoryId => {
+      score -=
+        getCategoryScore(categoryScores, collection.id, categoryId) *
+        categoryMatchWeight;
+    });
   });
 
   return score;

@@ -41,8 +41,8 @@ this page.
 // src/rulesets/myflavor/index.ts — in your app, not in Lore
 import {
   num,
-  flag,
   type AttributeDefinition,
+  type FacetCollection,
   type RulesetDefinition,
 } from 'lore/ruleset';
 
@@ -57,37 +57,52 @@ const attributes: AttributeDefinition[] = [
   { id: 'vitalityCap', label: 'Vitality Cap', type: 'number', role: 'cap' },
 ];
 
-export const myFlavorRuleset: RulesetDefinition = {
-  id: 'myflavor',
-  name: 'My Flavor',
-  version: '1.0.0',
-  terminology: { 'archetype.plural': 'Bloodlines' },
-  attributes,
-  groups: [{ id: 'mortal', label: 'Mortal' }],
-  archetypes: [
+// A ruleset declares however many facet collections its game needs — this
+// one axis (the old hardcoded "archetype") plus one scored, multi-select axis
+// (the old hardcoded "trait"). Neither name is special to the engine.
+const bloodlines: FacetCollection = {
+  id: 'bloodlines',
+  singular: 'Bloodline',
+  plural: 'Bloodlines',
+  selection: 'single',
+  defaultEntryId: 'knight',
+  contributes: { stage: 'base' },
+  entries: [
     {
       id: 'knight',
       label: 'Knight',
-      groups: ['mortal'],
       attributes: { vitality: num(4), vitalityCap: num(9) },
     },
   ],
-  defaultArchetypeId: 'knight',
-  traitCategories: [{ id: 'martial', label: 'Martial', color: '#8E44AD' }],
-  traits: [
+};
+
+const disciplines: FacetCollection = {
+  id: 'disciplines',
+  singular: 'Discipline',
+  plural: 'Disciplines',
+  selection: 'multi',
+  categories: [{ id: 'martial', label: 'Martial', color: '#8E44AD' }],
+  contributes: { deltaRoles: ['resource'], categoryScore: true },
+  entries: [
     {
       id: 'shield_wall',
-      name: 'Shield Wall',
+      label: 'Shield Wall',
       description: 'Holds the line.',
       categoryId: 'martial',
       modifier: { attributeDeltas: { vitality: 1 } },
     },
   ],
-  qualities: [],
-  categoryBonuses: [],
+};
+
+export const myFlavorRuleset: RulesetDefinition = {
+  id: 'myflavor',
+  name: 'My Flavor',
+  version: '1.0.0',
+  terminology: {},
+  attributes,
+  facets: [bloodlines, disciplines],
   features: {
     quests: true,
-    recipes: false,
     discord: false,
     map: false,
     modifications: true,
@@ -128,24 +143,20 @@ deliberately small enough to hold in your head.
 
 `src/ruleset/types.ts` is the authority. Field by field:
 
-| Field                   | Required | What it is                                                                                                 |
-| ----------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
-| `id`, `name`, `version` | yes      | Identity. `id` must be unique against any other ruleset in the tree.                                       |
-| `terminology`           | yes      | Overrides for the neutral nouns. Partial — anything you omit falls back.                                   |
-| `attributes`            | yes      | Every attribute anything in this ruleset may carry. See below.                                             |
-| `groups`                | yes      | Named groupings of archetypes (`organic`, `undead`, …).                                                    |
-| `archetypes`            | yes      | What a character _is_, with its base attribute values.                                                     |
-| `defaultArchetypeId`    | no       | What a new character starts as. Without it the form falls back to declaration order.                       |
-| `traitCategories`       | yes      | Categories traits belong to, with an optional `color`.                                                     |
-| `traits`                | yes      | Things a character _has_, each in one category, optionally with a `modifier` and an archetype restriction. |
-| `qualities`             | yes      | Descriptive properties, optionally archetype-restricted. No mechanical effect.                             |
-| `recipes`               | no       | Craftable things, gated by the `recipes` feature flag.                                                     |
-| `categoryBonuses`       | yes      | "N traits in this category grants X." May be `[]`.                                                         |
-| `archetypeRules`        | no       | Carve-outs — currently one kind, see below.                                                                |
-| `features`              | yes      | Seven booleans gating whole subsystems.                                                                    |
-| `limits`                | no       | Ruleset-level numbers, e.g. `maxQualities`.                                                                |
-| `map`                   | no       | `{ imageKey }` — resolved through `RulesetAssets`, never a `require()`.                                    |
-| `branding`              | yes      | `appName` plus optional `iconKey` / `splashKey` / `colors`. See "Theming".                                 |
+| Field                   | Required | What it is                                                                                                                                                                                     |
+| ----------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`, `name`, `version` | yes      | Identity. `id` must be unique against any other ruleset in the tree.                                                                                                                           |
+| `terminology`           | yes      | Overrides for the engine's own core nouns. Partial — anything you omit falls back.                                                                                                             |
+| `attributes`            | yes      | Every attribute anything in this ruleset may carry. See below.                                                                                                                                 |
+| `facets`                | yes      | Every facet collection this ruleset declares — archetypes, traits, qualities, modifications, recipes and anything else you invent. See below. May be `[]` for a ruleset with no facets at all. |
+| `features`              | yes      | Five booleans gating whole subsystems.                                                                                                                                                         |
+| `map`                   | no       | `{ imageKey }` — resolved through `RulesetAssets`, never a `require()`.                                                                                                                        |
+| `branding`              | yes      | `appName` plus optional `iconKey` / `splashKey` / `colors`. See "Theming".                                                                                                                     |
+
+There is no `groups`, `archetypes`, `traitCategories`, `traits`, `qualities`,
+`recipes`, `categoryBonuses`, `archetypeRules`, `defaultArchetypeId` or
+`limits` field any more — the engine used to name each of those outright.
+They are now all expressed as `FacetCollection`s, below.
 
 ### Attributes and roles
 
@@ -169,28 +180,88 @@ hardcoded ids:
 `perCharacter: true` lets a character carry its own value for an attribute —
 that is how GM-defined per-character fields work, with no code change.
 
+### Facet collections
+
+A `FacetCollection` (`src/ruleset/facets.ts`) is the one concept that
+replaces the engine's old six named collections — `archetypes`, `traits`,
+`traitCategories`, `qualities`, `modifications`, `recipes`. A ruleset
+declares as many as its game needs, in `RulesetDefinition.facets`:
+
+```ts
+interface FacetCollection {
+  id: string;
+  singular: string; // display noun — replaces the old per-collection TermKeys
+  plural: string;
+  selection: 'single' | 'multi' | 'catalog';
+  maxSelections?: number; // the old `limits.maxQualities`
+  defaultEntryId?: string; // the old `defaultArchetypeId`
+  authored?: boolean; // entries are written per character, not picked from a catalog
+  groups?: FacetGroup[];
+  categories?: FacetCategory[];
+  categorySingular?: string;
+  categoryPlural?: string;
+  categoryBonuses?: FacetBonusRule[];
+  entries: FacetEntry[];
+  contributes?: {
+    stage?: 'base' | 'preBonus' | 'postBonus'; // default 'preBonus'
+    deltaRoles?: AttributeRole[]; // default [] — no arithmetic
+    categoryScore?: boolean; // default false
+  };
+  scoreExclusions?: FacetScoreExclusion[];
+  matchWeight?: number; // quest-preference weight; default 5 for 'single', 3 otherwise
+  categoryMatchWeight?: number; // default 1
+}
+```
+
+`selection` is the whole shape of the collection:
+
+- **`'single'`** — a character holds at most one (the old archetype). Set
+  `contributes.stage: 'base'` and give each entry an `attributes` bag to make
+  it seed a character's base numbers.
+- **`'multi'`** — a character holds any number (the old traits and
+  qualities). Add `categories` + `categoryBonuses` and
+  `contributes: { deltaRoles: ['resource'], categoryScore: true }` to make it
+  score like the old traits; omit `contributes` entirely for a purely
+  descriptive collection like the old qualities.
+- **`'catalog'`** — never held directly, only reachable through another
+  entry's `links` (the old recipes).
+
+Set `authored: true` for a collection whose entries are written per
+character rather than picked from `entries` (the old modifications) — give
+it `contributes: { stage: 'postBonus', deltaRoles: ['resource', 'cap'] }` to
+reproduce the old modification behavior exactly.
+
+A `FacetEntry`'s `requires` (collectionId → entry ids) replaces the old
+`allowedArchetypeIds` — an entry is only offered to a character already
+holding one of the named entries in that other collection. `links`
+(collectionId → entry ids) replaces the old `Trait.recipeIds` — a pointer
+into a `'catalog'` collection. `FacetScoreExclusion` replaces the old
+`ArchetypeRule`'s one kind: it suppresses category score when the character
+holds a named entry in another collection and this entry is restricted (via
+`requires`) to exactly one group's membership.
+
 ### How a number is computed
 
 `calculateDerivedStats(character, ruleset)` (`src/ruleset/derived.ts`) returns
 `{ values, categoryScores, attributes }`. **The order is load-bearing:**
 
-1. archetype base attributes
+1. `stage: 'base'` collections seed absolute attribute values, in declaration order
 2. character attribute overrides — **absolute assignments, not deltas**
-3. trait deltas (`role: 'resource'` only)
-4. category-bonus grants
-5. modification deltas (`'resource'` and `'cap'`)
+3. `stage: 'preBonus'` collections apply deltas (gated by `deltaRoles`) and category scores (gated by `categoryScore`)
+4. every collection's `categoryBonuses` grants
+5. `stage: 'postBonus'` collections apply deltas and category deltas
 6. clamp each resource to its `capAttributeId`
 
 Three consequences are deliberate, and the parity suite pins them:
 
-- **Traits cannot raise caps.** A trait may _declare_ a cap delta; the engine
-  ignores it. (Afterworlds' `smarts_20` does exactly this — a real ruleset
-  relies on the engine ignoring it.) It is a consequence
-  of the role rule, not a special case — and declaring one is not a validation
-  error, because flagging it would make `RulesetProvider` throw for a ruleset
-  that has always worked.
-- **Modification `categoryDeltas` do not retroactively unlock category
-  bonuses**, since they land after step 4.
+- **A `preBonus` collection cannot raise a cap unless its `deltaRoles`
+  includes `'cap'`.** The old traits declared only `['resource']`, so a
+  trait's cap delta was — and still is — simply never applied. (Afterworlds'
+  `smarts_20` declares one; a real ruleset relies on the engine ignoring it.)
+  Declaring one is not a validation error, because flagging it would make
+  `RulesetProvider` throw for a ruleset that has always worked.
+- **A `postBonus` collection's category deltas do not retroactively unlock
+  category bonuses**, since they land after step 4.
 - **Only resources with a `capAttributeId` clamp.** An uncapped resource grows
   without bound.
 
@@ -198,41 +269,46 @@ All three are arguably bugs. Fixing any of them moves real players' numbers and
 is a rules change, not a refactor — so if you want different behavior, that is
 a conversation, not a patch.
 
-### Category bonuses and archetype rules
+### Category bonuses and score exclusions
 
-A `CategoryBonusRule` says "hold `requiredScore` traits in `categoryId` and
-receive `grants`". Score is the count of traits a character holds in that
-category.
+A `FacetBonusRule` says "hold `requiredScore` entries in `categoryId` within
+this collection and receive `grants`". Score is the count of entries a
+character holds in that category, per collection — `categoryScores` in
+`DerivedStats` is nested `collectionId -> categoryId -> score`, since two
+collections may each declare a category with the same id.
 
-`archetypeRules` currently has one kind,
-`excludeCategoryScoreFromGroupRestrictedTraits`: the named archetype accrues no
-category score from traits restricted to _exactly_ the membership of the named
-group. It exists because Afterworlds' "Perfect Mutant" works that way; declare
-it only if your rules need it.
+`scoreExclusions` is the declarative form of what used to be `ArchetypeRule`'s
+one kind: the named entry in `whenCollectionId` accrues no category score
+from entries restricted (via `requires`) to _exactly_ the membership of
+`groupId`. It exists because Afterworlds' "Perfect Mutant" works that way;
+declare it only if your rules need it.
 
 ### Terminology
 
-`terminology` maps a `TermKey` (`'trait.plural'`, `'archetype.singular'`,
-`'character.plural'`, `'map.label'`, …) to what your game calls that thing.
-Anything you omit uses the neutral default, so `terminology: {}` is a
-complete, valid choice — the example ruleset does exactly that so the
-fallback path is exercised by a running app.
+`terminology` maps a `TermKey` to what your game calls one of the engine's
+own core nouns — `character`, `faction`, `quest`, `resource`,
+`questSponsor`, `map.label`. Anything you omit uses the neutral default, so
+`terminology: {}` is a complete, valid choice — the example ruleset does
+exactly that so the fallback path is exercised by a running app.
+`location`/`event` are not yet in `TermKey`; they're always
+"Location"/"Event".
 
-Most `TermKey`s are ruleset-content nouns (`archetype`, `trait`,
-`traitCategory`, `quality`, `modification`, `resource`, `recipe`,
-`questSponsor`, `map.label`). Three are the engine's own core domain nouns —
-`character`, `faction`, `quest` — overridable for the same reason: a lore app
-for a real-world event ("Wastelander", "Tribe", "Mission") reads nothing like
-a fantasy campaign's "Character", "Faction", "Quest". `location` and `event`
-are not yet in `TermKey`; they're always "Location"/"Event".
+Every other noun — what used to be `archetype`, `trait`, `traitCategory`,
+`quality`, `modification`, `recipe` — is no longer a `TermKey` at all. It is
+a `FacetCollection`'s own `singular`/`plural` (and, for a scored collection,
+`categorySingular`/`categoryPlural`), declared once where the collection
+itself is declared rather than as a separate terminology override.
 
-Screens read these through `useLabels()`, and non-component code through
+Screens read `TermKey`s through `useLabels()`, and non-component code through
 `getLabel(ruleset, key)`. **Never hardcode a domain noun in a screen** — a
-different ruleset calls it something else.
+different ruleset calls it something else, and a facet collection's noun
+comes from `collection.singular`/`.plural` directly.
 
-Terminology overrides are _content_. Renaming an engine field must not drag the
-override values along with it: Junktown's app still says "Species" and "Perks"
-after the Phase 1 renames precisely because those values live in the ruleset.
+Terminology overrides are _content_, and so is a collection's `singular`/
+`plural`. Renaming an engine field must not drag either along with it —
+that discipline is what let Junktown's app keep saying "Species" and "Perks"
+through the Phase 1 renames, and it is exactly as true for the facet names
+now.
 
 ### Theming
 

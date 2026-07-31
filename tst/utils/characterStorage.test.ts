@@ -68,9 +68,11 @@ describe('characterStorage', () => {
     const mockCharacter: GameCharacter = {
       id: 'char-1',
       name: 'Test Character',
-      archetypeId: 'Human',
-      traitIds: ['perk1'],
-      qualityIds: ['dist1'],
+      facets: {
+        archetypes: ['Human'],
+        traits: ['perk1'],
+        qualities: ['dist1'],
+      },
       factions: [{ name: 'Brotherhood', standing: RelationshipStanding.Ally }],
       relationships: [],
       present: false,
@@ -112,9 +114,7 @@ describe('characterStorage', () => {
         const oldCharacter = {
           id: 'char-1',
           name: 'Old Character',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -187,9 +187,7 @@ describe('characterStorage', () => {
 
         const newCharacterData = {
           name: 'New Character',
-          archetypeId: 'Mutant' as const,
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Mutant'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
         };
@@ -213,9 +211,7 @@ describe('characterStorage', () => {
 
         const newCharacterData = {
           name: 'Second Character',
-          archetypeId: 'Android' as const,
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Android'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
         };
@@ -238,9 +234,7 @@ describe('characterStorage', () => {
 
         const newCharacterData = {
           name: 'Character Without Relationships',
-          archetypeId: 'Human' as const,
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
         } as any;
 
@@ -295,7 +289,7 @@ describe('characterStorage', () => {
         const result = await updateCharacter('char-1', { retired: true });
 
         expect(result?.name).toBe('Test Character');
-        expect(result?.archetypeId).toBe('Human');
+        expect(result?.facets?.archetypes).toEqual(['Human']);
         expect(result?.retired).toBe(true);
       });
     });
@@ -432,9 +426,7 @@ describe('characterStorage', () => {
             {
               id: 'char-1',
               name: 'Test',
-              archetypeId: 'Human',
-              traitIds: [],
-              qualityIds: [],
+              facets: { archetypes: ['Human'], traits: [], qualities: [] },
               factions: [],
               relationships: [],
               createdAt: mockDate,
@@ -522,9 +514,7 @@ describe('characterStorage', () => {
             {
               id: 'char-1',
               name: 'Imported',
-              archetypeId: 'Human',
-              traitIds: [],
-              qualityIds: [],
+              facets: { archetypes: ['Human'], traits: [], qualities: [] },
               factions: [],
               relationships: [],
               createdAt: mockDate,
@@ -1185,10 +1175,8 @@ describe('characterStorage', () => {
             {
               id: 'char-1',
               name: 'Test',
-              archetypeId: 'Human',
               location: 'Old Town', // Old location field
-              traitIds: [],
-              qualityIds: [],
+              facets: { archetypes: ['Human'], traits: [], qualities: [] },
               factions: [],
               relationships: [],
               present: false,
@@ -1236,10 +1224,8 @@ describe('characterStorage', () => {
             {
               id: 'char-1',
               name: 'Test',
-              archetypeId: 'Human',
               locationId: 'nonexistent-location-id',
-              traitIds: [],
-              qualityIds: [],
+              facets: { archetypes: ['Human'], traits: [], qualities: [] },
               factions: [],
               relationships: [],
               present: false,
@@ -1338,9 +1324,7 @@ describe('characterStorage', () => {
         const characterWithFaction: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [
             { name: 'ToDelete', standing: RelationshipStanding.Ally },
             { name: 'ToKeep', standing: RelationshipStanding.Neutral },
@@ -1456,9 +1440,7 @@ describe('characterStorage', () => {
         const character: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [{ name: 'OldName', standing: RelationshipStanding.Ally }],
           relationships: [],
           present: false,
@@ -1710,9 +1692,7 @@ describe('characterStorage', () => {
         const character: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [
             {
               name: 'Brotherhood',
@@ -1754,9 +1734,7 @@ describe('characterStorage', () => {
         const character: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [
             {
               name: 'Brotherhood',
@@ -1808,9 +1786,7 @@ describe('characterStorage', () => {
         const character = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -1997,10 +1973,8 @@ describe('characterStorage', () => {
         const character: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
           locationId: 'loc-to-delete',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -2258,10 +2232,8 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'John',
-          archetypeId: 'Human',
           notes: 'Original notes',
-          traitIds: ['perk1'],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: ['perk1'], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -2273,10 +2245,8 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Jane',
-          archetypeId: 'Mutant',
           notes: 'Different notes',
-          traitIds: ['perk2'],
-          qualityIds: [],
+          facets: { archetypes: ['Mutant'], traits: ['perk2'], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -2307,7 +2277,7 @@ describe('characterStorage', () => {
         expect(result.success).toBe(true);
         expect(result.conflicts.length).toBeGreaterThan(0);
         expect(result.conflicts[0].conflicts).toContain('name');
-        expect(result.conflicts[0].conflicts).toContain('archetypeId');
+        expect(result.conflicts[0].conflicts).toContain('facets');
         expect(result.conflicts[0].conflicts).toContain('notes');
       });
 
@@ -2315,9 +2285,11 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: ['perk1'],
-          qualityIds: ['dist1'],
+          facets: {
+            archetypes: ['Human'],
+            traits: ['perk1'],
+            qualities: ['dist1'],
+          },
           factions: [{ name: 'Faction1', standing: RelationshipStanding.Ally }],
           relationships: [],
           present: false,
@@ -2329,9 +2301,11 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: ['perk2'],
-          qualityIds: ['dist2'],
+          facets: {
+            archetypes: ['Human'],
+            traits: ['perk2'],
+            qualities: ['dist2'],
+          },
           factions: [
             { name: 'Faction2', standing: RelationshipStanding.Neutral },
           ],
@@ -2363,8 +2337,8 @@ describe('characterStorage', () => {
 
         expect(result.success).toBe(true);
         expect(result.conflicts).toHaveLength(0);
-        expect(result.merged[0].traitIds).toEqual(['perk1', 'perk2']);
-        expect(result.merged[0].qualityIds).toEqual(['dist1', 'dist2']);
+        expect(result.merged[0].facets?.traits).toEqual(['perk1', 'perk2']);
+        expect(result.merged[0].facets?.qualities).toEqual(['dist1', 'dist2']);
         expect(result.merged[0].factions).toHaveLength(2);
       });
 
@@ -2372,10 +2346,8 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: '',
-          archetypeId: 'Human',
           notes: '',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -2387,10 +2359,8 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Imported Name',
-          archetypeId: 'Human',
           notes: 'Imported notes',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -2428,9 +2398,7 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [
             {
@@ -2448,9 +2416,7 @@ describe('characterStorage', () => {
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [
             {
@@ -2590,9 +2556,7 @@ describe('characterStorage', () => {
         const testChar: GameCharacter = {
           id: 'test-1',
           name: 'Test',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -2954,9 +2918,7 @@ describe('characterStorage', () => {
         const characterWithFaction: GameCharacter = {
           id: 'char-1',
           name: 'Test Character',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [factionToDelete, factionToKeep],
           relationships: [],
           present: false,
@@ -3007,9 +2969,7 @@ describe('characterStorage', () => {
         const characterWithoutFaction: GameCharacter = {
           id: 'char-2',
           name: 'Other Character',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [otherFaction],
           relationships: [],
           present: false,
@@ -3061,9 +3021,7 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'Existing',
-          archetypeId: 'Human',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -3075,9 +3033,7 @@ describe('characterStorage', () => {
         const newChar: GameCharacter = {
           id: 'char-2',
           name: 'New Character',
-          archetypeId: 'Mutant',
-          traitIds: [],
-          qualityIds: [],
+          facets: { archetypes: ['Mutant'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
           present: false,
@@ -3132,9 +3088,11 @@ describe('characterStorage', () => {
         const existingChar: GameCharacter = {
           id: 'char-1',
           name: 'Test Character',
-          archetypeId: 'Human',
-          traitIds: ['perk1'],
-          qualityIds: ['dist1'],
+          facets: {
+            archetypes: ['Human'],
+            traits: ['perk1'],
+            qualities: ['dist1'],
+          },
           factions: [faction1],
           relationships: [],
           notes: 'Original notes',
@@ -3144,12 +3102,18 @@ describe('characterStorage', () => {
           updatedAt: mockDate,
         };
 
+        // `mergeDatasets` (unlike `importDataset`/
+        // `mergeDatasetWithConflictResolution`) does not run imported data
+        // through `normalizeDatasetRulesetFields`, so the import must already
+        // be in the current `facets` shape.
         const importedChar: GameCharacter = {
           id: 'char-1',
           name: 'Test Character',
-          archetypeId: 'Human',
-          traitIds: ['perk2', 'perk3'], // New perks
-          qualityIds: ['dist2'], // New distinction
+          facets: {
+            archetypes: ['Human'],
+            traits: ['perk2', 'perk3'], // New perks
+            qualities: ['dist2'], // New distinction
+          },
           factions: [faction2], // New faction
           relationships: [],
           present: false,
@@ -3187,8 +3151,11 @@ describe('characterStorage', () => {
         expect(savedCharacters[0]).toEqual(
           expect.objectContaining({
             id: 'char-1',
-            traitIds: ['perk1', 'perk2', 'perk3'],
-            qualityIds: ['dist1', 'dist2'],
+            facets: expect.objectContaining({
+              archetypes: ['Human'],
+              traits: ['perk1', 'perk2', 'perk3'],
+              qualities: ['dist1', 'dist2'],
+            }),
             factions: [faction1, faction2],
           })
         );

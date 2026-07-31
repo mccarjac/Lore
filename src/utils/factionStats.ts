@@ -1,24 +1,49 @@
 import { GameCharacter, RelationshipStanding } from '../models/types';
 import { FactionRelationship } from './characterStorage';
-import { getLabel, type RulesetDefinition } from '../ruleset';
+import { type RulesetDefinition } from '../ruleset';
 import { getActiveRuleset } from '@/activeRuleset';
+import { getFacetIds } from '@/ruleset/facets';
+
+/** A category's member count within one facet collection, plus its share. */
+export interface FactionFacetCategoryStats {
+  categoryId: string;
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+/** Distribution over one facet collection's held entries, faction-scoped. */
+export interface FactionFacetStats {
+  collectionId: string;
+  singular: string;
+  plural: string;
+  categorySingular?: string;
+  categoryPlural?: string;
+  selection: 'single' | 'multi' | 'catalog';
+  /**
+   * categoryId -> member count, initialized to 0 for every category the
+   * *collection* declares (rather than a hardcoded enum) — this is what
+   * lets a collection with a different number of categories render at all.
+   * Empty for a collection with no `categories`.
+   */
+  categoryCounts: Record<string, number>;
+  topCategories: FactionFacetCategoryStats[];
+  /** Most commonly held entries in this collection, resolved to labels. */
+  topEntries: {
+    id: string;
+    label: string;
+    count: number;
+    percentage: number;
+  }[];
+}
 
 export interface FactionStats {
   factionName: string;
   totalMembers: number;
   presentMembers: number;
 
-  // Trait category analysis. Keyed by ruleset trait-category id, not a
-  // closed enum — a ruleset may declare any number of categories.
-  perkTagCounts: Record<string, number>;
-  topPerkTags: { tag: string; count: number; percentage: number }[];
-
-  // Common perks and distinctions
-  commonPerks: { name: string; count: number; percentage: number }[];
-  commonDistinctions: { name: string; count: number; percentage: number }[];
-
-  // Species distribution
-  archetypeDistribution: Record<string, number>;
+  /** One entry per non-catalog facet collection the ruleset declares. */
+  facetCollections: FactionFacetStats[];
 
   // Relationships
   relationships: FactionRelationship[];
@@ -27,7 +52,8 @@ export interface FactionStats {
 
   // Combined strength (with allies)
   combinedMemberCount?: number;
-  combinedPerkTags?: Record<string, number>;
+  /** collectionId -> categoryId -> count, combined across allies. */
+  combinedCategoryCounts?: Record<string, Record<string, number>>;
 }
 
 export interface CombinedFactionAnalysis {
@@ -35,7 +61,8 @@ export interface CombinedFactionAnalysis {
   directMembers: number;
   alliedFactions: string[];
   combinedMembers: number;
-  combinedPerkTags: Record<string, number>;
+  /** collectionId -> categoryId -> count, combined across allies. */
+  combinedCategoryCounts: Record<string, Record<string, number>>;
   strengthMultiplier: number; // Combined vs direct member ratio
 }
 
@@ -60,102 +87,6 @@ export const calculateFactionStats = (
     );
   });
 
-  if (members.length === 0) {
-    // Return empty stats for factions with no members
-    return {
-      factionName,
-      totalMembers: 0,
-      presentMembers: 0,
-      perkTagCounts: {},
-      topPerkTags: [],
-      commonPerks: [],
-      commonDistinctions: [],
-      archetypeDistribution: {},
-      relationships: factionRelationships,
-      alliedFactions: [],
-      enemyFactions: [],
-    };
-  }
-
-  const totalMembers = members.length;
-  const presentMembers = members.filter(m => m.present === true).length;
-
-  // Initialize every category the *ruleset* declares to 0, rather than the
-  // twelve members of a hardcoded enum. This is what lets a ruleset with a
-  // different number of categories render at all.
-  const perkTagCounts: Record<string, number> = Object.fromEntries(
-    ruleset.traitCategories.map(category => [category.id, 0])
-  );
-
-  members.forEach(member => {
-    member.traitIds.forEach(perkId => {
-      const trait = ruleset.traits.find(t => t.id === perkId);
-      if (trait && trait.categoryId) {
-        perkTagCounts[trait.categoryId] =
-          (perkTagCounts[trait.categoryId] || 0) + 1;
-      }
-    });
-  });
-
-  // Get top perk tags
-  const topPerkTags = Object.entries(perkTagCounts)
-    .map(([tag, count]) => ({
-      tag,
-      count,
-      percentage: (count / totalMembers) * 100,
-    }))
-    .filter(item => item.count > 0)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  // Calculate most common perks
-  const perkCount: Record<string, number> = {};
-  members.forEach(member => {
-    member.traitIds.forEach(perkId => {
-      perkCount[perkId] = (perkCount[perkId] || 0) + 1;
-    });
-  });
-
-  const commonPerks = Object.entries(perkCount)
-    .map(([id, count]) => ({
-      name:
-        ruleset.traits.find(trait => trait.id === id)?.name ||
-        `Unknown ${getLabel(ruleset, 'trait.singular')}`,
-      count,
-      percentage: (count / totalMembers) * 100,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  // Calculate most common distinctions
-  const distinctionCount: Record<string, number> = {};
-  members.forEach(member => {
-    member.qualityIds.forEach(distinctionId => {
-      distinctionCount[distinctionId] =
-        (distinctionCount[distinctionId] || 0) + 1;
-    });
-  });
-
-  const commonDistinctions = Object.entries(distinctionCount)
-    .map(([id, count]) => ({
-      name:
-        ruleset.qualities.find(quality => quality.id === id)?.name ||
-        `Unknown ${getLabel(ruleset, 'quality.singular')}`,
-      count,
-      percentage: (count / totalMembers) * 100,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  // Calculate species distribution
-  const archetypeDistribution = members.reduce(
-    (acc, member) => {
-      acc[member.archetypeId] = (acc[member.archetypeId] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-
   // Analyze relationships
   const alliedFactions = factionRelationships
     .filter(
@@ -173,15 +104,89 @@ export const calculateFactionStats = (
     )
     .map(rel => rel.factionName);
 
+  if (members.length === 0) {
+    // Return empty stats for factions with no members
+    return {
+      factionName,
+      totalMembers: 0,
+      presentMembers: 0,
+      facetCollections: [],
+      relationships: factionRelationships,
+      alliedFactions,
+      enemyFactions,
+    };
+  }
+
+  const totalMembers = members.length;
+  const presentMembers = members.filter(m => m.present === true).length;
+
+  // One distribution per facet collection — the generalized form of the old
+  // perkTagCounts/topPerkTags/commonPerks/commonDistinctions/
+  // archetypeDistribution, which hardcoded exactly three collections plus
+  // one collection's categories. A catalog collection (recipes) is
+  // excluded: it's never held directly, so it has nothing to count.
+  const facetCollections: FactionFacetStats[] = ruleset.facets
+    .filter(collection => collection.selection !== 'catalog')
+    .map(collection => {
+      const categoryCounts: Record<string, number> = Object.fromEntries(
+        (collection.categories ?? []).map(category => [category.id, 0])
+      );
+      const entryCounts: Record<string, number> = {};
+
+      members.forEach(member => {
+        getFacetIds(member, collection.id).forEach(id => {
+          entryCounts[id] = (entryCounts[id] ?? 0) + 1;
+          const entry = collection.entries.find(e => e.id === id);
+          if (entry?.categoryId) {
+            categoryCounts[entry.categoryId] =
+              (categoryCounts[entry.categoryId] ?? 0) + 1;
+          }
+        });
+      });
+
+      const topCategories = Object.entries(categoryCounts)
+        .map(([categoryId, count]) => ({
+          categoryId,
+          label:
+            collection.categories?.find(c => c.id === categoryId)?.label ??
+            categoryId,
+          count,
+          percentage: (count / totalMembers) * 100,
+        }))
+        .filter(item => item.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      const topEntries = Object.entries(entryCounts)
+        .map(([id, count]) => ({
+          id,
+          label:
+            collection.entries.find(entry => entry.id === id)?.label ??
+            `Unknown ${collection.singular}`,
+          count,
+          percentage: (count / totalMembers) * 100,
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      return {
+        collectionId: collection.id,
+        singular: collection.singular,
+        plural: collection.plural,
+        categorySingular: collection.categorySingular,
+        categoryPlural: collection.categoryPlural,
+        selection: collection.selection,
+        categoryCounts,
+        topCategories,
+        topEntries,
+      };
+    });
+
   return {
     factionName,
     totalMembers,
     presentMembers,
-    perkTagCounts,
-    topPerkTags,
-    commonPerks,
-    commonDistinctions,
-    archetypeDistribution,
+    facetCollections,
     relationships: factionRelationships,
     alliedFactions,
     enemyFactions,
@@ -210,11 +215,14 @@ export const calculateCombinedFactionStats = (
   // Get allied factions
   const alliedFactions = baseStats.alliedFactions;
 
-  // Calculate combined member count and perk tags including allies
+  // Calculate combined member count and category counts including allies
   let combinedMembers = baseStats.totalMembers;
-  const combinedPerkTags: Record<string, number> = {
-    ...baseStats.perkTagCounts,
-  };
+  const combinedCategoryCounts: Record<string, Record<string, number>> = {};
+  baseStats.facetCollections.forEach(collection => {
+    combinedCategoryCounts[collection.collectionId] = {
+      ...collection.categoryCounts,
+    };
+  });
 
   alliedFactions.forEach(allyName => {
     const allyRelationships = allFactionRelationships.get(allyName) || [];
@@ -226,9 +234,14 @@ export const calculateCombinedFactionStats = (
     );
     combinedMembers += allyStats.totalMembers;
 
-    // Add ally perk tags to combined totals
-    Object.entries(allyStats.perkTagCounts).forEach(([tag, count]) => {
-      combinedPerkTags[tag] = (combinedPerkTags[tag] || 0) + count;
+    // Add ally category counts to combined totals, per collection.
+    allyStats.facetCollections.forEach(collection => {
+      const bucket = (combinedCategoryCounts[collection.collectionId] ??= {});
+      Object.entries(collection.categoryCounts).forEach(
+        ([categoryId, count]) => {
+          bucket[categoryId] = (bucket[categoryId] ?? 0) + count;
+        }
+      );
     });
   });
 
@@ -240,7 +253,7 @@ export const calculateCombinedFactionStats = (
     directMembers: baseStats.totalMembers,
     alliedFactions,
     combinedMembers,
-    combinedPerkTags,
+    combinedCategoryCounts,
     strengthMultiplier,
   };
 };

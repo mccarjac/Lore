@@ -19,12 +19,13 @@ import {
 } from '@react-navigation/native';
 import { RootStackParamList } from '@/navigation/types';
 import {
+  AuthoredFacetEntry,
   CharacterFormData,
+  FacetValue,
   GameCharacter,
   GameLocation,
   Relationship,
   RelationshipStanding,
-  Modification,
 } from '@models/types';
 import {
   addCharacter,
@@ -36,70 +37,31 @@ import {
 } from '@utils/characterStorage';
 import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
-import { BaseFormScreen } from '@/components';
-import { useLabels, useRuleset, useFeature } from '@/ruleset';
-import { roleOf, type AttributeDefinition } from '@/ruleset/attributes';
+import {
+  BaseFormScreen,
+  FacetAuthoredEditor,
+  FacetMultiSelectField,
+  FacetSingleSelectField,
+} from '@/components';
+import { useLabels, useRuleset } from '@/ruleset';
+import type { RulesetDefinition } from '@/ruleset/types';
 
 /**
- * A modification's numeric deltas are a flat attribute-id -> delta map since
- * #22 (a cap is simply another attribute), so these keep the per-input update
- * readable — the editor loops over the ruleset's attribute definitions and
- * calls these per input.
+ * A new character's starting facet selections: a `defaultEntryId` for a
+ * `single` collection (the old `defaultArchetypeId`), empty otherwise. Catalog
+ * collections are excluded — a character never holds one directly.
  */
-const setAttributeDelta = (
-  modification: Modification,
-  attributeId: string,
-  numValue: number | undefined
-): Modification => {
-  const existing = modification.modifier ?? {};
-  const deltas = { ...(existing.attributeDeltas ?? {}) };
-
-  if (numValue === undefined) {
-    delete deltas[attributeId];
-  } else {
-    deltas[attributeId] = numValue;
-  }
-
-  return {
-    ...modification,
-    modifier: {
-      ...existing,
-      attributeDeltas: Object.keys(deltas).length > 0 ? deltas : undefined,
-    },
-  };
-};
-
-const setCategoryModifiers = (
-  modification: Modification,
-  categoryDeltas: Record<string, number>
-): Modification => ({
-  ...modification,
-  modifier: {
-    ...(modification.modifier ?? {}),
-    categoryDeltas:
-      Object.keys(categoryDeltas).length > 0 ? categoryDeltas : undefined,
-  },
-});
-
-/**
- * Numeric modification inputs are laid out two per row. `derived.ts` applies a
- * modification's deltas to `resource` and `cap` attributes only, so those are
- * exactly the ones worth an input — a capability flag would get a meaningless
- * numeric field.
- */
-const modifiableAttributeRows = (
-  attributes: AttributeDefinition[]
-): AttributeDefinition[][] => {
-  const modifiable = attributes.filter(
-    attribute => roleOf(attribute) === 'resource' || roleOf(attribute) === 'cap'
+const buildDefaultFacets = (
+  ruleset: RulesetDefinition
+): Record<string, FacetValue[]> =>
+  Object.fromEntries(
+    ruleset.facets
+      .filter(collection => collection.selection !== 'catalog')
+      .map(collection => [
+        collection.id,
+        collection.defaultEntryId ? [collection.defaultEntryId] : [],
+      ])
   );
-
-  const rows: AttributeDefinition[][] = [];
-  for (let index = 0; index < modifiable.length; index += 2) {
-    rows.push(modifiable.slice(index, index + 2));
-  }
-  return rows;
-};
 
 type CharacterFormRouteProp = RouteProp<RootStackParamList, 'CharacterForm'>;
 
@@ -108,15 +70,7 @@ export const CharacterFormScreen: React.FC = () => {
   const route = useRoute<CharacterFormRouteProp>();
   const label = useLabels();
   const { ruleset } = useRuleset();
-  const maxQualities = ruleset.limits?.maxQualities ?? 3;
   const editingCharacter = route.params?.character;
-  const modificationsEnabled = useFeature('modifications');
-  const attributeRows = modifiableAttributeRows(ruleset.attributes);
-  const archetypeLabel = (id: string): string =>
-    ruleset.archetypes.find(archetype => archetype.id === id)?.label ?? id;
-  const categoryLabel = (id: string): string =>
-    ruleset.traitCategories.find(category => category.id === id)?.label ?? id;
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
   const [availableFactions, setAvailableFactions] = useState<string[]>([]);
   const [availableLocations, setAvailableLocations] = useState<GameLocation[]>(
@@ -125,9 +79,6 @@ export const CharacterFormScreen: React.FC = () => {
   const [showCustomFactionInput, setShowCustomFactionInput] = useState<{
     [key: number]: boolean;
   }>({});
-  const [perksExpanded, setPerksExpanded] = useState<boolean>(false);
-  const [distinctionsExpanded, setDistinctionsExpanded] =
-    useState<boolean>(false);
   const { colors: themeColors } = useTheme();
   const commonStyles = useCommonStyles();
   const styles = useMemo(
@@ -513,9 +464,7 @@ export const CharacterFormScreen: React.FC = () => {
     editingCharacter
       ? {
           name: editingCharacter.name,
-          archetypeId: editingCharacter.archetypeId,
-          traitIds: [...editingCharacter.traitIds],
-          qualityIds: [...editingCharacter.qualityIds],
+          facets: { ...(editingCharacter.facets ?? {}) },
           factions: [...editingCharacter.factions],
           relationships: [...(editingCharacter.relationships || [])],
           notes: editingCharacter.notes || '',
@@ -523,14 +472,10 @@ export const CharacterFormScreen: React.FC = () => {
           imageUris: editingCharacter.imageUris || [],
           locationId: editingCharacter.locationId,
           retired: editingCharacter.retired,
-          modifications: [...(editingCharacter.modifications || [])],
         }
       : {
           name: '',
-          archetypeId:
-            ruleset.defaultArchetypeId ?? ruleset.archetypes[0]?.id ?? '',
-          traitIds: [],
-          qualityIds: [],
+          facets: buildDefaultFacets(ruleset),
           factions: [],
           relationships: [],
           notes: '',
@@ -538,8 +483,34 @@ export const CharacterFormScreen: React.FC = () => {
           imageUris: [],
           locationId: undefined,
           retired: false,
-          modifications: [],
         }
+  );
+
+  const getFormFacetIds = (collectionId: string): string[] =>
+    (form.facets?.[collectionId] ?? []).filter(
+      (v): v is string => typeof v === 'string'
+    );
+
+  const getFormAuthoredFacets = (collectionId: string): AuthoredFacetEntry[] =>
+    (form.facets?.[collectionId] ?? []).filter(
+      (v): v is AuthoredFacetEntry => typeof v !== 'string'
+    );
+
+  const setFormFacet = (collectionId: string, values: FacetValue[]) => {
+    setForm(prev => ({
+      ...prev,
+      facets: { ...prev.facets, [collectionId]: values },
+    }));
+  };
+
+  // Every collection's current selections, for the `requires` filtering a
+  // `FacetMultiSelectField` needs (the generalized form of the old
+  // archetype-restricted trait check).
+  const allFacetSelections: Record<string, string[]> = Object.fromEntries(
+    ruleset.facets.map(collection => [
+      collection.id,
+      getFormFacetIds(collection.id),
+    ])
   );
 
   const loadAllCharacters = useCallback(async () => {
@@ -777,26 +748,16 @@ export const CharacterFormScreen: React.FC = () => {
         </View>
       </View>
 
-      {ruleset.archetypes.length > 1 && (
-        <View style={styles.formSection}>
-          <Text style={styles.label}>{label('archetype.singular')}</Text>
-          <Picker
-            selectedValue={form.archetypeId}
-            style={[styles.picker, { flex: 1 }]}
-            onValueChange={(value: string) =>
-              handleChange('archetypeId', value)
-            }
-          >
-            {ruleset.archetypes.map(archetype => (
-              <Picker.Item
-                key={archetype.id}
-                label={archetype.label}
-                value={archetype.id}
-              />
-            ))}
-          </Picker>
-        </View>
-      )}
+      {ruleset.facets
+        .filter(collection => collection.selection === 'single')
+        .map(collection => (
+          <FacetSingleSelectField
+            key={collection.id}
+            collection={collection}
+            selectedId={getFormFacetIds(collection.id)[0]}
+            onChange={id => setFormFacet(collection.id, [id])}
+          />
+        ))}
 
       <View style={styles.formSection}>
         <Text style={styles.label}>Location</Text>
@@ -818,352 +779,31 @@ export const CharacterFormScreen: React.FC = () => {
         </Picker>
       </View>
 
-      {ruleset.traits.length > 0 && (
-        <View style={styles.formSection}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => setPerksExpanded(!perksExpanded)}
-          >
-            <Text style={styles.label}>{label('trait.plural')}</Text>
-            <Text style={styles.expandIcon}>{perksExpanded ? '▼' : '▶'}</Text>
-          </TouchableOpacity>
-          {perksExpanded && (
-            <>
-              <View style={styles.filterContainer}>
-                <Text style={styles.filterLabel}>
-                  Filter by {label('traitCategory.singular')}:
-                </Text>
-                <Picker
-                  selectedValue={selectedCategoryId}
-                  style={[styles.picker, { flex: 1 }]}
-                  onValueChange={setSelectedCategoryId}
-                >
-                  <Picker.Item
-                    label={`All ${label('traitCategory.plural')}`}
-                    value=""
-                  />
-                  {ruleset.traitCategories.map(category => (
-                    <Picker.Item
-                      key={category.id}
-                      label={category.label}
-                      value={category.id}
-                    />
-                  ))}
-                </Picker>
-              </View>
-              {ruleset.traits
-                .filter(
-                  trait =>
-                    (!selectedCategoryId ||
-                      trait.categoryId === selectedCategoryId) &&
-                    (!trait.allowedArchetypeIds ||
-                      trait.allowedArchetypeIds.includes(form.archetypeId))
-                )
-                .map(trait => (
-                  <TouchableOpacity
-                    key={trait.id}
-                    style={[
-                      styles.selectionItem,
-                      form.traitIds.includes(trait.id) && styles.selectedItem,
-                      trait.allowedArchetypeIds && styles.speciesSpecificItem,
-                    ]}
-                    onPress={() => {
-                      const newTraitIds = form.traitIds.includes(trait.id)
-                        ? form.traitIds.filter(id => id !== trait.id)
-                        : [...form.traitIds, trait.id];
-                      handleChange('traitIds', newTraitIds);
-                    }}
-                  >
-                    <View style={styles.perkContainer}>
-                      <View style={styles.perkHeaderContainer}>
-                        <Text style={styles.itemName}>{trait.name}</Text>
-                        <View style={styles.perkBadgeContainer}>
-                          {trait.allowedArchetypeIds &&
-                            trait.allowedArchetypeIds.length > 0 && (
-                              <Text style={styles.speciesText}>
-                                {trait.allowedArchetypeIds.length === 1
-                                  ? archetypeLabel(trait.allowedArchetypeIds[0])
-                                  : `${trait.allowedArchetypeIds.length} ${label('archetype.plural')}`}
-                              </Text>
-                            )}
-                          <Text style={styles.tagText}>
-                            {categoryLabel(trait.categoryId)}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                    <Text style={styles.descriptionText}>
-                      {trait.description}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-            </>
-          )}
-        </View>
-      )}
-
-      {ruleset.qualities.length > 0 && (
-        <View style={styles.formSection}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => setDistinctionsExpanded(!distinctionsExpanded)}
-          >
-            <Text style={styles.label}>{label('quality.plural')}</Text>
-            <Text style={styles.expandIcon}>
-              {distinctionsExpanded ? '▼' : '▶'}
-            </Text>
-          </TouchableOpacity>
-          {distinctionsExpanded && (
-            <>
-              {ruleset.qualities.map(quality => (
-                <TouchableOpacity
-                  key={quality.id}
-                  style={[
-                    styles.selectionItem,
-                    form.qualityIds.includes(quality.id) && styles.selectedItem,
-                  ]}
-                  onPress={() => {
-                    const isSelected = form.qualityIds.includes(quality.id);
-
-                    if (isSelected) {
-                      // Allow deselection
-                      const newQualityIds = form.qualityIds.filter(
-                        id => id !== quality.id
-                      );
-                      handleChange('qualityIds', newQualityIds);
-                    } else if (form.qualityIds.length < maxQualities) {
-                      // Allow selection if under limit
-                      const newQualityIds = [...form.qualityIds, quality.id];
-                      handleChange('qualityIds', newQualityIds);
-                    } else {
-                      // Show alert when limit reached
-                      Alert.alert(
-                        'Maximum Reached',
-                        `You can only select up to ${maxQualities} ${label(
-                          'quality.plural',
-                          'lower'
-                        )}.`
-                      );
-                    }
-                  }}
-                >
-                  <Text style={styles.itemName}>{quality.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </>
-          )}
-        </View>
-      )}
-
-      {/* Gated on `modifications`. Existing modifications stay on the
-          character and are saved untouched, so the flag hides the editor
-          rather than discarding data. */}
-      {modificationsEnabled && (
-        <View style={styles.formSection}>
-          <Text style={styles.label}>{label('modification.plural')}</Text>
-          {form.modifications &&
-            form.modifications.map((cyber, index) => (
-              <View key={index} style={styles.cyberwareContainer}>
-                <View style={styles.cyberwareHeaderRow}>
-                  <TextInput
-                    style={styles.cyberwareName}
-                    value={cyber.name}
-                    onChangeText={value => {
-                      const newCyberware = [...(form.modifications || [])];
-                      newCyberware[index] = { ...cyber, name: value };
-                      handleChange('modifications', newCyberware);
-                    }}
-                    placeholder={`${label('modification.singular')} name`}
-                  />
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => {
-                      const newCyberware = (form.modifications || []).filter(
-                        (_, i) => i !== index
-                      );
-                      handleChange('modifications', newCyberware);
-                    }}
-                  >
-                    <Text style={styles.removeButtonText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-                <TextInput
-                  style={styles.cyberwareDescription}
-                  value={cyber.description}
-                  onChangeText={value => {
-                    const newCyberware = [...(form.modifications || [])];
-                    newCyberware[index] = { ...cyber, description: value };
-                    handleChange('modifications', newCyberware);
-                  }}
-                  placeholder="Description"
-                  multiline
-                />
-                <View style={styles.cyberwareModifiersSection}>
-                  <Text style={styles.cyberwareModifiersLabel}>
-                    Stat Modifiers (optional):
-                  </Text>
-                  {attributeRows.map((row, rowIndex) => (
-                    <View key={rowIndex} style={styles.modifierRow}>
-                      {row.map(attribute => (
-                        <View key={attribute.id} style={styles.modifierInput}>
-                          <Text style={styles.modifierLabel}>
-                            {attribute.label}:
-                          </Text>
-                          <TextInput
-                            style={styles.modifierField}
-                            value={
-                              cyber.modifier?.attributeDeltas?.[
-                                attribute.id
-                              ]?.toString() || ''
-                            }
-                            onChangeText={value => {
-                              const newCyberware = [
-                                ...(form.modifications || []),
-                              ];
-                              const numValue =
-                                value === '' ? undefined : parseInt(value) || 0;
-                              newCyberware[index] = setAttributeDelta(
-                                cyber,
-                                attribute.id,
-                                numValue
-                              );
-                              handleChange('modifications', newCyberware);
-                            }}
-                            placeholder="0"
-                            keyboardType="numeric"
-                          />
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-                  <View style={styles.tagModifiersSection}>
-                    <Text style={styles.tagModifiersLabel}>
-                      {label('traitCategory.singular')} Score Modifiers
-                      (optional):
-                    </Text>
-                    <View style={styles.tagModifiersList}>
-                      {ruleset.traitCategories.map(category => {
-                        const tag = category.id;
-                        const currentValue =
-                          cyber.modifier?.categoryDeltas?.[tag];
-                        if (currentValue === undefined && !cyber.modifier)
-                          return null;
-
-                        return (
-                          <View key={tag} style={styles.tagModifierRow}>
-                            <Text style={styles.tagModifierName}>
-                              {category.label}:
-                            </Text>
-                            <TextInput
-                              style={styles.tagModifierField}
-                              value={currentValue?.toString() || ''}
-                              onChangeText={value => {
-                                const newCyberware = [
-                                  ...(form.modifications || []),
-                                ];
-                                const numValue =
-                                  value === ''
-                                    ? undefined
-                                    : parseInt(value) || 0;
-
-                                const currentTagModifiers = {
-                                  ...(cyber.modifier?.categoryDeltas || {}),
-                                };
-
-                                if (numValue === undefined) {
-                                  delete currentTagModifiers[tag];
-                                } else {
-                                  currentTagModifiers[tag] = numValue;
-                                }
-
-                                newCyberware[index] = setCategoryModifiers(
-                                  cyber,
-                                  currentTagModifiers
-                                );
-                                handleChange('modifications', newCyberware);
-                              }}
-                              placeholder="0"
-                              keyboardType="numeric"
-                            />
-                            {currentValue !== undefined && (
-                              <TouchableOpacity
-                                style={styles.tagModifierRemove}
-                                onPress={() => {
-                                  const newCyberware = [
-                                    ...(form.modifications || []),
-                                  ];
-                                  const currentTagModifiers = {
-                                    ...(cyber.modifier?.categoryDeltas || {}),
-                                  };
-                                  delete currentTagModifiers[tag];
-
-                                  newCyberware[index] = setCategoryModifiers(
-                                    cyber,
-                                    currentTagModifiers
-                                  );
-                                  handleChange('modifications', newCyberware);
-                                }}
-                              >
-                                <Text style={styles.tagModifierRemoveText}>
-                                  ×
-                                </Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        );
-                      })}
-                    </View>
-                    <TouchableOpacity
-                      style={styles.addTagModifierButton}
-                      onPress={() => {
-                        // Find first tag that doesn't have a modifier
-                        const currentTagModifiers =
-                          cyber.modifier?.categoryDeltas || {};
-                        const availableTags = ruleset.traitCategories
-                          .map(category => category.id)
-                          .filter(tag => !(tag in currentTagModifiers));
-
-                        if (availableTags.length > 0) {
-                          const newCyberware = [...(form.modifications || [])];
-                          newCyberware[index] = setCategoryModifiers(cyber, {
-                            ...currentTagModifiers,
-                            [availableTags[0]]: 1,
-                          });
-                          handleChange('modifications', newCyberware);
-                        } else {
-                          Alert.alert(
-                            `All ${label('traitCategory.plural')} Added`,
-                            `All available ${label(
-                              'traitCategory.plural',
-                              'lower'
-                            )} already have modifiers.`
-                          );
-                        }
-                      }}
-                    >
-                      <Text style={styles.addTagModifierButtonText}>
-                        + Add {label('traitCategory.singular')} Modifier
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            ))}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              handleChange('modifications', [
-                ...(form.modifications || []),
-                { name: '', description: '' },
-              ]);
-            }}
-          >
-            <Text style={styles.addButtonText}>
-              Add {label('modification.singular')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {ruleset.facets
+        .filter(collection => collection.selection === 'multi')
+        .map(collection =>
+          collection.authored ? (
+            <View key={collection.id} style={styles.formSection}>
+              <Text style={styles.label}>{collection.plural}</Text>
+              <FacetAuthoredEditor
+                collection={collection}
+                ruleset={ruleset}
+                entries={getFormAuthoredFacets(collection.id)}
+                onChange={entries => setFormFacet(collection.id, entries)}
+              />
+            </View>
+          ) : (
+            <View key={collection.id} style={styles.formSection}>
+              <FacetMultiSelectField
+                collection={collection}
+                ruleset={ruleset}
+                selectedIds={getFormFacetIds(collection.id)}
+                onChange={ids => setFormFacet(collection.id, ids)}
+                allSelections={allFacetSelections}
+              />
+            </View>
+          )
+        )}
 
       <View style={styles.formSection}>
         <Text style={styles.label}>{label('faction.plural')}</Text>

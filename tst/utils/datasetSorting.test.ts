@@ -64,11 +64,13 @@ describe('sortDatasetDeterministically', () => {
                 relationshipType: RelationshipStanding.Ally,
               },
             ],
-            traitIds: ['perk3', 'perk1', 'perk2'],
-            qualityIds: ['dist2', 'dist1'],
+            facets: {
+              traits: ['perk3', 'perk1', 'perk2'],
+              qualities: ['dist2', 'dist1'],
+            },
             imageUris: ['image3.jpg', 'image1.jpg', 'image2.jpg'],
           },
-        ] as GameCharacter[],
+        ] as unknown as GameCharacter[],
       };
 
       const sorted = sortDatasetDeterministically(dataset);
@@ -78,8 +80,8 @@ describe('sortDatasetDeterministically', () => {
       expect(char.factions[1].name).toBe('Zulu Faction');
       expect(char.relationships[0].characterName).toBe('Alice');
       expect(char.relationships[1].characterName).toBe('Zoe');
-      expect(char.traitIds).toEqual(['perk1', 'perk2', 'perk3']);
-      expect(char.qualityIds).toEqual(['dist1', 'dist2']);
+      expect(char.facets?.traits).toEqual(['perk1', 'perk2', 'perk3']);
+      expect(char.facets?.qualities).toEqual(['dist1', 'dist2']);
       expect(char.imageUris).toEqual([
         'image1.jpg',
         'image2.jpg',
@@ -357,7 +359,7 @@ describe('sortDatasetDeterministically', () => {
             name: 'Test',
             factions: [],
             relationships: [],
-            traitIds: [],
+            facets: { traits: [] },
           } as unknown as GameCharacter,
         ],
       };
@@ -366,7 +368,7 @@ describe('sortDatasetDeterministically', () => {
 
       expect(sorted.characters[0].factions).toEqual([]);
       expect(sorted.characters[0].relationships).toEqual([]);
-      expect(sorted.characters[0].traitIds).toEqual([]);
+      expect(sorted.characters[0].facets?.traits).toEqual([]);
     });
   });
 });

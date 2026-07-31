@@ -33,3 +33,8 @@ export type {
   SelectFilterField,
   NumberFilterField,
 } from './search/filterFieldTypes';
+export { FacetSingleSelectField } from './facets/FacetSingleSelectField';
+export { FacetMultiSelectField } from './facets/FacetMultiSelectField';
+export { FacetAuthoredEditor } from './facets/FacetAuthoredEditor';
+export { FacetDetailSection } from './facets/FacetDetailSection';
+export { FacetCategoryScores } from './facets/FacetCategoryScores';

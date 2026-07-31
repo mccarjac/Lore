@@ -20,11 +20,13 @@ import {
   GameEvent,
   GameCharacter,
   QuestStatus,
+  type QuestFacetPreferences,
 } from '@models/types';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
-import { useLabels } from '@/ruleset';
+import { useLabels, useRuleset } from '@/ruleset';
+import type { RulesetDefinition } from '@/ruleset/types';
 import { formatEventDate, formatEventDateShort } from '@utils/dateUtils';
 import {
   buildQuestTimeline,
@@ -61,6 +63,40 @@ interface QuestTimelineItem {
   dateLabel: string;
 }
 
+/**
+ * Resolves a quest's facet preferences (entries and, for a scored
+ * collection, categories) to display chips — the generalized form of the
+ * old four hardcoded traitCategory/archetype/trait/quality chip lists.
+ */
+const preferenceChips = (
+  preferences: QuestFacetPreferences | undefined,
+  ruleset: RulesetDefinition
+): { key: string; label: string }[] => {
+  if (!preferences) return [];
+
+  const entryChips = Object.entries(preferences.entries ?? {}).flatMap(
+    ([collectionId, ids]) => {
+      const collection = ruleset.facets.find(c => c.id === collectionId);
+      return ids.map(id => ({
+        key: `entry-${collectionId}-${id}`,
+        label: collection?.entries.find(e => e.id === id)?.label ?? id,
+      }));
+    }
+  );
+
+  const categoryChips = Object.entries(preferences.categories ?? {}).flatMap(
+    ([collectionId, ids]) => {
+      const collection = ruleset.facets.find(c => c.id === collectionId);
+      return ids.map(id => ({
+        key: `category-${collectionId}-${id}`,
+        label: collection?.categories?.find(c => c.id === id)?.label ?? id,
+      }));
+    }
+  );
+
+  return [...entryChips, ...categoryChips];
+};
+
 interface QuestWithDetails extends GameQuest {
   locationName?: string;
   timeline: QuestTimelineItem[];
@@ -71,6 +107,7 @@ export const QuestDetailScreen: React.FC = () => {
   const navigation = useNavigation<QuestsDetailNavigationProp>();
   const route = useRoute<QuestsDetailRouteProp>();
   const label = useLabels();
+  const { ruleset } = useRuleset();
   const { questId } = route.params;
 
   const [quest, setQuest] = useState<QuestWithDetails | null>(null);
@@ -143,17 +180,10 @@ export const QuestDetailScreen: React.FC = () => {
     );
   }
 
+  const desirableChips = preferenceChips(quest.desirable, ruleset);
+  const undesirableChips = preferenceChips(quest.undesirable, ruleset);
   const hasPreferences =
-    (quest.desirable &&
-      ((quest.desirable.traitCategoryIds?.length ?? 0) > 0 ||
-        (quest.desirable.archetypeIds?.length ?? 0) > 0 ||
-        (quest.desirable.traitIds?.length ?? 0) > 0 ||
-        (quest.desirable.qualityIds?.length ?? 0) > 0)) ||
-    (quest.undesirable &&
-      ((quest.undesirable.traitCategoryIds?.length ?? 0) > 0 ||
-        (quest.undesirable.archetypeIds?.length ?? 0) > 0 ||
-        (quest.undesirable.traitIds?.length ?? 0) > 0 ||
-        (quest.undesirable.qualityIds?.length ?? 0) > 0));
+    desirableChips.length > 0 || undesirableChips.length > 0;
 
   return (
     <BaseDetailScreen
@@ -258,67 +288,25 @@ export const QuestDetailScreen: React.FC = () => {
       {/* Team Preferences */}
       {hasPreferences && (
         <CollapsibleSection title="Team Preferences" defaultCollapsed>
-          {quest.desirable && (
+          {desirableChips.length > 0 && (
             <View style={styles.preferenceGroup}>
               <Text style={styles.preferenceLabel}>Desirable</Text>
               <View style={styles.chipList}>
-                {quest.desirable.traitCategoryIds?.map(tag => (
-                  <View key={`tag-${tag}`} style={styles.chipPositive}>
-                    <Text style={styles.chipText}>{tag}</Text>
-                  </View>
-                ))}
-                {quest.desirable.archetypeIds?.map(archetypeId => (
-                  <View
-                    key={`archetype-${archetypeId}`}
-                    style={styles.chipPositive}
-                  >
-                    <Text style={styles.chipText}>{archetypeId}</Text>
-                  </View>
-                ))}
-                {quest.desirable.traitIds?.map(perkId => (
-                  <View key={`perk-${perkId}`} style={styles.chipPositive}>
-                    <Text style={styles.chipText}>{perkId}</Text>
-                  </View>
-                ))}
-                {quest.desirable.qualityIds?.map(distinctionId => (
-                  <View
-                    key={`distinction-${distinctionId}`}
-                    style={styles.chipPositive}
-                  >
-                    <Text style={styles.chipText}>{distinctionId}</Text>
+                {desirableChips.map(chip => (
+                  <View key={chip.key} style={styles.chipPositive}>
+                    <Text style={styles.chipText}>{chip.label}</Text>
                   </View>
                 ))}
               </View>
             </View>
           )}
-          {quest.undesirable && (
+          {undesirableChips.length > 0 && (
             <View style={styles.preferenceGroup}>
               <Text style={styles.preferenceLabel}>Undesirable</Text>
               <View style={styles.chipList}>
-                {quest.undesirable.traitCategoryIds?.map(tag => (
-                  <View key={`tag-${tag}`} style={styles.chipNegative}>
-                    <Text style={styles.chipText}>{tag}</Text>
-                  </View>
-                ))}
-                {quest.undesirable.archetypeIds?.map(archetypeId => (
-                  <View
-                    key={`archetype-${archetypeId}`}
-                    style={styles.chipNegative}
-                  >
-                    <Text style={styles.chipText}>{archetypeId}</Text>
-                  </View>
-                ))}
-                {quest.undesirable.traitIds?.map(perkId => (
-                  <View key={`perk-${perkId}`} style={styles.chipNegative}>
-                    <Text style={styles.chipText}>{perkId}</Text>
-                  </View>
-                ))}
-                {quest.undesirable.qualityIds?.map(distinctionId => (
-                  <View
-                    key={`distinction-${distinctionId}`}
-                    style={styles.chipNegative}
-                  >
-                    <Text style={styles.chipText}>{distinctionId}</Text>
+                {undesirableChips.map(chip => (
+                  <View key={chip.key} style={styles.chipNegative}>
+                    <Text style={styles.chipText}>{chip.label}</Text>
                   </View>
                 ))}
               </View>

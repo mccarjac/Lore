@@ -1,6 +1,6 @@
 {
   "name": "lore",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "//main": "Lore's own Expo entry. Consumers never see it — `exports` below takes precedence for package resolution — so the dev app and the published library can coexist without moving the app shell into example/.",
   "main": "index.ts",
   "//exports": "Two entry points: '.' is the app (LoreApp and everything behind it), './ruleset' is the engine without React Native — see src/headless.ts for why. Nothing else is published, so `lore/lib/utils/...` cannot become anyone's dependency.",

@@ -15,6 +15,7 @@ import { renderWithRuleset } from '../helpers/ruleset';
 import { genericRuleset } from '../fixtures/genericRuleset';
 import { CHART_PALETTE } from '@/styles/chartPalette';
 import { RelationshipStanding } from '@models/types';
+import type { RulesetDefinition } from '@/ruleset/types';
 
 jest.mock('@utils/characterStorage');
 
@@ -54,8 +55,7 @@ describe('FactionStatsScreen', () => {
       makeCharacter({
         id: 'c1',
         name: 'Bram',
-        archetypeId: 'scholar',
-        traitIds: ['well_read'],
+        facets: { lineages: ['scholar'], talents: ['well_read'] },
         factions: [
           { name: 'The Athenaeum', standing: RelationshipStanding.Ally },
         ],
@@ -100,25 +100,31 @@ describe('FactionStatsScreen', () => {
       makeCharacter({
         id: 'c1',
         name: 'Bram',
-        archetypeId: 'scholar',
-        traitIds: ['sly'],
+        facets: { lineages: ['scholar'], talents: ['sly'] },
         factions: [
           { name: 'The Athenaeum', standing: RelationshipStanding.Ally },
         ],
       }),
     ]);
 
-    const withGuileTrait = {
+    const withGuileTrait: RulesetDefinition = {
       ...genericRuleset,
-      traits: [
-        ...genericRuleset.traits,
-        {
-          id: 'sly',
-          name: 'Sly',
-          description: '',
-          categoryId: 'guile',
-        },
-      ],
+      facets: genericRuleset.facets.map(collection =>
+        collection.id === 'talents'
+          ? {
+              ...collection,
+              entries: [
+                ...collection.entries,
+                {
+                  id: 'sly',
+                  label: 'Sly',
+                  description: '',
+                  categoryId: 'guile',
+                },
+              ],
+            }
+          : collection
+      ),
     };
 
     const screen = await renderAndExpand(withGuileTrait);

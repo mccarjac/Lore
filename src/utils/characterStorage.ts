@@ -1,5 +1,6 @@
 import {
   CharacterDataset,
+  FacetValue,
   GameCharacter,
   GameLocation,
   LocationDataset,
@@ -16,7 +17,9 @@ import { exportDiscordDataset, importDiscordDataset } from './discordStorage';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { runExclusive } from './storageQueue';
 import { notifyLocalDataChanged } from './dataChangeSignal';
-import { warnIfUnconfigured } from '@/activeRuleset';
+import { getActiveRuleset, warnIfUnconfigured } from '@/activeRuleset';
+import { findFacetCollection } from '@/ruleset/facets';
+import type { RulesetDefinition } from '@/ruleset/types';
 import {
   normalizeCharactersRulesetFields,
   normalizeDatasetRulesetFields,
@@ -432,10 +435,71 @@ export interface MergeResult {
   added: GameCharacter[];
 }
 
+/**
+ * Merges a character's facet selections, collection by collection.
+ *
+ * A `single`-selection collection (the old `archetypeId`) is a conflict
+ * candidate like any other simple property: differing non-empty values are
+ * reported, not unioned. A `multi` catalog collection (the old `traitIds`/
+ * `qualityIds`) unions new ids in, deduping against what's already held. An
+ * `authored` collection (the old `modifications`) is left untouched — its
+ * entries are inline objects with no id to dedupe against, and that has
+ * always been the behavior here. `facets` is reported as one conflict field
+ * rather than one per collection, since a store resolves a conflict by
+ * writing `{ facets: value }` through `updateCharacter` — see
+ * `datastores/json/index.ts`.
+ */
+const mergeFacets = (
+  existing: GameCharacter,
+  imported: GameCharacter,
+  ruleset: RulesetDefinition
+): { facets: Record<string, FacetValue[]> | undefined; conflict: boolean } => {
+  if (!imported.facets) return { facets: existing.facets, conflict: false };
+
+  const merged: Record<string, FacetValue[]> = { ...(existing.facets ?? {}) };
+  let conflict = false;
+
+  Object.entries(imported.facets).forEach(([collectionId, importedValues]) => {
+    if (!importedValues || importedValues.length === 0) return;
+    const collection = findFacetCollection(ruleset, collectionId);
+    const existingValues = existing.facets?.[collectionId] ?? [];
+
+    if (collection?.selection === 'single') {
+      const importedId = importedValues[0];
+      const existingId = existingValues[0];
+      if (importedId === undefined || importedId === existingId) return;
+      if (existingId === undefined || existingId === '') {
+        merged[collectionId] = importedValues;
+      } else {
+        conflict = true;
+      }
+      return;
+    }
+
+    if (collection?.authored) return; // no id to dedupe against; keep existing.
+
+    const allIds = importedValues.every(
+      (v): v is string => typeof v === 'string'
+    );
+    if (!allIds) return;
+
+    const existingIds = new Set(
+      existingValues.filter((v): v is string => typeof v === 'string')
+    );
+    const newIds = importedValues.filter(id => !existingIds.has(id as string));
+    if (newIds.length > 0) {
+      merged[collectionId] = [...existingValues, ...newIds];
+    }
+  });
+
+  return { facets: merged, conflict };
+};
+
 // Smart property merger that combines properties intelligently
 const mergeCharacterProperties = (
   existing: GameCharacter,
-  imported: GameCharacter
+  imported: GameCharacter,
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): { merged: GameCharacter; conflicts: string[] } => {
   const conflicts: string[] = [];
   const merged: GameCharacter = { ...existing };
@@ -445,24 +509,13 @@ const mergeCharacterProperties = (
     merged.updatedAt = imported.updatedAt;
   }
 
-  // Merge arrays (like traitIds, qualityIds, factions)
-  if (imported.traitIds && imported.traitIds.length > 0) {
-    const existingPerkIds = new Set(existing.traitIds || []);
-    const newPerks = imported.traitIds.filter(id => !existingPerkIds.has(id));
-    if (newPerks.length > 0) {
-      merged.traitIds = [...(existing.traitIds || []), ...newPerks];
-    }
-  }
-
-  if (imported.qualityIds && imported.qualityIds.length > 0) {
-    const existingDistinctionIds = new Set(existing.qualityIds || []);
-    const newDistinctions = imported.qualityIds.filter(
-      id => !existingDistinctionIds.has(id)
-    );
-    if (newDistinctions.length > 0) {
-      merged.qualityIds = [...(existing.qualityIds || []), ...newDistinctions];
-    }
-  }
+  const { facets, conflict: facetsConflict } = mergeFacets(
+    existing,
+    imported,
+    ruleset
+  );
+  merged.facets = facets;
+  if (facetsConflict) conflicts.push('facets');
 
   // Merge factions (keep all unique factions)
   if (imported.factions && imported.factions.length > 0) {
@@ -514,7 +567,6 @@ const mergeCharacterProperties = (
   // Handle conflicting simple properties
   const simpleProperties: (keyof GameCharacter)[] = [
     'name',
-    'archetypeId',
     'locationId',
     'notes',
   ];

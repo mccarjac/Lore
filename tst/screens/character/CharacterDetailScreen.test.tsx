@@ -16,7 +16,7 @@ const storage = getStorageMock();
 const character = makeCharacter({
   id: 'char-1',
   name: 'Alice',
-  archetypeId: 'wanderer',
+  facets: { lineages: ['wanderer'] },
 });
 
 describeDetailScreenContract({
@@ -47,9 +47,11 @@ describe('CharacterDetailScreen — reads the active ruleset', () => {
   const fixtureCharacter = makeCharacter({
     id: 'char-2',
     name: 'Bram',
-    archetypeId: 'scholar',
-    traitIds: ['well_read'],
-    qualityIds: ['patient'],
+    facets: {
+      lineages: ['scholar'],
+      talents: ['well_read'],
+      virtues: ['patient'],
+    },
   });
 
   beforeEach(() => {

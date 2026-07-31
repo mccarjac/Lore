@@ -7,13 +7,14 @@
  * and that adding it did not disturb the steps around it. They run on the
  * mechanics fixture rather than a flavor, so the layer is proved for any
  * ruleset — `mechanicsRuleset` carries the caps, category bonuses and
- * archetype rules the pipeline needs.
+ * scoreExclusions the pipeline needs.
  */
 import { calculateDerivedStats } from '@/ruleset/derived';
 import { validateCharacterAttributes } from '@/ruleset/validate';
+import { getCategoryScore, type FacetCollection } from '@/ruleset/facets';
 import { flag, num, text, type AttributeBag } from '@/ruleset/attributes';
 import type { RulesetDefinition } from '@/ruleset/types';
-import type { GameCharacter } from '@/models/types';
+import type { GameCharacter, FacetValue } from '@/models/types';
 import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
 
 const TS = '2026-01-01T00:00:00.000Z';
@@ -29,13 +30,14 @@ const rulesetWithCharacterAttributes = (): RulesetDefinition => ({
   ],
 });
 
-const character = (attributes?: AttributeBag): GameCharacter =>
+const character = (
+  attributes?: AttributeBag,
+  facets: Record<string, FacetValue[]> = { callings: ['tinker'] }
+): GameCharacter =>
   ({
     id: 'c1',
     name: 'Test',
-    archetypeId: 'tinker',
-    traitIds: [],
-    qualityIds: [],
+    facets,
     factions: [],
     relationships: [],
     attributes,
@@ -59,7 +61,7 @@ describe('character attributes in derived stats', () => {
     const stats = calculateDerivedStats(character({ grit: num(4) }), ruleset);
 
     // 4, not 2 + 4 — character attributes are assignments. Deltas are what
-    // traits and modifications are for.
+    // knacks and rigs are for.
     expect(stats.values.grit).toBe(4);
   });
 
@@ -109,21 +111,24 @@ describe('character attributes in derived stats', () => {
     expect(stats.values.grit).toBe(8);
   });
 
-  it('applies trait deltas on top of a character override', () => {
-    // Overridden base 3, plus a +1 grit trait, still under the cap of 6.
-    const withTrait = {
-      ...character({ grit: num(3) }),
-      traitIds: ['hammer_hand'],
-    } as GameCharacter;
+  it('applies knack deltas on top of a character override', () => {
+    // Overridden base 3, plus a +1 grit knack, still under the cap of 6.
+    const withKnack = character(
+      { grit: num(3) },
+      {
+        callings: ['tinker'],
+        knacks: ['hammer_hand'],
+      }
+    );
 
-    expect(calculateDerivedStats(withTrait, ruleset).values.grit).toBe(4);
+    expect(calculateDerivedStats(withKnack, ruleset).values.grit).toBe(4);
   });
 
   it('leaves an unknown archetype rendering rather than throwing', () => {
-    const orphan = {
-      ...character({ corruption: num(1) }),
-      archetypeId: 'NotARealArchetype',
-    } as GameCharacter;
+    const orphan = character(
+      { corruption: num(1) },
+      { callings: ['NotARealCalling'] }
+    );
 
     const stats = calculateDerivedStats(orphan, ruleset);
 
@@ -180,26 +185,19 @@ describe('validateCharacterAttributes', () => {
 describe('derived stats — modifier edge cases', () => {
   const ruleset = rulesetWithCharacterAttributes();
 
-  const withModification = (
-    attributeDeltas: Record<string, number>
-  ): GameCharacter =>
-    ({
-      ...character(),
-      modifications: [
-        { name: 'Rig', description: '', modifier: { attributeDeltas } },
-      ],
-    }) as GameCharacter;
+  const withRig = (attributeDeltas: Record<string, number>): GameCharacter =>
+    character(undefined, {
+      callings: ['tinker'],
+      rigs: [{ name: 'Rig', description: '', modifier: { attributeDeltas } }],
+    });
 
   it('ignores a zero delta', () => {
-    const stats = calculateDerivedStats(withModification({ grit: 0 }), ruleset);
+    const stats = calculateDerivedStats(withRig({ grit: 0 }), ruleset);
     expect(stats.values.grit).toBe(2);
   });
 
   it('ignores a delta naming an attribute the ruleset does not declare', () => {
-    const stats = calculateDerivedStats(
-      withModification({ nonexistent: 5 }),
-      ruleset
-    );
+    const stats = calculateDerivedStats(withRig({ nonexistent: 5 }), ruleset);
     expect(stats.values.nonexistent).toBeUndefined();
     expect(stats.values.grit).toBe(2);
   });
@@ -209,48 +207,62 @@ describe('derived stats — modifier edge cases', () => {
     // supplies; that should read as "unbounded", not "clamped to zero".
     const uncapped: RulesetDefinition = {
       ...ruleset,
-      archetypes: ruleset.archetypes.map(a =>
-        a.id === 'tinker'
+      facets: ruleset.facets.map(collection =>
+        collection.id === 'callings'
           ? {
-              ...a,
-              attributes: Object.fromEntries(
-                Object.entries(a.attributes).filter(([id]) => id !== 'gritCap')
+              ...collection,
+              entries: collection.entries.map(entry =>
+                entry.id === 'tinker'
+                  ? {
+                      ...entry,
+                      attributes: Object.fromEntries(
+                        Object.entries(entry.attributes ?? {}).filter(
+                          ([id]) => id !== 'gritCap'
+                        )
+                      ),
+                    }
+                  : entry
               ),
             }
-          : a
+          : collection
       ),
       attributes: ruleset.attributes.filter(a => a.id !== 'gritCap'),
     };
 
-    const stats = calculateDerivedStats(
-      {
-        ...character(),
-        modifications: withModification({ grit: 50 }).modifications,
-      } as GameCharacter,
-      uncapped
-    );
+    const stats = calculateDerivedStats(withRig({ grit: 50 }), uncapped);
 
     expect(stats.values.grit).toBe(52);
   });
 
-  it('applies no archetype rules when the ruleset declares none', () => {
+  it('applies no score exclusions when the collection declares none', () => {
     const without: RulesetDefinition = {
       ...ruleset,
-      archetypeRules: undefined,
+      facets: ruleset.facets.map(collection =>
+        collection.id === 'knacks'
+          ? ({ ...collection, scoreExclusions: undefined } as FacetCollection)
+          : collection
+      ),
     };
-    const revenant = {
-      ...character(),
-      archetypeId: 'revenant',
-      traitIds: ['kin_secret'],
-    } as GameCharacter;
+    const revenant = character(undefined, {
+      callings: ['revenant'],
+      knacks: ['kin_secret'],
+    });
 
-    // With the carve-out gone, the group-restricted trait now scores. Under
+    // With the carve-out gone, the group-restricted knack now scores. Under
     // the rule it is skipped outright, so the category has no entry at all.
     expect(
-      calculateDerivedStats(revenant, ruleset).categoryScores.get('forge')
-    ).toBeUndefined();
+      getCategoryScore(
+        calculateDerivedStats(revenant, ruleset).categoryScores,
+        'knacks',
+        'forge'
+      )
+    ).toBe(0);
     expect(
-      calculateDerivedStats(revenant, without).categoryScores.get('forge')
+      getCategoryScore(
+        calculateDerivedStats(revenant, without).categoryScores,
+        'knacks',
+        'forge'
+      )
     ).toBe(1);
   });
 });

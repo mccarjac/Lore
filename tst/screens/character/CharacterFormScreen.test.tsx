@@ -163,7 +163,9 @@ describe('CharacterFormScreen — reads the active ruleset', () => {
 
     await waitFor(() => {
       expect(storage.addCharacter).toHaveBeenCalledWith(
-        expect.objectContaining({ archetypeId: 'scholar' })
+        expect.objectContaining({
+          facets: expect.objectContaining({ lineages: ['scholar'] }),
+        })
       );
       expect(nav.goBack).toHaveBeenCalled();
     });

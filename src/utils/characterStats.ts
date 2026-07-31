@@ -1,13 +1,25 @@
 import { GameCharacter } from '../models/types';
-import { getLabel, type RulesetDefinition } from '../ruleset';
+import { type RulesetDefinition } from '../ruleset';
 import { getActiveRuleset } from '@/activeRuleset';
+import { getFacetIds } from '@/ruleset/facets';
+
+/** Distribution over one facet collection's held entries, across characters. */
+export interface FacetCollectionStats {
+  collectionId: string;
+  singular: string;
+  plural: string;
+  selection: 'single' | 'multi' | 'catalog';
+  /** entryId -> number of characters holding it. */
+  counts: Record<string, number>;
+  /** Same counts, resolved to labels and sorted by count descending. */
+  entries: { id: string; label: string; count: number }[];
+}
 
 export interface CharacterStats {
   totalCharacters: number;
-  archetypeDistribution: Record<string, number>;
+  /** One entry per non-catalog facet collection the ruleset declares. */
+  facetCollections: FacetCollectionStats[];
   factionDistribution: Record<string, number>;
-  commonPerks: { name: string; count: number }[];
-  commonDistinctions: { name: string; count: number }[];
   factionStandings: Record<string, Record<string, number>>;
 }
 
@@ -24,15 +36,6 @@ export const calculateCharacterStats = (
   }
 
   const totalCharacters = characters.length;
-
-  // Calculate species distribution
-  const archetypeDistribution = characters.reduce(
-    (acc, char) => {
-      acc[char.archetypeId] = (acc[char.archetypeId] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
 
   // Calculate faction distribution
   const factionDistribution = characters.reduce(
@@ -57,49 +60,44 @@ export const calculateCharacterStats = (
     });
   });
 
-  // Calculate most common perks
-  const perkCount: Record<string, number> = {};
-  characters.forEach(char => {
-    char.traitIds.forEach(perkId => {
-      perkCount[perkId] = (perkCount[perkId] || 0) + 1;
+  // One distribution per facet collection — the generalized form of the old
+  // archetypeDistribution/commonPerks/commonDistinctions, which hardcoded
+  // exactly three collections. A catalog collection (recipes) is excluded:
+  // it's never held directly, so it has nothing to count.
+  const facetCollections: FacetCollectionStats[] = ruleset.facets
+    .filter(collection => collection.selection !== 'catalog')
+    .map(collection => {
+      const counts: Record<string, number> = {};
+      characters.forEach(character => {
+        getFacetIds(character, collection.id).forEach(id => {
+          counts[id] = (counts[id] ?? 0) + 1;
+        });
+      });
+
+      const entries = Object.entries(counts)
+        .map(([id, count]) => ({
+          id,
+          label:
+            collection.entries.find(entry => entry.id === id)?.label ??
+            `Unknown ${collection.singular}`,
+          count,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      return {
+        collectionId: collection.id,
+        singular: collection.singular,
+        plural: collection.plural,
+        selection: collection.selection,
+        counts,
+        entries,
+      };
     });
-  });
-
-  const commonPerks = Object.entries(perkCount)
-    .map(([id, count]) => ({
-      name:
-        ruleset.traits.find(trait => trait.id === id)?.name ||
-        `Unknown ${getLabel(ruleset, 'trait.singular')}`,
-      count,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  // Calculate most common distinctions
-  const distinctionCount: Record<string, number> = {};
-  characters.forEach(char => {
-    char.qualityIds.forEach(distinctionId => {
-      distinctionCount[distinctionId] =
-        (distinctionCount[distinctionId] || 0) + 1;
-    });
-  });
-
-  const commonDistinctions = Object.entries(distinctionCount)
-    .map(([id, count]) => ({
-      name:
-        ruleset.qualities.find(quality => quality.id === id)?.name ||
-        `Unknown ${getLabel(ruleset, 'quality.singular')}`,
-      count,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
 
   return {
     totalCharacters,
-    archetypeDistribution,
+    facetCollections,
     factionDistribution,
-    commonPerks,
-    commonDistinctions,
     factionStandings,
   };
 };
