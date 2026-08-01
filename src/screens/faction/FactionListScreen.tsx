@@ -43,7 +43,6 @@ interface FactionInfo {
   faction: FactionMembership;
   characters: GameCharacter[];
   totalCount: number;
-  presentCount: number;
   standingCounts: Record<string, number>;
   retired?: boolean;
 }
@@ -123,7 +122,6 @@ export const FactionListScreen: React.FC = () => {
           ...commonStyles.text.body,
           fontWeight: '500',
         },
-        presentText: commonStyles.text.caption,
         standingsContainer: {
           flexDirection: 'row',
           flexWrap: 'wrap',
@@ -221,7 +219,6 @@ export const FactionListScreen: React.FC = () => {
           },
           characters: data.characters,
           totalCount: data.characters.length,
-          presentCount: data.characters.filter(c => c.present === true).length,
           standingCounts: data.standings,
           retired: factionRetiredMap.get(name) ?? false,
         };
@@ -282,7 +279,6 @@ export const FactionListScreen: React.FC = () => {
             <Text style={styles.countText}>
               {item.totalCount} member{item.totalCount !== 1 ? 's' : ''}
             </Text>
-            <Text style={styles.presentText}>{item.presentCount} present</Text>
           </View>
         </View>
 

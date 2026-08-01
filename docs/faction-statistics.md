@@ -59,7 +59,6 @@ interface FactionRelationship {
 interface FactionStats {
   factionName: string;
   totalMembers: number;
-  presentMembers: number;
 
   // Trait-category analysis, keyed by ruleset trait-category id rather than a
   // closed enum — a ruleset may declare any number of categories. The field

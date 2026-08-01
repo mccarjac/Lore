@@ -54,7 +54,6 @@ describe('jsonDataStore', () => {
     qualityIds: [],
     factions: [],
     relationships: [],
-    present: false,
     retired: false,
     createdAt: mockDate,
     updatedAt: mockDate,

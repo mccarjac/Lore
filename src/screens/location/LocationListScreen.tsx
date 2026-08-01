@@ -29,26 +29,12 @@ interface LocationInfo {
   location: GameLocation;
   characters: GameCharacter[];
   totalCount: number;
-  presentCount: number;
 }
 
-const locationFilterFields: FilterFieldConfig[] = [
-  {
-    key: 'occupancy',
-    type: 'select',
-    label: 'Occupancy',
-    options: [
-      { value: 'occupied', label: 'Has present characters' },
-      { value: 'empty', label: 'No present characters' },
-    ],
-    matches: (item, value) => {
-      const info = item as LocationInfo;
-      return value === 'occupied'
-        ? info.presentCount > 0
-        : info.presentCount === 0;
-    },
-  },
-];
+// No location-specific filter fields exist since presence (#56) left the
+// engine; kept as an empty array (rather than dropped) so `useEntitySearch`,
+// `AdvancedSearch` and `ActiveFiltersBar` below need no special-casing.
+const locationFilterFields: FilterFieldConfig[] = [];
 
 export const LocationListScreen: React.FC = () => {
   const [locationInfos, setLocationInfos] = useState<LocationInfo[]>([]);
@@ -84,7 +70,6 @@ export const LocationListScreen: React.FC = () => {
           ...commonStyles.text.body,
           fontWeight: '500',
         },
-        presentText: commonStyles.text.caption,
         locationDescription: {
           ...commonStyles.text.body,
           lineHeight: 20,
@@ -118,7 +103,6 @@ export const LocationListScreen: React.FC = () => {
         location,
         characters: [],
         totalCount: 0,
-        presentCount: 0,
       });
     });
 
@@ -129,9 +113,6 @@ export const LocationListScreen: React.FC = () => {
         if (locationInfo) {
           locationInfo.characters.push(character);
           locationInfo.totalCount++;
-          if (character.present) {
-            locationInfo.presentCount++;
-          }
         }
       }
     });
@@ -200,9 +181,6 @@ export const LocationListScreen: React.FC = () => {
             <View style={styles.locationCounts}>
               <Text style={styles.countText}>
                 {item.totalCount} character{item.totalCount !== 1 ? 's' : ''}
-              </Text>
-              <Text style={styles.presentText}>
-                {item.presentCount} present
               </Text>
             </View>
           </View>

@@ -68,7 +68,6 @@ const fullDataset = (): CampaignDataset => ({
       locationId: 'loc-vault',
       occupation: 'Courier',
       notes: 'Owes a debt.\nSecond line.',
-      present: true,
       factions: [
         {
           name: 'The Combine',
@@ -346,16 +345,12 @@ describe('renderCampaignHtml', () => {
       expect(render(fullDataset(), noAugments)).not.toContain('Grafted Lens');
     });
 
-    it('marks a retired and a present character', () => {
+    it('marks a retired character', () => {
       const html = render({
-        characters: [
-          makeCharacter({ id: 'a', name: 'Gone', retired: true }),
-          makeCharacter({ id: 'b', name: 'Here', present: true }),
-        ],
+        characters: [makeCharacter({ id: 'a', name: 'Gone', retired: true })],
       });
 
       expect(html).toContain('Retired');
-      expect(html).toContain('Present');
     });
   });
 

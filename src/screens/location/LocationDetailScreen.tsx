@@ -88,10 +88,6 @@ export const LocationDetailsScreen: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
         },
-        characterCardPresent: {
-          borderLeftWidth: 4,
-          borderLeftColor: themeColors.status.present,
-        },
         characterInfo: {
           flex: 1,
         },
@@ -104,25 +100,6 @@ export const LocationDetailsScreen: React.FC = () => {
         characterSpecies: {
           fontSize: 14,
           color: themeColors.text.secondary,
-        },
-        presentBadge: {
-          ...commonStyles.badge.base,
-          paddingHorizontal: 8,
-          paddingVertical: 3,
-          borderRadius: 12,
-        },
-        presentBadgeActive: {
-          backgroundColor: themeColors.status.present,
-          borderColor: themeColors.status.present,
-        },
-        presentBadgeText: {
-          fontSize: 10,
-          fontWeight: '600',
-          color: themeColors.text.muted,
-          letterSpacing: 0.3,
-        },
-        presentBadgeTextActive: {
-          color: themeColors.text.primary,
         },
         emptyContainer: {
           padding: 40,
@@ -236,40 +213,20 @@ export const LocationDetailsScreen: React.FC = () => {
 
   const getStats = () => {
     const totalCharacters = characters.length;
-    const presentCharacters = characters.filter(c => c.present === true).length;
-    const absentCharacters = totalCharacters - presentCharacters;
 
-    return { totalCharacters, presentCharacters, absentCharacters };
+    return { totalCharacters };
   };
 
   const renderCharacter = (character: GameCharacter) => (
     <TouchableOpacity
       key={character.id}
-      style={[
-        styles.characterCard,
-        character.present && styles.characterCardPresent,
-      ]}
+      style={styles.characterCard}
       onPress={() => navigation.navigate('CharacterDetail', { character })}
     >
       <View style={styles.characterInfo}>
         <Text style={styles.characterName}>{character.name}</Text>
         <Text style={styles.characterSpecies}>
           {getPrimaryFacetLabel(character, ruleset)}
-        </Text>
-      </View>
-      <View
-        style={[
-          styles.presentBadge,
-          character.present && styles.presentBadgeActive,
-        ]}
-      >
-        <Text
-          style={[
-            styles.presentBadgeText,
-            character.present && styles.presentBadgeTextActive,
-          ]}
-        >
-          {character.present ? 'Present' : 'Absent'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -349,14 +306,6 @@ export const LocationDetailsScreen: React.FC = () => {
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.totalCharacters}</Text>
             <Text style={styles.statLabel}>Total Characters</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.presentCharacters}</Text>
-            <Text style={styles.statLabel}>Present</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.absentCharacters}</Text>
-            <Text style={styles.statLabel}>Absent</Text>
           </View>
         </View>
       </Section>

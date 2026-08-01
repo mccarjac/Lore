@@ -42,9 +42,10 @@ describe('the example ruleset', () => {
     expect(traits?.plural).toBe('Traits');
   });
 
-  it('declares five facet collections — one more than the engine used to hardcode', () => {
+  it('declares six facet collections — the five the engine used to hardcode, plus attendance (#56)', () => {
     expect(exampleRuleset.facets.map(c => c.id).sort()).toEqual([
       'archetypes',
+      'attendance',
       'modifications',
       'qualities',
       'recipes',

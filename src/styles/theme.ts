@@ -73,8 +73,6 @@ export const DEFAULT_COLORS: ColorPalette = {
     warning: '#FDCB6E',
     error: '#E17055',
     info: '#74B9FF',
-    present: '#059669', // Green for present
-    absent: '#6B7280', // Gray for absent
   },
 
   // Standing/relationship colors
@@ -282,11 +280,6 @@ export const buildComponentStyles = (c: ColorPalette) => ({
     elevated: {
       backgroundColor: c.elevated,
       borderColor: c.border,
-    },
-    present: {
-      borderLeftWidth: 4 as const,
-      borderLeftColor: c.status.present,
-      borderColor: c.status.present,
     },
   },
 });

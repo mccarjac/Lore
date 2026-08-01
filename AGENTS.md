@@ -264,6 +264,14 @@ the images, and changes no tracked source at all.
   `legacyField` pattern `FacetCollection` uses, one level up. This third
   normalizer runs from `migrateRulesetFields()` under the faction storage
   key, sequenced after (never nested with) the character and quest keys.
+  `foldCharacterFacets` also folds a fourth thing in: the pre-#56 builtin
+  `character.present: boolean`, resolved through whichever collection
+  declares `legacyField: 'present'` and an entry with a matching
+  `legacyValue` (`true`/`false`) — the same mechanism, one level down, since
+  `present` (unlike the four pre-#51 fields) was never id-shaped. A ruleset
+  declaring no such collection simply drops the field rather than inventing
+  a facet, matching `foldCharacterFacets`' "only reshapes, never invents
+  data" rule for an unset `single` collection.
 - **Data stores are a plugin seam, not a fixed list (#29).** `src/datastores/`
   holds the `DataStore` contract, a registry, and the three built-ins. A store
   declares `actions` (the engine renders a button per action via
@@ -452,9 +460,10 @@ drag those override _values_ along with it.
   It **overrides no terminology**, so every core noun comes from
   `DEFAULT_TERMINOLOGY` and "the app boots with generic labels" is literally
   checkable — it is also the only place the `getLabel` fallback is exercised
-  in a running app. It declares **five facet collections** (archetypes,
+  in a running app. It declares **six facet collections** (archetypes,
   traits, qualities, modifications, recipes — one more than the four the
-  engine used to hardcode, plus a catalog), which is the direct, running
+  engine used to hardcode, plus a catalog — and `attendance`, added by #56
+  to replace the builtin `present` boolean), which is the direct, running
   proof that #51 did what it says: a ruleset states how many facet kinds its
   game needs. And it declares **no map, with `features.map: false`**,
   because the map is the one feature needing a bundled binary and images
@@ -494,7 +503,7 @@ drag those override _values_ along with it.
   `FacetCollection.selection` (`'single'`/`'multi'`/`'catalog'`) plus
   `authored` plus `contributes.{stage,deltaRoles,categoryScore}` is what lets
   one shape express all six of the old named collections — see
-  `exampleRuleset.ts`'s five collections for the mapping, and the module
+  `exampleRuleset.ts`'s six collections for the mapping, and the module
   doc-comment at the top of `facets.ts` for the exact correspondence.
 - `src/ruleset/types.ts` — the `RulesetDefinition` schema (attributes,
   `facets: FacetCollection[]`, feature flags, terminology). **Must stay

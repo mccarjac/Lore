@@ -127,14 +127,14 @@ export const QuestProposalScreen: React.FC = () => {
       <Text style={styles.title}>{label('quest.singular')} Team Proposals</Text>
       <Text style={styles.subtitle}>
         Proposed teams for unresolved quests that don&apos;t have a team
-        assigned yet, drawn only from present characters.
+        assigned yet, drawn only from non-retired characters.
       </Text>
 
       {proposals.length === 0 ? (
         <Section title="Nothing to propose">
           <Text style={styles.emptyText}>
             No quests currently need a proposal — every unresolved quest already
-            has a team, or there are no present characters available.
+            has a team, or there are no available characters.
           </Text>
         </Section>
       ) : (
@@ -147,7 +147,7 @@ export const QuestProposalScreen: React.FC = () => {
             <Section key={proposal.questId} title={quest.name}>
               {proposal.proposedCharacterIds.length === 0 ? (
                 <Text style={styles.emptyText}>
-                  No present characters available to propose.
+                  No available characters to propose.
                 </Text>
               ) : (
                 <View style={styles.characterList}>

@@ -247,6 +247,16 @@ into a `'catalog'` collection. `FacetScoreExclusion` replaces the old
 holds a named entry in another collection and this entry is restricted (via
 `requires`) to exactly one group's membership.
 
+If your ruleset tracks whether a character is present at a session, declare
+a `'single'` collection for it — the engine no longer has a builtin notion of
+presence (issue #56). If you're upgrading from an app version that still
+shipped the builtin `present` boolean, give the two entries that replace it a
+`legacyValue` (`true`/`false`) and set the collection's `legacyField` to
+`'present'` — `rulesetFieldMigration.ts` uses this to fold the old field into
+`facets` on load, the same `legacyField`/`legacyValue` pattern relationship
+types use below. The bundled example ruleset's `attendance` collection is the
+reference implementation.
+
 ### How a number is computed
 
 `calculateDerivedStats(character, ruleset)` (`src/ruleset/derived.ts`) returns

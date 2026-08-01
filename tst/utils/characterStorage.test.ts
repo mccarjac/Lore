@@ -6,8 +6,6 @@ import {
   deleteCharacter,
   exportDataset,
   importDataset,
-  toggleCharacterPresent,
-  resetAllPresentStatus,
   clearStorage,
   saveFactions,
   loadFactions,
@@ -74,7 +72,6 @@ describe('characterStorage', () => {
       },
       factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
       relationships: [],
-      present: false,
       retired: false,
       createdAt: mockDate,
       updatedAt: mockDate,
@@ -129,7 +126,6 @@ describe('characterStorage', () => {
 
         const result = await loadCharacters();
 
-        expect(result[0].present).toBe(false);
         expect(result[0].retired).toBe(false);
         expect(result[0].relationships).toEqual([]);
       });
@@ -195,7 +191,6 @@ describe('characterStorage', () => {
 
         expect(result.id).toBe('mock-uuid-1234');
         expect(result.name).toBe('New Character');
-        expect(result.present).toBe(false);
         expect(result.retired).toBe(false);
         expect(result.createdAt).toBe(mockDate);
         expect(result.updatedAt).toBe(mockDate);
@@ -253,14 +248,14 @@ describe('characterStorage', () => {
 
         const updates = {
           name: 'Updated Name',
-          present: true,
+          retired: true,
         };
 
         const result = await updateCharacter('char-1', updates);
 
         expect(result).not.toBeNull();
         expect(result?.name).toBe('Updated Name');
-        expect(result?.present).toBe(true);
+        expect(result?.retired).toBe(true);
         expect(result?.updatedAt).toBe(mockDate);
       });
 
@@ -335,84 +330,6 @@ describe('characterStorage', () => {
           .calls[0][1];
         expect(savedData.characters).toHaveLength(1);
         expect(savedData.characters[0].id).toBe('char-2');
-      });
-    });
-
-    describe('toggleCharacterPresent', () => {
-      it('should toggle present status from false to true', async () => {
-        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
-          characters: [mockCharacter],
-          version: '1.0',
-          lastUpdated: mockDate,
-        });
-
-        const result = await toggleCharacterPresent('char-1');
-
-        expect(result).not.toBeNull();
-        expect(result?.present).toBe(true);
-        const savedData = (SafeAsyncStorageJSONParser.setItem as jest.Mock).mock
-          .calls[0][1];
-        expect(savedData.characters[0].present).toBe(true);
-      });
-
-      it('should toggle present status from true to false', async () => {
-        const presentCharacter = { ...mockCharacter, present: true };
-        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
-          characters: [presentCharacter],
-          version: '1.0',
-          lastUpdated: mockDate,
-        });
-
-        const result = await toggleCharacterPresent('char-1');
-
-        expect(result).not.toBeNull();
-        expect(result?.present).toBe(false);
-        const savedData = (SafeAsyncStorageJSONParser.setItem as jest.Mock).mock
-          .calls[0][1];
-        expect(savedData.characters[0].present).toBe(false);
-      });
-
-      it('should return null for non-existent character', async () => {
-        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
-          characters: [],
-          version: '1.0',
-          lastUpdated: mockDate,
-        });
-
-        const result = await toggleCharacterPresent('non-existent');
-
-        expect(result).toBeNull();
-      });
-    });
-
-    describe('resetAllPresentStatus', () => {
-      it('should set all characters present to false', async () => {
-        const char1 = { ...mockCharacter, id: 'char-1', present: true };
-        const char2 = { ...mockCharacter, id: 'char-2', present: true };
-        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
-          characters: [char1, char2],
-          version: '1.0',
-          lastUpdated: mockDate,
-        });
-
-        await resetAllPresentStatus();
-
-        const savedData = (SafeAsyncStorageJSONParser.setItem as jest.Mock).mock
-          .calls[0][1];
-        expect(savedData.characters[0].present).toBe(false);
-        expect(savedData.characters[1].present).toBe(false);
-      });
-
-      it('should handle empty character list', async () => {
-        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
-          characters: [],
-          version: '1.0',
-          lastUpdated: mockDate,
-        });
-
-        await resetAllPresentStatus();
-
-        expect(SafeAsyncStorageJSONParser.setItem).toHaveBeenCalled();
       });
     });
   });
@@ -1178,7 +1095,6 @@ describe('characterStorage', () => {
               facets: { archetypes: ['Human'], traits: [], qualities: [] },
               factions: [],
               relationships: [],
-              present: false,
               retired: false,
               createdAt: mockDate,
               updatedAt: mockDate,
@@ -1227,7 +1143,6 @@ describe('characterStorage', () => {
               facets: { archetypes: ['Human'], traits: [], qualities: [] },
               factions: [],
               relationships: [],
-              present: false,
               retired: false,
               createdAt: mockDate,
               updatedAt: mockDate,
@@ -1329,7 +1244,6 @@ describe('characterStorage', () => {
             { name: 'ToKeep', relationshipTypeId: 'neutral' },
           ],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -1440,7 +1354,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [{ name: 'OldName', relationshipTypeId: 'ally' }],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -1696,7 +1609,6 @@ describe('characterStorage', () => {
             },
           ],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -1738,7 +1650,6 @@ describe('characterStorage', () => {
             },
           ],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -1784,7 +1695,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           imageUri: 'legacy-character.jpg',
           createdAt: mockDate,
@@ -1972,7 +1882,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2231,7 +2140,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: ['perk1'], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2244,7 +2152,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Mutant'], traits: ['perk2'], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2287,7 +2194,6 @@ describe('characterStorage', () => {
           },
           factions: [{ name: 'Faction1', relationshipTypeId: 'ally' }],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2303,7 +2209,6 @@ describe('characterStorage', () => {
           },
           factions: [{ name: 'Faction2', relationshipTypeId: 'neutral' }],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2343,7 +2248,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2356,7 +2260,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2400,7 +2303,6 @@ describe('characterStorage', () => {
               description: 'Old friend',
             },
           ],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2423,7 +2325,6 @@ describe('characterStorage', () => {
               description: 'New enemy',
             },
           ],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2552,7 +2453,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2914,7 +2814,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [factionToDelete, factionToKeep],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -2965,7 +2864,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [otherFaction],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -3017,7 +2915,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -3029,7 +2926,6 @@ describe('characterStorage', () => {
           facets: { archetypes: ['Mutant'], traits: [], qualities: [] },
           factions: [],
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -3089,7 +2985,6 @@ describe('characterStorage', () => {
           factions: [faction1],
           relationships: [],
           notes: 'Original notes',
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,
@@ -3109,7 +3004,6 @@ describe('characterStorage', () => {
           },
           factions: [faction2], // New faction
           relationships: [],
-          present: false,
           retired: false,
           createdAt: mockDate,
           updatedAt: mockDate,

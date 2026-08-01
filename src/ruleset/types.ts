@@ -96,8 +96,6 @@ export interface ColorPalette {
     warning: ColorToken;
     error: ColorToken;
     info: ColorToken;
-    present: ColorToken;
-    absent: ColorToken;
   };
   standing: {
     allied: ColorToken;
