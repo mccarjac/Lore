@@ -322,7 +322,9 @@ export const exampleRuleset: RulesetDefinition = {
     discord: true,
     map: false,
   },
-  // Reporting screens stay opt-in — see docs/ruleset-authoring.md.
-  reports: [],
+  // Reporting screens stay opt-in — see docs/ruleset-authoring.md. Two
+  // enabled here so the collapsible "Statistics" nav section has something
+  // to preview.
+  reports: [{ kind: 'characterStats' }, { kind: 'factionStats' }],
   branding: { appName: APP_NAME },
 };

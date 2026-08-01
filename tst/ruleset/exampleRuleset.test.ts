@@ -58,12 +58,15 @@ describe('the example ruleset', () => {
     expect(exampleRuleset.features.map).toBe(false);
   });
 
-  it('enables the core features, leaving reporting screens opt-in', () => {
+  it('enables the core features, previewing two reporting screens', () => {
     const { map, ...rest } = exampleRuleset.features;
     expect(map).toBe(false);
-    // Reporting/statistics screens are opt-in, so none are declared even
-    // though the engine ships fully able to reach them.
-    expect(exampleRuleset.reports).toEqual([]);
+    // Reporting/statistics screens are opt-in; this ruleset turns on two of
+    // the four kinds so the "Statistics" nav section has something to show.
+    expect(exampleRuleset.reports).toEqual([
+      { kind: 'characterStats' },
+      { kind: 'factionStats' },
+    ]);
     expect(Object.values(rest).every(Boolean)).toBe(true);
   });
 
