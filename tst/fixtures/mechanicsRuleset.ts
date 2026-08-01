@@ -320,10 +320,7 @@ export const mechanicsRuleset: RulesetDefinition = {
     quests: true,
     discord: false,
     map: false,
-    influenceReport: true,
-    relationshipGraph: false,
-    characterStats: false,
-    factionStats: false,
   },
+  reports: [{ kind: 'influenceReport' }],
   branding: { appName: 'Mechanics Fixture' },
 };

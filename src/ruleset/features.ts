@@ -9,15 +9,7 @@ export type FeatureKey = keyof FeatureFlags;
  * ruleset that simply omits a flag would otherwise gate a whole subsystem off
  * by accident.
  */
-export const FEATURE_KEYS: readonly FeatureKey[] = [
-  'quests',
-  'discord',
-  'map',
-  'influenceReport',
-  'relationshipGraph',
-  'characterStats',
-  'factionStats',
-];
+export const FEATURE_KEYS: readonly FeatureKey[] = ['quests', 'discord', 'map'];
 
 /** Non-hook form, mirroring `getLabel` — for navigators and pure utils. */
 export function isFeatureEnabled(

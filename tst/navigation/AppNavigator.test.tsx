@@ -1,7 +1,9 @@
 import React from 'react';
+import { fireEvent } from '@testing-library/react-native';
 import { renderWithRuleset } from '../helpers/ruleset';
 import { genericRuleset } from '../fixtures/genericRuleset';
 import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
+import { REPORT_KINDS } from '@/ruleset/reports';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 /**
@@ -80,11 +82,8 @@ const allFeaturesRuleset: RulesetDefinition = {
     quests: true,
     discord: true,
     map: true,
-    influenceReport: true,
-    relationshipGraph: true,
-    characterStats: true,
-    factionStats: true,
   },
+  reports: REPORT_KINDS.map(kind => ({ kind })),
 };
 
 const renderNav = (ruleset = allFeaturesRuleset) =>
@@ -145,7 +144,7 @@ describe('AppNavigator — a ruleset with every feature enabled', () => {
     ].forEach(name => expect(getByText(`stack:${name}`)).toBeTruthy());
   });
 
-  it('shows every drawer item', () => {
+  it('shows every top-level drawer item', () => {
     const { getByText } = renderDrawer();
 
     [
@@ -155,11 +154,28 @@ describe('AppNavigator — a ruleset with every feature enabled', () => {
       'Locations',
       'Events',
       'Quests',
+      'Data Management',
+    ].forEach(label => expect(getByText(`item:${label}`)).toBeTruthy());
+  });
+
+  it('groups every report under a collapsed "Statistics" section', () => {
+    const { getByText, queryByText } = renderDrawer();
+
+    expect(getByText('Statistics')).toBeTruthy();
+    [
       'Influence Report',
       'Relationship Graph',
       'Character Statistics',
       'Faction Statistics',
-      'Data Management',
+    ].forEach(label => expect(queryByText(`item:${label}`)).toBeNull());
+
+    fireEvent.press(getByText('Statistics'));
+
+    [
+      'Influence Report',
+      'Relationship Graph',
+      'Character Statistics',
+      'Faction Statistics',
     ].forEach(label => expect(getByText(`item:${label}`)).toBeTruthy());
   });
 });
@@ -188,8 +204,12 @@ describe('AppNavigator — a ruleset with features disabled', () => {
     // The drawer item list is maintained separately from the screen list, so
     // hiding one without the other is the easy mistake here.
     expect(queryByText('item:Quests')).toBeNull();
-    expect(queryByText('item:Influence Report')).toBeNull();
+
+    // Only relationshipGraph is in the fixture's `reports`, so the
+    // Statistics section has exactly one item once expanded.
+    fireEvent.press(getByText('Statistics'));
     expect(getByText('item:Relationship Graph')).toBeTruthy();
+    expect(queryByText('item:Influence Report')).toBeNull();
   });
 
   it('drops the quest, discord and map stack routes', () => {

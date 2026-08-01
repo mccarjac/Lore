@@ -321,10 +321,8 @@ export const exampleRuleset: RulesetDefinition = {
     quests: true,
     discord: true,
     map: false,
-    influenceReport: false,
-    relationshipGraph: false,
-    characterStats: false,
-    factionStats: false,
   },
+  // Reporting screens stay opt-in — see docs/ruleset-authoring.md.
+  reports: [],
   branding: { appName: APP_NAME },
 };

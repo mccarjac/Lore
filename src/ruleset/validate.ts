@@ -6,6 +6,7 @@ import {
   type AttributeDefinition,
 } from './attributes';
 import { FEATURE_KEYS } from './features';
+import { REPORT_KINDS } from './reports';
 import type { FacetCollection } from './facets';
 import type { RelationshipTypeCollection } from './relationships';
 import type { RulesetDefinition } from './types';
@@ -517,6 +518,25 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
         message: `features.${key} must be a boolean`,
       });
     }
+  });
+
+  // Each declared report must name a kind the engine actually implements,
+  // and a ruleset registering the same kind twice is an authoring mistake
+  // (it would produce two drawer items navigating to the same route).
+  const seenReportKinds = new Set<string>();
+  (ruleset.reports ?? []).forEach((report, index) => {
+    if (!REPORT_KINDS.includes(report.kind)) {
+      issues.push({
+        path: `reports[${index}].kind`,
+        message: `reports[${index}].kind must be one of ${REPORT_KINDS.join(', ')}`,
+      });
+    } else if (seenReportKinds.has(report.kind)) {
+      issues.push({
+        path: `reports[${index}].kind`,
+        message: `Duplicate report kind '${report.kind}' in reports`,
+      });
+    }
+    seenReportKinds.add(report.kind);
   });
 
   if (ruleset.map && !ruleset.map.imageKey) {

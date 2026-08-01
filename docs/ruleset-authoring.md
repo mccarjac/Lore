@@ -257,6 +257,38 @@ shipped the builtin `present` boolean, give the two entries that replace it a
 types use below. The bundled example ruleset's `attendance` collection is the
 reference implementation.
 
+### Reports
+
+The engine ships four analytics/reporting screens — character statistics,
+faction statistics, an influence report, and a relationship graph. Which of
+them exist for your ruleset, in what order, and under what title is declared
+data (`src/ruleset/reports.ts`), the same pattern `facets` and
+`relationshipTypes` use: the engine owns the screens and their computation,
+the ruleset owns which are turned on.
+
+```ts
+type ReportKind =
+  | 'characterStats'
+  | 'factionStats'
+  | 'influenceReport'
+  | 'relationshipGraph';
+
+interface ReportDefinition {
+  kind: ReportKind;
+  title?: string; // overrides the engine's default title/drawer label
+}
+```
+
+`RulesetDefinition.reports: ReportDefinition[]` — array order is drawer
+order. An empty array (the default) declares no reports at all. Enabled
+reports are grouped under a single collapsible "Statistics" section in the
+drawer, collapsed by default; the section itself doesn't render when
+`reports` is empty. Omitting `title` falls back to the engine's default for
+that kind (`` `${label('character.singular')} Statistics` `` and similarly
+for faction stats; static "Influence Report"/"Relationship Graph" for the
+other two). `validateRuleset` rejects an unknown `kind` and a duplicate
+`kind` in the array.
+
 ### How a number is computed
 
 `calculateDerivedStats(character, ruleset)` (`src/ruleset/derived.ts`) returns
@@ -464,16 +496,13 @@ screens).
 
 ### Feature flags
 
-Nine booleans — `quests`, `recipes`, `discord`, `map`, `modifications`,
-`influenceReport`, `relationshipGraph`, `characterStats`, `factionStats` —
-gate **route registration** in `src/navigation/AppNavigator.tsx`. Turning one
-off hides the screens; the data stays, and turning it back on restores
-everything intact.
+Three booleans — `quests`, `discord`, `map` — gate **route registration** in
+`src/navigation/AppNavigator.tsx`. Turning one off hides the screens; the
+data stays, and turning it back on restores everything intact.
 
-`influenceReport`, `relationshipGraph`, `characterStats` and `factionStats`
-are opt-in: they default to `false` in `exampleRuleset.ts` because they're
-reporting/analytics screens, not core content. When enabled, each gets its
-own drawer item — there is no header-icon path for them.
+The four reporting/analytics screens (`characterStats`, `factionStats`,
+`influenceReport`, `relationshipGraph`) aren't feature flags — see "Reports"
+above for how a ruleset opts into them via `RulesetDefinition.reports`.
 
 Two traps: the drawer's item list and its screen list are maintained
 separately and **both** need gating, and `navigate()` into an unregistered
