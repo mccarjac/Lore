@@ -598,6 +598,17 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   caller into a gated route is gated at its call site too. Grep
   `navigation.navigate(` when adding a flag. Disabled features retain their
   data; turning a flag back on restores the screens intact.
+- `src/ruleset/reports.ts` — the four reporting/analytics screens
+  (`characterStats`, `factionStats`, `influenceReport`, `relationshipGraph`)
+  moved off `FeatureFlags` onto `RulesetDefinition.reports: ReportDefinition[]`
+  — array order, not a boolean each, so a ruleset also controls which exist,
+  in what order, and under what title. `useReports()` mirrors `useFeature`.
+  `AppNavigator.tsx` groups enabled reports under one collapsible
+  "Statistics" drawer section (same collapsed-by-default pattern as the
+  Discord section) via a local `REPORT_ROUTES`/`REPORT_COMPONENTS` lookup
+  keyed by `ReportKind` — there's no dynamic route registration, so a new
+  report kind is still an engine change, same as a new facet `selection`
+  would be.
 - **`App.tsx` is the provider stack only.** The navigators live in
   `src/navigation/AppNavigator.tsx` because `App` renders `RulesetProvider`
   and therefore sits _outside_ it — nothing in `App.tsx` can call

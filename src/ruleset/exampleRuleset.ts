@@ -321,10 +321,10 @@ export const exampleRuleset: RulesetDefinition = {
     quests: true,
     discord: true,
     map: false,
-    influenceReport: false,
-    relationshipGraph: false,
-    characterStats: false,
-    factionStats: false,
   },
+  // Reporting screens stay opt-in — see docs/ruleset-authoring.md. Two
+  // enabled here so the collapsible "Statistics" nav section has something
+  // to preview.
+  reports: [{ kind: 'characterStats' }, { kind: 'factionStats' }],
   branding: { appName: APP_NAME },
 };

@@ -139,11 +139,13 @@ const baseRuleset = (): RulesetDefinition => ({
     quests: true,
     discord: true,
     map: true,
-    influenceReport: true,
-    relationshipGraph: true,
-    characterStats: true,
-    factionStats: true,
   },
+  reports: [
+    { kind: 'influenceReport' },
+    { kind: 'relationshipGraph' },
+    { kind: 'characterStats' },
+    { kind: 'factionStats' },
+  ],
   map: { imageKey: 'map' },
   branding: { appName: 'Fixture App' },
 });
@@ -503,6 +505,31 @@ describe('validateRuleset', () => {
     expect(result.issues).toContainEqual({
       path: 'features.quests',
       message: 'features.quests must be a boolean',
+    });
+  });
+
+  it('flags a report with an unknown kind', () => {
+    const ruleset = baseRuleset();
+    ruleset.reports = [
+      { kind: 'characterStats' },
+      // @ts-expect-error — testing an invalid kind a ruleset author might type.
+      { kind: 'partyStats' },
+    ];
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'reports[1].kind',
+      message:
+        'reports[1].kind must be one of characterStats, factionStats, influenceReport, relationshipGraph',
+    });
+  });
+
+  it('flags a duplicate report kind', () => {
+    const ruleset = baseRuleset();
+    ruleset.reports = [{ kind: 'characterStats' }, { kind: 'characterStats' }];
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toContainEqual({
+      path: 'reports[1].kind',
+      message: "Duplicate report kind 'characterStats' in reports",
     });
   });
 

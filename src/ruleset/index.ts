@@ -6,4 +6,5 @@ export * from './validate';
 export * from './context';
 export * from './terminology';
 export * from './features';
+export * from './reports';
 export { calculateDerivedStats, type DerivedStats } from './derived';

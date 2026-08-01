@@ -202,10 +202,7 @@ export const genericRuleset: RulesetDefinition = {
     quests: false,
     discord: false,
     map: false,
-    influenceReport: false,
-    relationshipGraph: true,
-    characterStats: false,
-    factionStats: false,
   },
+  reports: [{ kind: 'relationshipGraph' }],
   branding: { appName: 'Fixture' },
 };

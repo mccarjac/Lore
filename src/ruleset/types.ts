@@ -7,6 +7,7 @@
 import type { AttributeBag, AttributeDefinition } from './attributes';
 import type { FacetCollection } from './facets';
 import type { RelationshipTypeCollection } from './relationships';
+import type { ReportDefinition } from './reports';
 
 export type { AttributeBag, AttributeDefinition };
 
@@ -52,10 +53,6 @@ export interface FeatureFlags {
   quests: boolean;
   discord: boolean;
   map: boolean;
-  influenceReport: boolean;
-  relationshipGraph: boolean;
-  characterStats: boolean;
-  factionStats: boolean;
 }
 
 /**
@@ -153,6 +150,12 @@ export interface RulesetDefinition {
    */
   relationshipTypes: RelationshipTypeCollection[];
   features: FeatureFlags;
+  /**
+   * Which analytics/reporting screens this ruleset enables, in drawer order.
+   * They're grouped under a collapsible "Statistics" drawer section; an
+   * empty array (the default) renders no such section. See `reports.ts`.
+   */
+  reports: ReportDefinition[];
   /**
    * Asset key resolved through RulesetAssets — never a require() result.
    * The map's display name is `terminology['map.label']`, not a field here:

@@ -1,8 +1,8 @@
 /**
  * The whole navigation tree, extracted from App.tsx so it renders *inside*
- * `RulesetProvider` and can therefore read `ruleset.features` (#10). App.tsx
- * still owns the provider stack; everything below the NavigationContainer
- * lives here.
+ * `RulesetProvider` and can therefore read `ruleset.features`/`ruleset.reports`
+ * (#10). App.tsx still owns the provider stack; everything below the
+ * NavigationContainer lives here.
  *
  * Feature flags gate *registration*, not the param-list types
  * (`navigation/types.ts` stays complete). A route that isn't registered throws
@@ -12,6 +12,12 @@
  *
  * Disabled features keep their data. Turning a flag back on restores the
  * screens with everything still there.
+ *
+ * The four report screens (`ruleset.reports`, see `@/ruleset/reports`) work
+ * the same way but are array- rather than boolean-driven: which report kinds
+ * are registered, in what order, and under what title all come from the
+ * ruleset, grouped under a collapsible "Statistics" drawer section (see
+ * `REPORT_ROUTES`/`REPORT_COMPONENTS` below).
  */
 import React, { useMemo, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -58,11 +64,43 @@ import { DiscordServerFormScreen } from '@screens/discord/DiscordServerFormScree
 import { DiscordCharacterMappingScreen } from '@screens/discord/DiscordCharacterMappingScreen';
 import { DiscordMessagesScreen } from '@screens/discord/DiscordMessagesScreen';
 import { DiscordMessageContextScreen } from '@screens/discord/DiscordMessageContextScreen';
-import { useLabels, useFeature } from '@/ruleset';
+import { useLabels, useFeature, useReports, type ReportKind } from '@/ruleset';
 import { useTheme, type ColorPalette } from '@/styles/theme';
 
 const Drawer = createDrawerNavigator<RootDrawerParamList>();
 const Stack = createStackNavigator<RootStackParamList>();
+
+/** Where each report kind navigates — route identities are unchanged. */
+const REPORT_ROUTES: Record<ReportKind, keyof RootDrawerParamList> = {
+  characterStats: 'CharacterStats',
+  factionStats: 'FactionStats',
+  influenceReport: 'InfluenceReport',
+  relationshipGraph: 'RelationshipGraph',
+};
+
+const REPORT_COMPONENTS: Record<ReportKind, React.ComponentType> = {
+  characterStats: CharacterStatsScreen,
+  factionStats: FactionStatsScreen,
+  influenceReport: InfluenceReportScreen,
+  relationshipGraph: RelationshipGraphScreen,
+};
+
+/** Used when a `ReportDefinition` doesn't override `title`. */
+const defaultReportTitle = (
+  kind: ReportKind,
+  label: ReturnType<typeof useLabels>
+): string => {
+  switch (kind) {
+    case 'characterStats':
+      return `${label('character.singular')} Statistics`;
+    case 'factionStats':
+      return `${label('faction.singular')} Statistics`;
+    case 'influenceReport':
+      return 'Influence Report';
+    case 'relationshipGraph':
+      return 'Relationship Graph';
+  }
+};
 
 // Shared by every `DrawerItem` — one place to change the drawer's
 // selection colors instead of six per item.
@@ -111,6 +149,7 @@ const buildDrawerStyles = (colors: ColorPalette) => ({
 // Custom drawer content with collapsible Discord section
 export function CustomDrawerContent(props: DrawerContentComponentProps) {
   const [discordExpanded, setDiscordExpanded] = useState(false);
+  const [statisticsExpanded, setStatisticsExpanded] = useState(false);
   const { state, navigation } = props;
   const label = useLabels();
   const { colors } = useTheme();
@@ -119,10 +158,7 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
     drawerStyles;
   const quests = useFeature('quests');
   const discord = useFeature('discord');
-  const influenceReport = useFeature('influenceReport');
-  const relationshipGraph = useFeature('relationshipGraph');
-  const characterStats = useFeature('characterStats');
-  const factionStats = useFeature('factionStats');
+  const reports = useReports();
 
   const isActive = (routeName: string) => {
     const currentRoute = state.routes[state.index];
@@ -187,50 +223,6 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
           labelStyle={drawerStyles.drawerLabel}
         />
       )}
-      {influenceReport && (
-        <DrawerItem
-          label="Influence Report"
-          onPress={() => navigation.navigate('InfluenceReport')}
-          focused={isActive('InfluenceReport')}
-          activeTintColor={activeTintColor}
-          inactiveTintColor={inactiveTintColor}
-          activeBackgroundColor={activeBackgroundColor}
-          labelStyle={drawerStyles.drawerLabel}
-        />
-      )}
-      {relationshipGraph && (
-        <DrawerItem
-          label="Relationship Graph"
-          onPress={() => navigation.navigate('RelationshipGraph')}
-          focused={isActive('RelationshipGraph')}
-          activeTintColor={activeTintColor}
-          inactiveTintColor={inactiveTintColor}
-          activeBackgroundColor={activeBackgroundColor}
-          labelStyle={drawerStyles.drawerLabel}
-        />
-      )}
-      {characterStats && (
-        <DrawerItem
-          label={`${label('character.singular')} Statistics`}
-          onPress={() => navigation.navigate('CharacterStats')}
-          focused={isActive('CharacterStats')}
-          activeTintColor={activeTintColor}
-          inactiveTintColor={inactiveTintColor}
-          activeBackgroundColor={activeBackgroundColor}
-          labelStyle={drawerStyles.drawerLabel}
-        />
-      )}
-      {factionStats && (
-        <DrawerItem
-          label={`${label('faction.singular')} Statistics`}
-          onPress={() => navigation.navigate('FactionStats')}
-          focused={isActive('FactionStats')}
-          activeTintColor={activeTintColor}
-          inactiveTintColor={inactiveTintColor}
-          activeBackgroundColor={activeBackgroundColor}
-          labelStyle={drawerStyles.drawerLabel}
-        />
-      )}
       <DrawerItem
         label="Data Management"
         onPress={() => navigation.navigate('DataManagement')}
@@ -240,6 +232,43 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
         activeBackgroundColor={activeBackgroundColor}
         labelStyle={drawerStyles.drawerLabel}
       />
+
+      {/* Collapsible Statistics Section */}
+      {reports.length > 0 && (
+        <>
+          <TouchableOpacity
+            style={drawerStyles.sectionHeader}
+            onPress={() => setStatisticsExpanded(!statisticsExpanded)}
+          >
+            <Text style={drawerStyles.sectionHeaderText}>Statistics</Text>
+            <Text style={drawerStyles.sectionHeaderArrow}>
+              {statisticsExpanded ? '▼' : '▶'}
+            </Text>
+          </TouchableOpacity>
+
+          {statisticsExpanded && (
+            <View style={drawerStyles.sectionContent}>
+              {reports.map(report => {
+                const route = REPORT_ROUTES[report.kind];
+                return (
+                  <DrawerItem
+                    key={report.kind}
+                    label={
+                      report.title ?? defaultReportTitle(report.kind, label)
+                    }
+                    onPress={() => navigation.navigate(route)}
+                    focused={isActive(route)}
+                    activeTintColor={activeTintColor}
+                    inactiveTintColor={inactiveTintColor}
+                    activeBackgroundColor={activeBackgroundColor}
+                    labelStyle={drawerStyles.drawerLabelIndented}
+                  />
+                );
+              })}
+            </View>
+          )}
+        </>
+      )}
 
       {/* Collapsible Discord Section */}
       {discord && (
@@ -306,10 +335,7 @@ export function MainDrawer() {
   const { colors } = useTheme();
   const quests = useFeature('quests');
   const discord = useFeature('discord');
-  const influenceReport = useFeature('influenceReport');
-  const relationshipGraph = useFeature('relationshipGraph');
-  const characterStats = useFeature('characterStats');
-  const factionStats = useFeature('factionStats');
+  const reports = useReports();
 
   return (
     <Drawer.Navigator
@@ -383,46 +409,17 @@ export function MainDrawer() {
           }}
         />
       )}
-      {influenceReport && (
-        <Drawer.Screen
-          name="InfluenceReport"
-          component={InfluenceReportScreen}
-          options={{
-            title: 'Influence Report',
-            drawerLabel: 'Influence Report',
-          }}
-        />
-      )}
-      {relationshipGraph && (
-        <Drawer.Screen
-          name="RelationshipGraph"
-          component={RelationshipGraphScreen}
-          options={{
-            title: 'Relationship Graph',
-            drawerLabel: 'Relationship Graph',
-          }}
-        />
-      )}
-      {characterStats && (
-        <Drawer.Screen
-          name="CharacterStats"
-          component={CharacterStatsScreen}
-          options={{
-            title: `${label('character.singular')} Statistics`,
-            drawerLabel: `${label('character.singular')} Statistics`,
-          }}
-        />
-      )}
-      {factionStats && (
-        <Drawer.Screen
-          name="FactionStats"
-          component={FactionStatsScreen}
-          options={{
-            title: `${label('faction.singular')} Statistics`,
-            drawerLabel: `${label('faction.singular')} Statistics`,
-          }}
-        />
-      )}
+      {reports.map(report => {
+        const title = report.title ?? defaultReportTitle(report.kind, label);
+        return (
+          <Drawer.Screen
+            key={report.kind}
+            name={REPORT_ROUTES[report.kind]}
+            component={REPORT_COMPONENTS[report.kind]}
+            options={{ title, drawerLabel: title }}
+          />
+        );
+      })}
       <Drawer.Screen
         name="DataManagement"
         component={DataManagementScreen}
