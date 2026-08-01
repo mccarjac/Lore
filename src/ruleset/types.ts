@@ -6,6 +6,7 @@
  */
 import type { AttributeBag, AttributeDefinition } from './attributes';
 import type { FacetCollection } from './facets';
+import type { RelationshipTypeCollection } from './relationships';
 
 export type { AttributeBag, AttributeDefinition };
 
@@ -145,6 +146,14 @@ export interface RulesetDefinition {
    * ruleset may declare as few or as many as its game needs.
    */
   facets: FacetCollection[];
+  /**
+   * Every relationship-type collection this ruleset declares — the
+   * generalized form of `RelationshipStanding` (#50). A ruleset declares one
+   * collection per entity pairing that carries a typed relationship
+   * (character-character, character-faction, faction-faction, or any other
+   * pairing it invents); the engine no longer hardcodes any of them.
+   */
+  relationshipTypes: RelationshipTypeCollection[];
   features: FeatureFlags;
   /**
    * Asset key resolved through RulesetAssets — never a require() result.

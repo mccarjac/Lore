@@ -114,6 +114,27 @@ const baseRuleset = (): RulesetDefinition => ({
       ],
     },
   ],
+  relationshipTypes: [
+    {
+      id: 'bond',
+      singular: 'Bond',
+      plural: 'Bonds',
+      appliesTo: ['character', 'character'],
+      defaultEntryId: 'neutral',
+      entries: [
+        { id: 'ally', label: 'Ally', role: 'positive' },
+        { id: 'neutral', label: 'Neutral', role: 'neutral' },
+        { id: 'rival', label: 'Rival', role: 'negative' },
+        {
+          id: 'mentor',
+          label: 'Mentor of',
+          inverseLabel: 'Student of',
+          symmetric: false,
+          role: 'neutral',
+        },
+      ],
+    },
+  ],
   features: {
     quests: true,
     discord: true,
@@ -131,6 +152,9 @@ const baseRuleset = (): RulesetDefinition => ({
 const archetypes = (ruleset: RulesetDefinition) => ruleset.facets[0];
 const traits = (ruleset: RulesetDefinition) => ruleset.facets[1];
 const qualities = (ruleset: RulesetDefinition) => ruleset.facets[2];
+
+/** Convenience accessor into `baseRuleset()`'s one relationship collection. */
+const bonds = (ruleset: RulesetDefinition) => ruleset.relationshipTypes[0];
 
 describe('validateRuleset', () => {
   it('accepts a well-formed fixture ruleset', () => {
@@ -530,6 +554,139 @@ describe('validateRuleset', () => {
     expect(result.issues).toContainEqual({
       path: 'facets[0].entries[0].weird',
       message: expect.stringContaining('JSON-serializable'),
+    });
+  });
+});
+
+describe('relationship type collection checks', () => {
+  it('is valid for the base fixture', () => {
+    expect(validateRuleset(baseRuleset())).toEqual({ valid: true, issues: [] });
+  });
+
+  it('flags a collection with an empty id, singular, or plural', () => {
+    const ruleset = baseRuleset();
+    bonds(ruleset).id = '';
+    bonds(ruleset).singular = '';
+    bonds(ruleset).plural = '';
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[0].id',
+      message: 'id must be non-empty',
+    });
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[0].singular',
+      message: 'singular must be non-empty',
+    });
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[0].plural',
+      message: 'plural must be non-empty',
+    });
+  });
+
+  it('flags an unknown entity kind in appliesTo', () => {
+    const ruleset = baseRuleset();
+    bonds(ruleset).appliesTo = ['character', 'spaceship' as never];
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[0].appliesTo[1]',
+      message: "Unknown relationship entity kind 'spaceship'",
+    });
+  });
+
+  it('flags a duplicate entry id within a collection', () => {
+    const ruleset = baseRuleset();
+    bonds(ruleset).entries.push({
+      id: 'ally',
+      label: 'Ally Again',
+      role: 'positive',
+    });
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[0].entries[4].id',
+      message: "Duplicate id 'ally' in relationshipTypes[0].entries",
+    });
+  });
+
+  it('flags an entry with an empty id or label', () => {
+    const ruleset = baseRuleset();
+    bonds(ruleset).entries.push({ id: '', label: '', role: 'positive' });
+    const result = validateRuleset(ruleset);
+
+    const index = bonds(ruleset).entries.length - 1;
+    expect(result.issues).toContainEqual({
+      path: `relationshipTypes[0].entries[${index}].id`,
+      message: 'id must be non-empty',
+    });
+    expect(result.issues).toContainEqual({
+      path: `relationshipTypes[0].entries[${index}].label`,
+      message: 'label must be non-empty',
+    });
+  });
+
+  it('flags an invalid role', () => {
+    const ruleset = baseRuleset();
+    bonds(ruleset).entries.push({
+      id: 'weird',
+      label: 'Weird',
+      role: 'chaotic' as never,
+    });
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[0].entries[4].role',
+      message: 'role must be one of positive, neutral, negative',
+    });
+  });
+
+  it('flags a directional (symmetric: false) entry with no inverseLabel', () => {
+    const ruleset = baseRuleset();
+    bonds(ruleset).entries.push({
+      id: 'sponsor',
+      label: 'Sponsor of',
+      symmetric: false,
+      role: 'neutral',
+    });
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[0].entries[4].inverseLabel',
+      message: 'inverseLabel is required when symmetric is false',
+    });
+  });
+
+  it('does not flag a directional entry that supplies an inverseLabel', () => {
+    const ruleset = baseRuleset();
+    const result = validateRuleset(ruleset);
+    expect(result.issues).toEqual([]);
+    // 'mentor' in the base fixture is symmetric: false with an inverseLabel.
+    expect(bonds(ruleset).entries.find(e => e.id === 'mentor')).toMatchObject({
+      inverseLabel: 'Student of',
+    });
+  });
+
+  it('flags an unresolvable defaultEntryId', () => {
+    const ruleset = baseRuleset();
+    bonds(ruleset).defaultEntryId = 'nonexistent';
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[0].defaultEntryId',
+      message:
+        "Unknown entry id 'nonexistent' in relationship type collection 'bond'",
+    });
+  });
+
+  it('flags duplicate collection ids across relationshipTypes', () => {
+    const ruleset = baseRuleset();
+    ruleset.relationshipTypes.push({ ...bonds(ruleset) });
+    const result = validateRuleset(ruleset);
+
+    expect(result.issues).toContainEqual({
+      path: 'relationshipTypes[1].id',
+      message: "Duplicate id 'bond' in relationshipTypes",
     });
   });
 });

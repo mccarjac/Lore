@@ -17,6 +17,7 @@
  */
 import { num, flag, type AttributeDefinition } from '@/ruleset/attributes';
 import type { FacetCollection } from '@/ruleset/facets';
+import type { RelationshipTypeCollection } from '@/ruleset/relationships';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const attributes: AttributeDefinition[] = [
@@ -140,6 +141,55 @@ const augments: FacetCollection = {
   entries: [],
 };
 
+const rapport: RelationshipTypeCollection = {
+  id: 'rapport',
+  singular: 'Rapport',
+  plural: 'Rapports',
+  appliesTo: ['character', 'character'],
+  defaultEntryId: 'wary',
+  entries: [
+    { id: 'kindred', label: 'Kindred', role: 'positive' },
+    { id: 'wary', label: 'Wary', role: 'neutral' },
+    { id: 'feuding', label: 'Feuding', role: 'negative' },
+  ],
+};
+
+const allegiance: RelationshipTypeCollection = {
+  id: 'allegiance',
+  singular: 'Allegiance',
+  plural: 'Allegiances',
+  appliesTo: ['character', 'faction'],
+  defaultEntryId: 'unsworn',
+  entries: [
+    { id: 'sworn', label: 'Sworn', role: 'positive' },
+    { id: 'unsworn', label: 'Unsworn', role: 'neutral' },
+    { id: 'outcast', label: 'Outcast', role: 'negative' },
+  ],
+};
+
+// Exercises a directional entry (`symmetric: false`), the generalized form of
+// the old faction-faction "standing" needed for hierarchy/composition
+// relationships, alongside two ordinary symmetric ones.
+const accord: RelationshipTypeCollection = {
+  id: 'accord',
+  singular: 'Accord',
+  plural: 'Accords',
+  appliesTo: ['faction', 'faction'],
+  defaultEntryId: 'ceasefire',
+  entries: [
+    { id: 'concordat', label: 'Concordat', role: 'positive' },
+    { id: 'ceasefire', label: 'Ceasefire', role: 'neutral' },
+    { id: 'blood_feud', label: 'Blood Feud', role: 'negative' },
+    {
+      id: 'vassalage',
+      label: 'Vassal of',
+      inverseLabel: 'Suzerain of',
+      symmetric: false,
+      role: 'neutral',
+    },
+  ],
+};
+
 export const genericRuleset: RulesetDefinition = {
   id: 'fixture',
   name: 'Fixture Ruleset',
@@ -147,6 +197,7 @@ export const genericRuleset: RulesetDefinition = {
   terminology: { 'map.label': 'Realm Map' },
   attributes,
   facets: [lineages, talents, virtues, augments],
+  relationshipTypes: [rapport, allegiance, accord],
   features: {
     quests: false,
     discord: false,

@@ -335,7 +335,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
                   y1={source.y}
                   x2={target.x}
                   y2={target.y}
-                  stroke={standingEdgeColor(edge.standing)}
+                  stroke={standingEdgeColor(edge.role)}
                   strokeWidth={2}
                   strokeOpacity={0.7}
                 />

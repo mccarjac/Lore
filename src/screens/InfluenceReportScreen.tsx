@@ -43,10 +43,10 @@ export const InfluenceReportScreen: React.FC = () => {
       setCharacters(loadedCharacters);
 
       // Calculate all analyses
-      const influencers = getTopInfluencers(loadedCharacters, 10);
-      const factions = await analyzeFactionInfluence(loadedCharacters);
-      const connectors = findKeyConnectors(loadedCharacters, 5);
-      const centers = findPowerCenters(loadedCharacters, 5);
+      const influencers = getTopInfluencers(loadedCharacters, 10, ruleset);
+      const factions = await analyzeFactionInfluence(loadedCharacters, ruleset);
+      const connectors = findKeyConnectors(loadedCharacters, 5, ruleset);
+      const centers = findPowerCenters(loadedCharacters, 5, ruleset);
 
       setTopInfluencers(influencers);
       setFactionInfluences(factions);

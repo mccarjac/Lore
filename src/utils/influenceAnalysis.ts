@@ -1,9 +1,12 @@
+import { GameCharacter } from '@models/types';
+import { getActiveRuleset } from '@/activeRuleset';
 import {
-  GameCharacter,
-  NEGATIVE_RELATIONSHIP_TYPE,
-  POSITIVE_RELATIONSHIP_TYPE,
-  RelationshipStanding,
-} from '@models/types';
+  findRelationshipEntryForPair,
+  isNegativeRelationship,
+  isPositiveRelationship,
+  type RelationshipRole,
+} from '@/ruleset/relationships';
+import type { RulesetDefinition } from '@/ruleset/types';
 
 export interface CharacterInfluence {
   character: GameCharacter;
@@ -26,13 +29,17 @@ export interface FactionInfluence {
   enemies: string[]; // Other factions with enemy relationships
 }
 
+/**
+ * A character's relationships grouped by the ruleset-declared role of each
+ * one — the generalized form of the pre-#50 five fixed buckets
+ * (allies/friends/neutral/hostile/enemies), which assumed every ruleset's
+ * relationship-type vocabulary maps onto those five English words.
+ */
 export interface RelationshipNetwork {
   character: GameCharacter;
-  allies: GameCharacter[];
-  friends: GameCharacter[];
+  positive: GameCharacter[];
   neutral: GameCharacter[];
-  hostile: GameCharacter[];
-  enemies: GameCharacter[];
+  negative: GameCharacter[];
 }
 
 /**
@@ -44,7 +51,8 @@ export interface RelationshipNetwork {
  */
 export const calculateCharacterInfluence = (
   character: GameCharacter,
-  allCharacters: GameCharacter[]
+  allCharacters: GameCharacter[],
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): CharacterInfluence => {
   let influenceScore = 0;
 
@@ -52,11 +60,23 @@ export const calculateCharacterInfluence = (
   const relationshipCount = character.relationships?.length || 0;
   const positiveRelationships =
     character.relationships?.filter(r =>
-      POSITIVE_RELATIONSHIP_TYPE.includes(r.relationshipType)
+      isPositiveRelationship(
+        findRelationshipEntryForPair(
+          ruleset,
+          ['character', 'character'],
+          r.relationshipTypeId
+        )
+      )
     ).length || 0;
   const negativeRelationships =
     character.relationships?.filter(r =>
-      NEGATIVE_RELATIONSHIP_TYPE.includes(r.relationshipType)
+      isNegativeRelationship(
+        findRelationshipEntryForPair(
+          ruleset,
+          ['character', 'character'],
+          r.relationshipTypeId
+        )
+      )
     ).length || 0;
 
   // Relationships add to influence
@@ -97,10 +117,11 @@ export const calculateCharacterInfluence = (
  */
 export const getTopInfluencers = (
   characters: GameCharacter[],
-  limit = 10
+  limit = 10,
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): CharacterInfluence[] => {
   const influences = characters.map(char =>
-    calculateCharacterInfluence(char, characters)
+    calculateCharacterInfluence(char, characters, ruleset)
   );
 
   return influences
@@ -114,7 +135,8 @@ export const getTopInfluencers = (
  * Excludes retired factions from the analysis
  */
 export const analyzeFactionInfluence = async (
-  characters: GameCharacter[]
+  characters: GameCharacter[],
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): Promise<FactionInfluence[]> => {
   // Load factions to check retirement status
   const { loadFactions } = await import('@utils/characterStorage');
@@ -147,7 +169,11 @@ export const analyzeFactionInfluence = async (
 
   factionMap.forEach((members, factionName) => {
     const totalInfluence = members.reduce((sum, member) => {
-      const influence = calculateCharacterInfluence(member, characters);
+      const influence = calculateCharacterInfluence(
+        member,
+        characters,
+        ruleset
+      );
       return sum + influence.influenceScore;
     }, 0);
 
@@ -162,15 +188,14 @@ export const analyzeFactionInfluence = async (
       // Check faction standings of this member
       member.factions?.forEach(otherFaction => {
         if (otherFaction.name !== factionName) {
-          if (
-            otherFaction.standing === RelationshipStanding.Ally ||
-            otherFaction.standing === RelationshipStanding.Friend
-          ) {
+          const entry = findRelationshipEntryForPair(
+            ruleset,
+            ['character', 'faction'],
+            otherFaction.relationshipTypeId
+          );
+          if (isPositiveRelationship(entry)) {
             alliedFactions.add(otherFaction.name);
-          } else if (
-            otherFaction.standing === RelationshipStanding.Enemy ||
-            otherFaction.standing === RelationshipStanding.Hostile
-          ) {
+          } else if (isNegativeRelationship(entry)) {
             enemyFactions.add(otherFaction.name);
           }
         }
@@ -197,39 +222,32 @@ export const analyzeFactionInfluence = async (
  */
 export const buildRelationshipNetwork = (
   character: GameCharacter,
-  allCharacters: GameCharacter[]
+  allCharacters: GameCharacter[],
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): RelationshipNetwork => {
   const network: RelationshipNetwork = {
     character,
-    allies: [],
-    friends: [],
+    positive: [],
     neutral: [],
-    hostile: [],
-    enemies: [],
+    negative: [],
+  };
+
+  const bucketFor: Record<RelationshipRole, GameCharacter[]> = {
+    positive: network.positive,
+    neutral: network.neutral,
+    negative: network.negative,
   };
 
   // Direct relationships
   character.relationships?.forEach(rel => {
     const relatedChar = allCharacters.find(c => c.name === rel.characterName);
-    if (relatedChar) {
-      switch (rel.relationshipType) {
-        case RelationshipStanding.Ally:
-          network.allies.push(relatedChar);
-          break;
-        case RelationshipStanding.Friend:
-          network.friends.push(relatedChar);
-          break;
-        case RelationshipStanding.Neutral:
-          network.neutral.push(relatedChar);
-          break;
-        case RelationshipStanding.Hostile:
-          network.hostile.push(relatedChar);
-          break;
-        case RelationshipStanding.Enemy:
-          network.enemies.push(relatedChar);
-          break;
-      }
-    }
+    if (!relatedChar) return;
+    const entry = findRelationshipEntryForPair(
+      ruleset,
+      ['character', 'character'],
+      rel.relationshipTypeId
+    );
+    bucketFor[entry?.role ?? 'neutral'].push(relatedChar);
   });
 
   return network;
@@ -267,14 +285,14 @@ export const findMutualRelationships = (
 ): Array<{
   character1: GameCharacter;
   character2: GameCharacter;
-  relationship1: RelationshipStanding;
-  relationship2: RelationshipStanding;
+  relationship1: string;
+  relationship2: string;
 }> => {
   const mutualRelationships: Array<{
     character1: GameCharacter;
     character2: GameCharacter;
-    relationship1: RelationshipStanding;
-    relationship2: RelationshipStanding;
+    relationship1: string;
+    relationship2: string;
   }> = [];
 
   characters.forEach(char1 => {
@@ -297,8 +315,8 @@ export const findMutualRelationships = (
             mutualRelationships.push({
               character1: char1,
               character2: char2,
-              relationship1: rel.relationshipType,
-              relationship2: reverseRel.relationshipType,
+              relationship1: rel.relationshipTypeId,
+              relationship2: reverseRel.relationshipTypeId,
             });
           }
         }
@@ -314,10 +332,11 @@ export const findMutualRelationships = (
  */
 export const findKeyConnectors = (
   characters: GameCharacter[],
-  limit = 5
+  limit = 5,
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): CharacterInfluence[] => {
   const influences = characters.map(char =>
-    calculateCharacterInfluence(char, characters)
+    calculateCharacterInfluence(char, characters, ruleset)
   );
 
   // Sort by combination of relationship count and faction count
@@ -336,10 +355,11 @@ export const findKeyConnectors = (
  */
 export const findPowerCenters = (
   characters: GameCharacter[],
-  limit = 5
+  limit = 5,
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): CharacterInfluence[] => {
   const influences = characters.map(char =>
-    calculateCharacterInfluence(char, characters)
+    calculateCharacterInfluence(char, characters, ruleset)
   );
 
   // Calculate power center score
@@ -350,11 +370,19 @@ export const findPowerCenters = (
         const allyChar = characters.find(c => c.name === rel.characterName);
         if (!allyChar) return false;
 
-        const allyInfluence = calculateCharacterInfluence(allyChar, characters);
+        const allyInfluence = calculateCharacterInfluence(
+          allyChar,
+          characters,
+          ruleset
+        );
         return (
-          (rel.relationshipType === RelationshipStanding.Ally ||
-            rel.relationshipType === RelationshipStanding.Friend) &&
-          allyInfluence.influenceScore > 10
+          isPositiveRelationship(
+            findRelationshipEntryForPair(
+              ruleset,
+              ['character', 'character'],
+              rel.relationshipTypeId
+            )
+          ) && allyInfluence.influenceScore > 10
         );
       }).length || 0;
 

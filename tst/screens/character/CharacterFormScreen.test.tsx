@@ -7,7 +7,7 @@ import {
 } from '@testing-library/react-native';
 import { CharacterFormScreen } from '@screens/character/CharacterFormScreen';
 import { getStorageMock, primeStorageDefaults } from '../../helpers/storage';
-import { makeCharacter } from '../../helpers/factories';
+import { makeCharacter, makeEvent } from '../../helpers/factories';
 import {
   installNavigationMock,
   installRouteParams,
@@ -104,6 +104,48 @@ describe('CharacterFormScreen', () => {
       expect(nav.goBack).toHaveBeenCalled();
     });
     expect(storage.addCharacter).not.toHaveBeenCalled();
+  });
+});
+
+// A net-new pair (#50) with no legacy counterpart, proving the
+// relationship-type mechanism generalizes beyond char-char/char-faction.
+describe('CharacterFormScreen — event relationships', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    primeStorageDefaults();
+    installRouteParams({});
+  });
+
+  afterEach(() => {
+    resetNavigationMocks();
+    jest.restoreAllMocks();
+  });
+
+  it('adds an event relationship and saves it with the character', async () => {
+    const nav = installNavigationMock();
+    storage.loadEvents.mockResolvedValue([
+      makeEvent({ id: 'event-1', title: 'The Great Fire' }),
+    ]);
+    storage.addCharacter.mockResolvedValue(
+      makeCharacter({ id: 'new-1', name: 'Newbie' })
+    );
+    storage.saveCharacters.mockResolvedValue(undefined);
+
+    const { getByText, getByPlaceholderText } = render(<CharacterFormScreen />);
+
+    await waitFor(() => expect(getByText('Create Character')).toBeTruthy());
+    fireEvent.changeText(getByPlaceholderText('Character Name'), 'Newbie');
+    fireEvent.press(getByText('Add Event Relationship'));
+    fireEvent.press(getByText('Create Character'));
+
+    await waitFor(() => {
+      expect(storage.addCharacter).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventRelationships: [{ eventId: '', relationshipTypeId: 'witness' }],
+        })
+      );
+      expect(nav.goBack).toHaveBeenCalled();
+    });
   });
 });
 

@@ -8,7 +8,6 @@ import {
   EventDataset,
   GameQuest,
   QuestDataset,
-  RelationshipStanding,
   DiscordDataset,
 } from '@models/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,18 +18,32 @@ import { runExclusive } from './storageQueue';
 import { notifyLocalDataChanged } from './dataChangeSignal';
 import { getActiveRuleset, warnIfUnconfigured } from '@/activeRuleset';
 import { findFacetCollection } from '@/ruleset/facets';
+import {
+  findRelationshipEntryForPair,
+  flipDirection,
+  isSymmetric,
+  type RelationshipDirection,
+} from '@/ruleset/relationships';
 import type { RulesetDefinition } from '@/ruleset/types';
 import {
   normalizeCharactersRulesetFields,
   normalizeDatasetRulesetFields,
+  normalizeFactionsRulesetFields,
   normalizeQuestsRulesetFields,
 } from './rulesetFieldMigration';
 import type { SyncDataset } from './syncMerge';
 
 export interface FactionRelationship {
   factionName: string;
-  relationshipType: RelationshipStanding;
+  relationshipTypeId: string;
   description?: string;
+  /**
+   * Which side of a directional (`symmetric: false`) relationship-type entry
+   * this record represents. Undefined for a symmetric entry — both sides
+   * read identically, so there is nothing to flip. See
+   * `src/ruleset/relationships.ts`.
+   */
+  direction?: RelationshipDirection;
 }
 
 export interface StoredFaction {
@@ -42,6 +55,33 @@ export interface StoredFaction {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Builds the reciprocal side of a faction-faction relationship: same
+ * `relationshipTypeId`, but with `direction` flipped when the resolved entry
+ * is directional (`symmetric: false`) and left undefined otherwise —
+ * matching how a symmetric entry (today's "standing") has always been
+ * mirrored, with no direction concept at all.
+ */
+const reciprocalFactionRelationship = (
+  relationship: FactionRelationship,
+  sourceFactionName: string,
+  ruleset: RulesetDefinition
+): FactionRelationship => {
+  const entry = findRelationshipEntryForPair(
+    ruleset,
+    ['faction', 'faction'],
+    relationship.relationshipTypeId
+  );
+  return {
+    factionName: sourceFactionName,
+    relationshipTypeId: relationship.relationshipTypeId,
+    direction:
+      entry && !isSymmetric(entry)
+        ? flipDirection(relationship.direction ?? 'forward')
+        : undefined,
+  };
+};
 
 interface FactionDataset {
   factions: StoredFaction[];
@@ -549,8 +589,8 @@ const mergeCharacterProperties = (
           // If relationship exists in both, prefer the one with more recent timestamp or better description
           return {
             ...existingRel,
-            relationshipType:
-              importedRel.relationshipType || existingRel.relationshipType,
+            relationshipTypeId:
+              importedRel.relationshipTypeId || existingRel.relationshipTypeId,
             description: importedRel.description || existingRel.description,
           };
         }
@@ -1028,6 +1068,7 @@ export const createFaction = async (factionData: {
     // Add bidirectional relationships
     const updatedFactions = [...existingFactions, newFaction];
     if (factionData.relationships && factionData.relationships.length > 0) {
+      const ruleset = getActiveRuleset();
       factionData.relationships.forEach(relationship => {
         const targetFaction = updatedFactions.find(
           f => f.name === relationship.factionName
@@ -1040,10 +1081,11 @@ export const createFaction = async (factionData: {
           if (!reciprocalExists) {
             targetFaction.relationships = [
               ...(targetFaction.relationships || []),
-              {
-                factionName: factionData.name,
-                relationshipType: relationship.relationshipType,
-              },
+              reciprocalFactionRelationship(
+                relationship,
+                factionData.name,
+                ruleset
+              ),
             ];
             targetFaction.updatedAt = now;
           }
@@ -1094,6 +1136,7 @@ export const updateFaction = async (
 
     // Handle bidirectional relationships
     if (updates.relationships !== undefined) {
+      const ruleset = getActiveRuleset();
       const newRelationships = updates.relationships || [];
 
       // Find relationships that were removed
@@ -1112,12 +1155,16 @@ export const updateFaction = async (
           )
       );
 
-      // Find relationships that changed type
+      // Find relationships that changed type or direction
       const changedRelationships = newRelationships.filter(newRel => {
         const oldRel = oldRelationships.find(
           oldR => oldR.factionName === newRel.factionName
         );
-        return oldRel && oldRel.relationshipType !== newRel.relationshipType;
+        return (
+          oldRel &&
+          (oldRel.relationshipTypeId !== newRel.relationshipTypeId ||
+            oldRel.direction !== newRel.direction)
+        );
       });
 
       // Remove reciprocal relationships for removed relationships
@@ -1145,10 +1192,7 @@ export const updateFaction = async (
           if (!reciprocalExists) {
             targetFaction.relationships = [
               ...(targetFaction.relationships || []),
-              {
-                factionName: factionName,
-                relationshipType: relationship.relationshipType,
-              },
+              reciprocalFactionRelationship(relationship, factionName, ruleset),
             ];
             targetFaction.updatedAt = now;
           }
@@ -1161,11 +1205,13 @@ export const updateFaction = async (
           f => f.name === relationship.factionName
         );
         if (targetFaction) {
+          const reciprocal = reciprocalFactionRelationship(
+            relationship,
+            factionName,
+            ruleset
+          );
           targetFaction.relationships = (targetFaction.relationships || []).map(
-            r =>
-              r.factionName === factionName
-                ? { ...r, relationshipType: relationship.relationshipType }
-                : r
+            r => (r.factionName === factionName ? reciprocal : r)
           );
           targetFaction.updatedAt = now;
         }
@@ -1977,5 +2023,23 @@ export const migrateRulesetFields = async (): Promise<void> => {
     });
   } catch (error) {
     console.error('Error migrating quest ruleset fields:', error);
+  }
+
+  try {
+    await runExclusive(FACTION_STORAGE_KEY, async () => {
+      const dataset =
+        await SafeAsyncStorageJSONParser.getItem<FactionDataset>(
+          FACTION_STORAGE_KEY
+        );
+      const factions = dataset?.factions;
+      if (!factions?.length) return;
+
+      const normalized = normalizeFactionsRulesetFields(factions);
+      if (normalized === factions) return;
+
+      await saveFactions(normalized);
+    });
+  } catch (error) {
+    console.error('Error migrating faction ruleset fields:', error);
   }
 };

@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, waitFor, fireEvent, act } from '@testing-library/react-native';
 import { FactionListScreen } from '@screens/faction/FactionListScreen';
-import { RelationshipStanding } from '@models/types';
 import { describeListScreenContract } from '../../helpers/screenContracts';
 import { getStorageMock, primeStorageDefaults } from '../../helpers/storage';
 import { makeStoredFaction, makeCharacter } from '../../helpers/factories';
@@ -51,9 +50,7 @@ describe('FactionListScreen — advanced search', () => {
     storage.loadCharacters.mockResolvedValue([
       makeCharacter({
         id: 'c1',
-        factions: [
-          { name: 'Iron Legion', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Iron Legion', relationshipTypeId: 'ally' }],
       }),
     ]);
     const screen = render(<FactionListScreen />);
@@ -76,7 +73,7 @@ describe('FactionListScreen — advanced search', () => {
       call => call[0] === 'AdvancedSearch'
     )?.[1].onApply as (values: Record<string, unknown>) => void;
 
-    act(() => onApply({ standing: RelationshipStanding.Ally }));
+    act(() => onApply({ standing: 'ally' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Void Cult')).toBeNull();

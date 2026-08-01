@@ -22,7 +22,6 @@
  * RN-free, and this file has to stay importable from `headless.ts`.
  */
 import {
-  RelationshipStanding,
   QuestStatus,
   type GameCharacter,
   type GameEvent,
@@ -36,7 +35,7 @@ import { num, text } from './attributes';
  * to avoid importing a non-RN-free module from here. */
 export interface SeedFactionRelationship {
   factionName: string;
-  relationshipType: RelationshipStanding;
+  relationshipTypeId: string;
   description?: string;
 }
 
@@ -65,9 +64,9 @@ const T = '2026-01-05T12:00:00.000Z';
 
 const relationship = (
   characterName: string,
-  relationshipType: RelationshipStanding,
+  relationshipTypeId: string,
   description?: string
-): Relationship => ({ characterName, relationshipType, description });
+): Relationship => ({ characterName, relationshipTypeId, description });
 
 // --- Locations ---------------------------------------------------------
 
@@ -122,14 +121,8 @@ const characters: GameCharacter[] = [
       qualities: ['curious'],
       modifications: [],
     },
-    factions: [{ name: "Wardens' Guild", standing: RelationshipStanding.Ally }],
-    relationships: [
-      relationship(
-        'Corwin Ashe',
-        RelationshipStanding.Friend,
-        'Trained together.'
-      ),
-    ],
+    factions: [{ name: "Wardens' Guild", relationshipTypeId: 'ally' }],
+    relationships: [relationship('Corwin Ashe', 'friend', 'Trained together.')],
     locationId: 'loc-ashfall-hold',
     occupation: 'Gate Captain',
     present: true,
@@ -145,14 +138,8 @@ const characters: GameCharacter[] = [
       qualities: ['stubborn'],
       modifications: [],
     },
-    factions: [{ name: "Wardens' Guild", standing: RelationshipStanding.Ally }],
-    relationships: [
-      relationship(
-        'Mira Hale',
-        RelationshipStanding.Friend,
-        'Trained together.'
-      ),
-    ],
+    factions: [{ name: "Wardens' Guild", relationshipTypeId: 'ally' }],
+    relationships: [relationship('Mira Hale', 'friend', 'Trained together.')],
     locationId: 'loc-ashfall-hold',
     occupation: 'Watch Sergeant',
     present: true,
@@ -168,9 +155,7 @@ const characters: GameCharacter[] = [
       qualities: [],
       modifications: [],
     },
-    factions: [
-      { name: "Wardens' Guild", standing: RelationshipStanding.Friend },
-    ],
+    factions: [{ name: "Wardens' Guild", relationshipTypeId: 'friend' }],
     relationships: [],
     locationId: 'loc-ashfall-hold',
     occupation: 'Quartermaster',
@@ -187,9 +172,7 @@ const characters: GameCharacter[] = [
       qualities: [],
       modifications: [],
     },
-    factions: [
-      { name: 'Free Folk Coalition', standing: RelationshipStanding.Ally },
-    ],
+    factions: [{ name: 'Free Folk Coalition', relationshipTypeId: 'ally' }],
     relationships: [],
     locationId: 'loc-sable-reach',
     present: true,
@@ -211,16 +194,8 @@ const characters: GameCharacter[] = [
         },
       ],
     },
-    factions: [
-      { name: "Artisans' Circle", standing: RelationshipStanding.Ally },
-    ],
-    relationships: [
-      relationship(
-        'Yuki Tanaka',
-        RelationshipStanding.Ally,
-        'Business partners.'
-      ),
-    ],
+    factions: [{ name: "Artisans' Circle", relationshipTypeId: 'ally' }],
+    relationships: [relationship('Yuki Tanaka', 'ally', 'Business partners.')],
     locationId: 'loc-the-warren',
     occupation: 'Smith',
     present: true,
@@ -239,16 +214,8 @@ const characters: GameCharacter[] = [
     attributes: {
       background: text('Trained as a cartographer before the fall.'),
     },
-    factions: [
-      { name: "Artisans' Circle", standing: RelationshipStanding.Ally },
-    ],
-    relationships: [
-      relationship(
-        'Dez Okafor',
-        RelationshipStanding.Ally,
-        'Business partners.'
-      ),
-    ],
+    factions: [{ name: "Artisans' Circle", relationshipTypeId: 'ally' }],
+    relationships: [relationship('Dez Okafor', 'ally', 'Business partners.')],
     locationId: 'loc-the-warren',
     occupation: 'Cartographer',
     present: true,
@@ -264,9 +231,7 @@ const characters: GameCharacter[] = [
       qualities: ['curious'],
       modifications: [],
     },
-    factions: [
-      { name: "Artisans' Circle", standing: RelationshipStanding.Friend },
-    ],
+    factions: [{ name: "Artisans' Circle", relationshipTypeId: 'friend' }],
     relationships: [],
     locationId: 'loc-the-warren',
     present: false,
@@ -283,9 +248,7 @@ const characters: GameCharacter[] = [
       qualities: [],
       modifications: [],
     },
-    factions: [
-      { name: 'Free Folk Coalition', standing: RelationshipStanding.Ally },
-    ],
+    factions: [{ name: 'Free Folk Coalition', relationshipTypeId: 'ally' }],
     relationships: [],
     locationId: 'loc-sable-reach',
     present: true,
@@ -301,15 +264,9 @@ const characters: GameCharacter[] = [
       qualities: ['stubborn'],
       modifications: [],
     },
-    factions: [
-      { name: "Drifters' Union", standing: RelationshipStanding.Ally },
-    ],
+    factions: [{ name: "Drifters' Union", relationshipTypeId: 'ally' }],
     relationships: [
-      relationship(
-        'Otis Kane',
-        RelationshipStanding.Enemy,
-        'Old grudge over a bad trade.'
-      ),
+      relationship('Otis Kane', 'enemy', 'Old grudge over a bad trade.'),
     ],
     locationId: 'loc-millbrook-circle',
     present: true,
@@ -334,15 +291,9 @@ const characters: GameCharacter[] = [
         },
       ],
     },
-    factions: [
-      { name: "Drifters' Union", standing: RelationshipStanding.Ally },
-    ],
+    factions: [{ name: "Drifters' Union", relationshipTypeId: 'ally' }],
     relationships: [
-      relationship(
-        'Nadia Reyes',
-        RelationshipStanding.Enemy,
-        'Old grudge over a bad trade.'
-      ),
+      relationship('Nadia Reyes', 'enemy', 'Old grudge over a bad trade.'),
     ],
     locationId: 'loc-millbrook-circle',
     present: true,
@@ -358,9 +309,7 @@ const characters: GameCharacter[] = [
       qualities: ['curious'],
       modifications: [],
     },
-    factions: [
-      { name: "Drifters' Union", standing: RelationshipStanding.Friend },
-    ],
+    factions: [{ name: "Drifters' Union", relationshipTypeId: 'friend' }],
     relationships: [],
     locationId: 'loc-millbrook-circle',
     present: false,
@@ -377,7 +326,7 @@ const characters: GameCharacter[] = [
       modifications: [],
     },
     attributes: { resolve: num(5) },
-    factions: [{ name: 'The Watch', standing: RelationshipStanding.Ally }],
+    factions: [{ name: 'The Watch', relationshipTypeId: 'ally' }],
     relationships: [],
     locationId: 'loc-sable-reach',
     present: true,
@@ -399,12 +348,12 @@ const factions: SeedFaction[] = [
     relationships: [
       {
         factionName: "Artisans' Circle",
-        relationshipType: RelationshipStanding.Ally,
+        relationshipTypeId: 'ally',
         description: 'Trade weapons and armor for tools.',
       },
       {
         factionName: "Drifters' Union",
-        relationshipType: RelationshipStanding.Hostile,
+        relationshipTypeId: 'hostile',
         description: 'Disputes over toll roads.',
       },
     ],
@@ -417,12 +366,12 @@ const factions: SeedFaction[] = [
     relationships: [
       {
         factionName: "Wardens' Guild",
-        relationshipType: RelationshipStanding.Ally,
+        relationshipTypeId: 'ally',
         description: 'Trade weapons and armor for tools.',
       },
       {
         factionName: 'Free Folk Coalition',
-        relationshipType: RelationshipStanding.Friend,
+        relationshipTypeId: 'friend',
         description: 'Buy raw materials from Free Folk scouts.',
       },
     ],
@@ -435,12 +384,12 @@ const factions: SeedFaction[] = [
     relationships: [
       {
         factionName: "Wardens' Guild",
-        relationshipType: RelationshipStanding.Hostile,
+        relationshipTypeId: 'hostile',
         description: 'Disputes over toll roads.',
       },
       {
         factionName: 'The Watch',
-        relationshipType: RelationshipStanding.Enemy,
+        relationshipTypeId: 'enemy',
         description: 'The Watch accuses the Union of banditry.',
       },
     ],
@@ -453,12 +402,12 @@ const factions: SeedFaction[] = [
     relationships: [
       {
         factionName: "Artisans' Circle",
-        relationshipType: RelationshipStanding.Friend,
+        relationshipTypeId: 'friend',
         description: 'Buy raw materials from Free Folk scouts.',
       },
       {
         factionName: 'The Watch',
-        relationshipType: RelationshipStanding.Neutral,
+        relationshipTypeId: 'neutral',
         description: 'Wary but not openly hostile.',
       },
     ],
@@ -471,12 +420,12 @@ const factions: SeedFaction[] = [
     relationships: [
       {
         factionName: "Drifters' Union",
-        relationshipType: RelationshipStanding.Enemy,
+        relationshipTypeId: 'enemy',
         description: 'The Watch accuses the Union of banditry.',
       },
       {
         factionName: 'Free Folk Coalition',
-        relationshipType: RelationshipStanding.Neutral,
+        relationshipTypeId: 'neutral',
         description: 'Wary but not openly hostile.',
       },
     ],

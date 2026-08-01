@@ -1,17 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { RelationshipStanding } from '@models/types';
 import { colors, spacing, borderRadius, typography } from '@/styles/theme';
 import type { GraphNodeType } from '@utils/relationshipGraph';
+import type { RelationshipRole } from '@/ruleset/relationships';
 import { nodeTypeColor, nodeTypeLabel, standingEdgeColor } from './graphColors';
 
 const NODE_TYPES: GraphNodeType[] = ['character', 'faction', 'location'];
-const STANDINGS: RelationshipStanding[] = [
-  RelationshipStanding.Ally,
-  RelationshipStanding.Friend,
-  RelationshipStanding.Neutral,
-  RelationshipStanding.Hostile,
-  RelationshipStanding.Enemy,
+
+// The generalized form of the old fixed five-value standing list: a ruleset
+// declares its own relationship-type vocabulary and labels
+// (`RelationshipTypeEntry.label`), but every one of those entries carries a
+// `role` from this same closed three-value set, so the legend key stays
+// role-based rather than trying to enumerate a ruleset's entries with no
+// graph data to know which are actually in use.
+const ROLES: { role: RelationshipRole; label: string }[] = [
+  { role: 'positive', label: 'Positive' },
+  { role: 'neutral', label: 'Neutral' },
+  { role: 'negative', label: 'Negative' },
 ];
 
 export const GraphLegend: React.FC = () => {
@@ -28,15 +33,15 @@ export const GraphLegend: React.FC = () => {
         ))}
       </View>
       <View style={styles.row}>
-        {STANDINGS.map(standing => (
-          <View key={standing} style={styles.item}>
+        {ROLES.map(({ role, label }) => (
+          <View key={role} style={styles.item}>
             <View
               style={[
                 styles.line,
-                { backgroundColor: standingEdgeColor(standing) },
+                { backgroundColor: standingEdgeColor(role) },
               ]}
             />
-            <Text style={styles.label}>{standing}</Text>
+            <Text style={styles.label}>{label}</Text>
           </View>
         ))}
       </View>

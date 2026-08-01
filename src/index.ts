@@ -78,6 +78,27 @@ export {
   resolveFacetEntries,
   getPrimaryFacetLabel,
   getCategoryScore,
+  // relationship types (#50) — a ruleset declares however many of these
+  // it needs, one per entity pairing that carries a typed relationship;
+  // the engine no longer hardcodes a `RelationshipStanding` vocabulary.
+  type RelationshipTypeCollection,
+  type RelationshipTypeEntry,
+  type RelationshipRole,
+  type RelationshipEntityKind,
+  type RelationshipDirection,
+  findRelationshipCollection,
+  findRelationshipCollectionForPair,
+  findRelationshipEntry,
+  findRelationshipEntryForPair,
+  relationshipCollectionForLegacyField,
+  findRelationshipEntryByLegacyValue,
+  relationshipLabel,
+  isPositiveRelationship,
+  isNegativeRelationship,
+  isSymmetric,
+  flipDirection,
+  resolveRelationshipColor,
+  roleColor,
   // assets
   type RulesetAssets,
   resolveAsset,
@@ -136,7 +157,8 @@ export type {
   FacetValue,
   QuestFacetPreferences,
   Relationship,
-  RelationshipStanding,
+  FactionMembership,
+  EventRelationship,
   QuestStatus,
 } from './models/types';
 

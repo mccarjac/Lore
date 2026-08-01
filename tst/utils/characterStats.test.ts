@@ -2,7 +2,7 @@ import {
   calculateCharacterStats as calculateWith,
   type CharacterStats,
 } from '@/utils/characterStats';
-import { GameCharacter, RelationshipStanding } from '@/models/types';
+import { GameCharacter } from '@/models/types';
 import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
 
 /**
@@ -24,9 +24,7 @@ describe('characterStats', () => {
         id: '1',
         name: 'Alice',
         facets: { callings: ['tinker'] },
-        factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
@@ -36,8 +34,8 @@ describe('characterStats', () => {
         name: 'Bob',
         facets: { callings: ['sentinel'] },
         factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Friend },
-          { name: 'Raiders', standing: RelationshipStanding.Enemy },
+          { name: 'Brotherhood', relationshipTypeId: 'friend' },
+          { name: 'Raiders', relationshipTypeId: 'enemy' },
         ],
         relationships: [],
         createdAt: '2025-01-01',
@@ -47,7 +45,7 @@ describe('characterStats', () => {
         id: '3',
         name: 'Charlie',
         facets: { callings: ['tinker'] },
-        factions: [{ name: 'Raiders', standing: RelationshipStanding.Ally }],
+        factions: [{ name: 'Raiders', relationshipTypeId: 'ally' }],
         relationships: [],
         createdAt: '2025-01-01',
         updatedAt: '2025-01-01',
@@ -89,12 +87,12 @@ describe('characterStats', () => {
 
       expect(stats.factionStandings).toEqual({
         Brotherhood: {
-          Ally: 1,
-          Friend: 1,
+          ally: 1,
+          friend: 1,
         },
         Raiders: {
-          Enemy: 1,
-          Ally: 1,
+          enemy: 1,
+          ally: 1,
         },
       });
     });
@@ -125,9 +123,7 @@ describe('characterStats', () => {
           id: '1',
           name: 'Solo',
           facets: { callings: ['revenant'] },
-          factions: [
-            { name: 'Machines', standing: RelationshipStanding.Neutral },
-          ],
+          factions: [{ name: 'Machines', relationshipTypeId: 'neutral' }],
           relationships: [],
           createdAt: '2025-01-01',
           updatedAt: '2025-01-01',
@@ -150,9 +146,9 @@ describe('characterStats', () => {
           name: 'Multi-faction',
           facets: { callings: ['tinker'] },
           factions: [
-            { name: 'Faction A', standing: RelationshipStanding.Ally },
-            { name: 'Faction B', standing: RelationshipStanding.Friend },
-            { name: 'Faction C', standing: RelationshipStanding.Neutral },
+            { name: 'Faction A', relationshipTypeId: 'ally' },
+            { name: 'Faction B', relationshipTypeId: 'friend' },
+            { name: 'Faction C', relationshipTypeId: 'neutral' },
           ],
           relationships: [],
           createdAt: '2025-01-01',
@@ -224,9 +220,7 @@ describe('characterStats', () => {
           id: '1',
           name: 'Char1',
           facets: { callings: ['tinker'] },
-          factions: [
-            { name: 'TestFaction', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'TestFaction', relationshipTypeId: 'ally' }],
           relationships: [],
           createdAt: '2025-01-01',
           updatedAt: '2025-01-01',
@@ -235,9 +229,7 @@ describe('characterStats', () => {
           id: '2',
           name: 'Char2',
           facets: { callings: ['tinker'] },
-          factions: [
-            { name: 'TestFaction', standing: RelationshipStanding.Friend },
-          ],
+          factions: [{ name: 'TestFaction', relationshipTypeId: 'friend' }],
           relationships: [],
           createdAt: '2025-01-01',
           updatedAt: '2025-01-01',
@@ -246,9 +238,7 @@ describe('characterStats', () => {
           id: '3',
           name: 'Char3',
           facets: { callings: ['tinker'] },
-          factions: [
-            { name: 'TestFaction', standing: RelationshipStanding.Neutral },
-          ],
+          factions: [{ name: 'TestFaction', relationshipTypeId: 'neutral' }],
           relationships: [],
           createdAt: '2025-01-01',
           updatedAt: '2025-01-01',
@@ -257,9 +247,7 @@ describe('characterStats', () => {
           id: '4',
           name: 'Char4',
           facets: { callings: ['tinker'] },
-          factions: [
-            { name: 'TestFaction', standing: RelationshipStanding.Hostile },
-          ],
+          factions: [{ name: 'TestFaction', relationshipTypeId: 'hostile' }],
           relationships: [],
           createdAt: '2025-01-01',
           updatedAt: '2025-01-01',
@@ -268,9 +256,7 @@ describe('characterStats', () => {
           id: '5',
           name: 'Char5',
           facets: { callings: ['tinker'] },
-          factions: [
-            { name: 'TestFaction', standing: RelationshipStanding.Enemy },
-          ],
+          factions: [{ name: 'TestFaction', relationshipTypeId: 'enemy' }],
           relationships: [],
           createdAt: '2025-01-01',
           updatedAt: '2025-01-01',
@@ -280,11 +266,11 @@ describe('characterStats', () => {
       const stats = calculateCharacterStats(characters);
 
       expect(stats.factionStandings.TestFaction).toEqual({
-        Ally: 1,
-        Friend: 1,
-        Neutral: 1,
-        Hostile: 1,
-        Enemy: 1,
+        ally: 1,
+        friend: 1,
+        neutral: 1,
+        hostile: 1,
+        enemy: 1,
       });
     });
 

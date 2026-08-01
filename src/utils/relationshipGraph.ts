@@ -7,13 +7,16 @@ import {
   type SimulationLinkDatum,
   type SimulationNodeDatum,
 } from 'd3-force';
-import {
-  GameCharacter,
-  GameLocation,
-  RelationshipStanding,
-} from '@models/types';
+import { GameCharacter, GameLocation } from '@models/types';
 import type { StoredFaction } from '@utils/characterStorage';
 import { Size } from '@utils/mapCoordinates';
+import { getActiveRuleset } from '@/activeRuleset';
+import {
+  findRelationshipEntryForPair,
+  type RelationshipEntityKind,
+  type RelationshipRole,
+} from '@/ruleset/relationships';
+import type { RulesetDefinition } from '@/ruleset/types';
 
 /**
  * Pure, dependency-free graph model + layout for the relationship graph
@@ -47,22 +50,42 @@ export type GraphEdgeKind =
   | 'character-location'
   | 'faction-faction';
 
+/** `GraphEdgeKind` as the `RelationshipEntityKind` pair it resolves against. */
+const ENTITY_KINDS_FOR: Record<
+  GraphEdgeKind,
+  [RelationshipEntityKind, RelationshipEntityKind] | undefined
+> = {
+  'character-character': ['character', 'character'],
+  'character-faction': ['character', 'faction'],
+  'character-location': undefined, // no relationship type exists for this pair
+  'faction-faction': ['faction', 'faction'],
+};
+
 export interface GraphEdge {
   id: string;
   sourceId: string;
   targetId: string;
   kind: GraphEdgeKind;
   /**
-   * Drives edge color. For character-location edges (which carry no
-   * standing in the data model) this is always `Neutral`.
+   * The ruleset relationship-type entry id, resolved via the collection
+   * matching `kind`'s entity pairing. Undefined for a character-location
+   * edge (no relationship type exists for that pairing).
    */
-  standing: RelationshipStanding;
+  relationshipTypeId?: string;
+  /**
+   * Drives edge color and layout distance. Defaults to `'neutral'` when
+   * `relationshipTypeId` doesn't resolve to a declared entry (including
+   * every character-location edge) — the generalized form of the old
+   * `RelationshipStanding.Neutral` fallback.
+   */
+  role: RelationshipRole;
   /**
    * Set when the reciprocal side of a character-character or
-   * faction-faction relationship exists and disagrees with `standing`
-   * (e.g. A calls B an Ally but B calls A Hostile).
+   * faction-faction relationship exists and disagrees with
+   * `relationshipTypeId` (e.g. A calls B an Ally but B calls A Hostile).
    */
-  reciprocalStanding?: RelationshipStanding;
+  reciprocalRelationshipTypeId?: string;
+  reciprocalRole?: RelationshipRole;
 }
 
 export interface RelationshipGraph {
@@ -105,7 +128,8 @@ const undirectedKey = (a: string, b: string): string =>
  */
 export function buildRelationshipGraph(
   input: BuildGraphInput,
-  options: BuildGraphOptions = {}
+  options: BuildGraphOptions = {},
+  ruleset: RulesetDefinition = getActiveRuleset()
 ): RelationshipGraph {
   const {
     includeCharacters = true,
@@ -114,6 +138,19 @@ export function buildRelationshipGraph(
     includeRetired = false,
     hideIsolated = false,
   } = options;
+
+  /** Resolves a stored `relationshipTypeId` to its role for `kind`'s pairing. */
+  const roleFor = (
+    kind: GraphEdgeKind,
+    relationshipTypeId: string | undefined
+  ): RelationshipRole => {
+    const appliesTo = ENTITY_KINDS_FOR[kind];
+    if (!appliesTo) return 'neutral';
+    return (
+      findRelationshipEntryForPair(ruleset, appliesTo, relationshipTypeId)
+        ?.role ?? 'neutral'
+    );
+  };
 
   const characters = includeCharacters
     ? input.characters.filter(c => includeRetired || !c.retired)
@@ -158,8 +195,12 @@ export function buildRelationshipGraph(
       const key = undirectedKey(sourceId, targetId);
       const existing = characterEdgeSeen.get(key);
       if (existing) {
-        if (existing.standing !== rel.relationshipType) {
-          existing.reciprocalStanding = rel.relationshipType;
+        if (existing.relationshipTypeId !== rel.relationshipTypeId) {
+          existing.reciprocalRelationshipTypeId = rel.relationshipTypeId;
+          existing.reciprocalRole = roleFor(
+            'character-character',
+            rel.relationshipTypeId
+          );
         }
         return;
       }
@@ -168,7 +209,8 @@ export function buildRelationshipGraph(
         sourceId,
         targetId,
         kind: 'character-character',
-        standing: rel.relationshipType,
+        relationshipTypeId: rel.relationshipTypeId,
+        role: roleFor('character-character', rel.relationshipTypeId),
       };
       characterEdgeSeen.set(key, edge);
       edges.push(edge);
@@ -189,7 +231,8 @@ export function buildRelationshipGraph(
         sourceId,
         targetId,
         kind: 'character-faction',
-        standing: faction.standing,
+        relationshipTypeId: faction.relationshipTypeId,
+        role: roleFor('character-faction', faction.relationshipTypeId),
       });
     });
   });
@@ -209,7 +252,7 @@ export function buildRelationshipGraph(
       sourceId,
       targetId,
       kind: 'character-location',
-      standing: RelationshipStanding.Neutral,
+      role: 'neutral',
     });
   });
 
@@ -230,8 +273,12 @@ export function buildRelationshipGraph(
       const key = undirectedKey(sourceId, targetId);
       const existing = factionEdgeSeen.get(key);
       if (existing) {
-        if (existing.standing !== rel.relationshipType) {
-          existing.reciprocalStanding = rel.relationshipType;
+        if (existing.relationshipTypeId !== rel.relationshipTypeId) {
+          existing.reciprocalRelationshipTypeId = rel.relationshipTypeId;
+          existing.reciprocalRole = roleFor(
+            'faction-faction',
+            rel.relationshipTypeId
+          );
         }
         return;
       }
@@ -240,7 +287,8 @@ export function buildRelationshipGraph(
         sourceId,
         targetId,
         kind: 'faction-faction',
-        standing: rel.relationshipType,
+        relationshipTypeId: rel.relationshipTypeId,
+        role: roleFor('faction-faction', rel.relationshipTypeId),
       };
       factionEdgeSeen.set(key, edge);
       edges.push(edge);
@@ -335,33 +383,35 @@ const CENTER_PULL = 0.06;
 const LAYOUT_SEED = 0x2545f491;
 
 /**
- * Relative rest-distance adjustment per standing: negative pulls the pair
- * closer, positive pushes it apart. The asymmetry (Enemy pushes further than
- * Ally pulls) keeps hostile clusters visually distinct without collapsing
- * friendly ones into each other.
+ * Relative rest-distance adjustment per relationship role: negative pulls
+ * the pair closer, positive pushes it apart. The asymmetry (negative pushes
+ * further than positive pulls) keeps hostile clusters visually distinct
+ * without collapsing friendly ones into each other. The generalized form of
+ * the old per-`RelationshipStanding`-value table — a ruleset declares
+ * *which* of its relationship types are positive/negative/neutral, not how
+ * far apart each one draws, so this stays a fixed three-entry table rather
+ * than something the ruleset configures per entry.
  */
-const STANDING_DISTANCE_DELTA: Record<RelationshipStanding, number> = {
-  [RelationshipStanding.Ally]: -0.35,
-  [RelationshipStanding.Friend]: -0.2,
-  [RelationshipStanding.Neutral]: 0,
-  [RelationshipStanding.Hostile]: 0.45,
-  [RelationshipStanding.Enemy]: 0.8,
+const ROLE_DISTANCE_DELTA: Record<RelationshipRole, number> = {
+  positive: -0.3,
+  neutral: 0,
+  negative: 0.6,
 };
 
 /**
  * Multiplier applied to an edge's rest distance. Uses the WORSE of
- * `standing`/`reciprocalStanding` (max delta): a one-sided Ally + Hostile
- * pair should not be drawn close — antagonism dominates. Floored at 0.4 so
- * a large `standingSpread` can never produce a zero or negative distance.
+ * `role`/`reciprocalRole` (max delta): a one-sided positive + negative pair
+ * should not be drawn close — antagonism dominates. Floored at 0.4 so a
+ * large `standingSpread` can never produce a zero or negative distance.
  */
 export function standingDistanceFactor(
-  edge: Pick<GraphEdge, 'standing' | 'reciprocalStanding'>,
+  edge: Pick<GraphEdge, 'role' | 'reciprocalRole'>,
   standingSpread: number
 ): number {
   const delta = Math.max(
-    STANDING_DISTANCE_DELTA[edge.standing],
-    edge.reciprocalStanding !== undefined
-      ? STANDING_DISTANCE_DELTA[edge.reciprocalStanding]
+    ROLE_DISTANCE_DELTA[edge.role],
+    edge.reciprocalRole !== undefined
+      ? ROLE_DISTANCE_DELTA[edge.reciprocalRole]
       : -Infinity
   );
   return Math.max(0.4, 1 + delta * standingSpread);

@@ -25,14 +25,18 @@ Reached from the drawer. For the selected faction it shows:
 - **Combined force analysis** — member count and merged category counts across
   the faction and its direct allies, plus the resulting strength multiplier.
 
-Only characters with **Ally** or **Friend** standing count as members. Retired
-characters and retired factions are excluded.
+Only characters whose faction standing resolves to a **positive** role count
+as members — see [ruleset-authoring.md](./ruleset-authoring.md#relationship-types).
+Retired characters and retired factions are excluded.
 
 ## Relationships
 
 Edit a faction (**Factions** → select → edit) and use **Faction
-Relationships** → **+ Add Relationship**. The standings are **Ally**, **Friend**,
-**Neutral**, **Hostile**, **Enemy**; only Ally and Friend feed combined-force
+Relationships** → **+ Add Relationship**. The available standings — and which
+of them are positive/neutral/negative — are declared by the active ruleset's
+`character`-`faction` and `faction`-`faction` `RelationshipTypeCollection`s
+(the generalized form of the old fixed **Ally**/**Friend**/**Neutral**/
+**Hostile**/**Enemy** enum); only positive-role standings feed combined-force
 analysis.
 
 **Relationships are bidirectional.** Adding, changing or removing one keeps the
@@ -47,8 +51,9 @@ preserve that.
 ```typescript
 interface FactionRelationship {
   factionName: string; // factions are name-keyed — StoredFaction has no id
-  relationshipType: RelationshipStanding;
+  relationshipTypeId: string; // resolves into a ruleset RelationshipTypeCollection entry
   description?: string;
+  direction?: 'forward' | 'inverse'; // only set for a directional (symmetric: false) entry
 }
 
 interface FactionStats {
@@ -87,11 +92,11 @@ allies of allies.
 
 ## Troubleshooting
 
-**No statistics at all** — the faction has no members with Ally or Friend
+**No statistics at all** — the faction has no members with a positive-role
 standing, they are all retired, or the faction itself is retired.
 
-**Combined analysis matches the direct numbers** — no Ally/Friend relationships,
-or the allied factions have no members of their own.
+**Combined analysis matches the direct numbers** — no positive-role faction
+relationships, or the allied factions have no members of their own.
 
 **Category counts look wrong** — counts are cumulative across every trait a
 member holds, and each trait contributes to exactly one category

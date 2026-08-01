@@ -101,6 +101,9 @@ export const myFlavorRuleset: RulesetDefinition = {
   terminology: {},
   attributes,
   facets: [bloodlines, disciplines],
+  // Every relationship-type collection this ruleset declares — see
+  // "Relationship types" below. May be `[]` for a ruleset with none.
+  relationshipTypes: [],
   features: {
     quests: true,
     discord: false,
@@ -149,6 +152,7 @@ deliberately small enough to hold in your head.
 | `terminology`           | yes      | Overrides for the engine's own core nouns. Partial — anything you omit falls back.                                                                                                             |
 | `attributes`            | yes      | Every attribute anything in this ruleset may carry. See below.                                                                                                                                 |
 | `facets`                | yes      | Every facet collection this ruleset declares — archetypes, traits, qualities, modifications, recipes and anything else you invent. See below. May be `[]` for a ruleset with no facets at all. |
+| `relationshipTypes`     | yes      | Every relationship-type collection this ruleset declares — the generalized form of the old `RelationshipStanding` enum. See below. May be `[]` for a ruleset with no typed relationships.      |
 | `features`              | yes      | Five booleans gating whole subsystems.                                                                                                                                                         |
 | `map`                   | no       | `{ imageKey }` — resolved through `RulesetAssets`, never a `require()`.                                                                                                                        |
 | `branding`              | yes      | `appName` plus optional `iconKey` / `splashKey` / `colors`. See "Theming".                                                                                                                     |
@@ -156,7 +160,10 @@ deliberately small enough to hold in your head.
 There is no `groups`, `archetypes`, `traitCategories`, `traits`, `qualities`,
 `recipes`, `categoryBonuses`, `archetypeRules`, `defaultArchetypeId` or
 `limits` field any more — the engine used to name each of those outright.
-They are now all expressed as `FacetCollection`s, below.
+They are now all expressed as `FacetCollection`s, below. Likewise, there is
+no `RelationshipStanding` enum any more — every character-character,
+character-faction, and faction-faction relationship is now expressed as a
+`RelationshipTypeCollection`, further below.
 
 ### Attributes and roles
 
@@ -282,6 +289,88 @@ one kind: the named entry in `whenCollectionId` accrues no category score
 from entries restricted (via `requires`) to _exactly_ the membership of
 `groupId`. It exists because Afterworlds' "Perfect Mutant" works that way;
 declare it only if your rules need it.
+
+### Relationship types
+
+A `RelationshipTypeCollection` (`src/ruleset/relationships.ts`) is what
+replaces the engine's old hardcoded `RelationshipStanding` enum
+(`Ally | Friend | Neutral | Hostile | Enemy`), reused for three unrelated
+pairs — character↔character, character↔faction ("standing"), and
+faction↔faction. A ruleset now declares as many relationship-type
+collections as it needs, one per entity pairing that carries a typed
+relationship, in `RulesetDefinition.relationshipTypes`:
+
+```ts
+interface RelationshipTypeCollection {
+  id: string;
+  singular: string;
+  plural: string;
+  appliesTo: [RelationshipEntityKind, RelationshipEntityKind]; // e.g. ['character', 'faction']
+  entries: RelationshipTypeEntry[];
+  defaultEntryId?: string;
+}
+
+interface RelationshipTypeEntry {
+  id: string;
+  label: string; // shown from the "forward" (authored) side
+  inverseLabel?: string; // required when symmetric is false
+  symmetric?: boolean; // default true
+  role: 'positive' | 'neutral' | 'negative';
+  color?: ColorToken; // overrides the role-based default from ColorPalette.standing
+}
+```
+
+`RelationshipEntityKind` is `'character' | 'faction' | 'event' | 'quest' |
+'location'` — declare a collection for any pairing your game needs a typed
+relationship between, not only the three the engine used to hardcode.
+
+**`role` is the generalized form of `POSITIVE_RELATIONSHIP_TYPE`/
+`NEGATIVE_RELATIONSHIP_TYPE`.** Those two module-level arrays no longer
+exist; downstream code (`isPositiveRelationship`, `isNegativeRelationship`,
+faction stats, the influence report, the relationship graph's layout
+weighting) dispatches on `entry.role`, never on a literal id or label — the
+same "role, not identity" discipline attributes use.
+
+**`symmetric`/`inverseLabel` are how a relationship-type collection
+expresses hierarchy or composition**, not only mutual standing. A symmetric
+entry (the default, and every entry in the bundled example ruleset) reads
+the same from both sides and is stored mirrored on both entities, exactly
+like the old standing always was. Set `symmetric: false` and supply
+`inverseLabel` for a directional relationship — e.g. a faction-faction entry
+`{ id: 'vassal', label: 'Vassal of', inverseLabel: 'Suzerain of', symmetric: false, role: 'neutral' }`
+lets one faction be declared a vassal of another, rendering "Vassal of" on
+the authored side and "Suzerain of" on the reciprocal side, which is what
+"Faction C is an alliance of Faction A and Faction B"-style relationships
+need that plain mutual standing cannot express.
+
+Accessors mirror the facet ones: `findRelationshipCollection`/
+`findRelationshipEntry` resolve within one collection you already have;
+`findRelationshipCollectionForPair`/`findRelationshipEntryForPair` resolve
+by entity pairing, since stored data records only a bare
+`relationshipTypeId`, never which collection it came from.
+`relationshipLabel(entry, direction)` resolves the label for a given side,
+and `resolveRelationshipColor(entry, colors)` (or `roleColor(role, colors)`
+when only a role is available, as in the relationship graph) resolves the
+color, falling back to `ColorPalette.standing`'s role-keyed defaults when an
+entry sets no `color` of its own.
+
+**Storage topology differs by pairing**, and that is the engine's concern,
+not something a ruleset author needs to manage: faction-faction
+relationships are independent top-level records, so the engine mirrors a
+write onto both sides (flipping `direction` when the entry is directional);
+character-faction and character-character relationships are already
+embedded on the character, so no mirroring is needed; and a brand-new
+pairing like character-event needs no dedicated sync code at all — the
+reverse side is discovered by scanning, the same technique
+`FactionListScreen` already uses for faction membership.
+
+If your ruleset upgrades from an app version that still shipped
+`RelationshipStanding`, give each entry that replaces one of its five values
+a `legacyValue` (the old member name, e.g. `'Ally'`) and set the owning
+collection's `legacyField` to `'characterStanding'`,
+`'characterFactionStanding'`, or `'factionStanding'` — `rulesetFieldMigration.ts`
+uses this to rewrite stored data on load, the same `legacyField` pattern
+`FacetCollection` already uses for the pre-#51 fields.
 
 ### Terminology
 

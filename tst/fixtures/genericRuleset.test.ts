@@ -10,6 +10,8 @@ const identifiersOf = (ruleset: RulesetDefinition): string[] => [
   ...ruleset.facets.flatMap(c => (c.categories ?? []).map(cat => cat.id)),
   ...ruleset.facets.flatMap(c => (c.groups ?? []).map(g => g.id)),
   ...ruleset.attributes.map(a => a.id),
+  ...ruleset.relationshipTypes.map(c => c.id),
+  ...ruleset.relationshipTypes.flatMap(c => c.entries.map(e => e.id)),
 ];
 
 describe.each([

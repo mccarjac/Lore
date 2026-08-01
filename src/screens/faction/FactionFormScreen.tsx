@@ -13,7 +13,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
-import { RelationshipStanding } from '@models/types';
 import {
   createFaction,
   updateFaction,
@@ -24,7 +23,15 @@ import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseFormScreen } from '@/components';
 import { Picker } from '@react-native-picker/picker';
-import { useLabels } from '@/ruleset';
+import { useLabels, useRuleset } from '@/ruleset';
+import {
+  findRelationshipCollectionForPair,
+  findRelationshipEntry,
+  isSymmetric,
+  relationshipLabel,
+  resolveRelationshipColor,
+  type RelationshipDirection,
+} from '@/ruleset/relationships';
 
 type FactionFormNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -45,7 +52,17 @@ export const FactionFormScreen: React.FC = () => {
   const navigation = useNavigation<FactionFormNavigationProp>();
   const route = useRoute<FactionFormRouteProp>();
   const label = useLabels();
+  const { ruleset } = useRuleset();
   const { factionName } = route.params || {};
+
+  const factionFactionRelationship = useMemo(
+    () => findRelationshipCollectionForPair(ruleset, ['faction', 'faction']),
+    [ruleset]
+  );
+  const defaultRelationshipTypeId =
+    factionFactionRelationship?.defaultEntryId ??
+    factionFactionRelationship?.entries[0]?.id ??
+    '';
 
   const [formData, setFormData] = useState<FactionFormData>({
     name: '',
@@ -61,8 +78,10 @@ export const FactionFormScreen: React.FC = () => {
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [selectedFactionForRelationship, setSelectedFactionForRelationship] =
     useState<string>('');
-  const [selectedRelationshipType, setSelectedRelationshipType] =
-    useState<RelationshipStanding>(RelationshipStanding.Neutral);
+  const [selectedRelationshipTypeId, setSelectedRelationshipTypeId] =
+    useState<string>(defaultRelationshipTypeId);
+  const [selectedDirection, setSelectedDirection] =
+    useState<RelationshipDirection>('forward');
   const { colors: themeColors } = useTheme();
   const commonStyles = useCommonStyles();
   const styles = useMemo(
@@ -266,21 +285,6 @@ export const FactionFormScreen: React.FC = () => {
           fontWeight: '600',
           color: themeColors.text.primary,
         },
-        standingAllied: {
-          backgroundColor: themeColors.standing.allied,
-        },
-        standingFriendly: {
-          backgroundColor: themeColors.standing.friendly,
-        },
-        standingNeutral: {
-          backgroundColor: themeColors.standing.neutral,
-        },
-        standingHostile: {
-          backgroundColor: themeColors.standing.hostile,
-        },
-        standingEnemy: {
-          backgroundColor: themeColors.standing.enemy,
-        },
         modalOverlay: {
           flex: 1,
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -441,6 +445,26 @@ export const FactionFormScreen: React.FC = () => {
     });
   };
 
+  const selectedRelationshipEntry = findRelationshipEntry(
+    factionFactionRelationship,
+    selectedRelationshipTypeId
+  );
+  const directionalRelationshipToAdd = (): FactionRelationship => ({
+    factionName: selectedFactionForRelationship,
+    relationshipTypeId: selectedRelationshipTypeId,
+    direction:
+      selectedRelationshipEntry && !isSymmetric(selectedRelationshipEntry)
+        ? selectedDirection
+        : undefined,
+  });
+
+  const resetRelationshipModal = () => {
+    setSelectedFactionForRelationship('');
+    setSelectedRelationshipTypeId(defaultRelationshipTypeId);
+    setSelectedDirection('forward');
+    setShowRelationshipModal(false);
+  };
+
   const handleAddRelationship = () => {
     if (!selectedFactionForRelationship) {
       Alert.alert('Error', 'Please select a faction');
@@ -462,17 +486,13 @@ export const FactionFormScreen: React.FC = () => {
             text: 'Update',
             onPress: () => {
               const updatedRelationships = [...(formData.relationships || [])];
-              updatedRelationships[existingRelationshipIndex] = {
-                factionName: selectedFactionForRelationship,
-                relationshipType: selectedRelationshipType,
-              };
+              updatedRelationships[existingRelationshipIndex] =
+                directionalRelationshipToAdd();
               setFormData({
                 ...formData,
                 relationships: updatedRelationships,
               });
-              setSelectedFactionForRelationship('');
-              setSelectedRelationshipType(RelationshipStanding.Neutral);
-              setShowRelationshipModal(false);
+              resetRelationshipModal();
             },
           },
         ]
@@ -480,20 +500,15 @@ export const FactionFormScreen: React.FC = () => {
       return;
     }
 
-    const newRelationship: FactionRelationship = {
-      factionName: selectedFactionForRelationship,
-      relationshipType: selectedRelationshipType,
-    };
-
     setFormData({
       ...formData,
-      relationships: [...(formData.relationships || []), newRelationship],
+      relationships: [
+        ...(formData.relationships || []),
+        directionalRelationshipToAdd(),
+      ],
     });
 
-    // Reset modal state
-    setSelectedFactionForRelationship('');
-    setSelectedRelationshipType(RelationshipStanding.Neutral);
-    setShowRelationshipModal(false);
+    resetRelationshipModal();
   };
 
   const handleRemoveRelationship = (factionName: string) => {
@@ -516,23 +531,6 @@ export const FactionFormScreen: React.FC = () => {
         },
       ]
     );
-  };
-
-  const getStandingStyle = (standing: RelationshipStanding) => {
-    switch (standing) {
-      case RelationshipStanding.Ally:
-        return styles.standingAllied;
-      case RelationshipStanding.Friend:
-        return styles.standingFriendly;
-      case RelationshipStanding.Neutral:
-        return styles.standingNeutral;
-      case RelationshipStanding.Hostile:
-        return styles.standingHostile;
-      case RelationshipStanding.Enemy:
-        return styles.standingEnemy;
-      default:
-        return styles.standingNeutral;
-    }
   };
 
   const handleSubmit = async () => {
@@ -733,32 +731,45 @@ export const FactionFormScreen: React.FC = () => {
 
           {formData.relationships && formData.relationships.length > 0 ? (
             <View style={styles.relationshipsList}>
-              {formData.relationships.map((relationship, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.relationshipCard,
-                    getStandingStyle(relationship.relationshipType),
-                  ]}
-                >
-                  <View style={styles.relationshipCardContent}>
-                    <Text style={styles.relationshipFactionName}>
-                      {relationship.factionName}
-                    </Text>
-                    <Text style={styles.relationshipType}>
-                      {relationship.relationshipType}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.removeRelationshipButton}
-                    onPress={() =>
-                      handleRemoveRelationship(relationship.factionName)
-                    }
+              {formData.relationships.map((relationship, index) => {
+                const entry = findRelationshipEntry(
+                  factionFactionRelationship,
+                  relationship.relationshipTypeId
+                );
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.relationshipCard,
+                      {
+                        backgroundColor: resolveRelationshipColor(
+                          entry,
+                          themeColors
+                        ),
+                      },
+                    ]}
                   >
-                    <Text style={styles.removeRelationshipButtonText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                    <View style={styles.relationshipCardContent}>
+                      <Text style={styles.relationshipFactionName}>
+                        {relationship.factionName}
+                      </Text>
+                      <Text style={styles.relationshipType}>
+                        {entry
+                          ? relationshipLabel(entry, relationship.direction)
+                          : relationship.relationshipTypeId}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removeRelationshipButton}
+                      onPress={() =>
+                        handleRemoveRelationship(relationship.factionName)
+                      }
+                    >
+                      <Text style={styles.removeRelationshipButtonText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           ) : (
             <View style={styles.emptyRelationships}>
@@ -849,31 +860,54 @@ export const FactionFormScreen: React.FC = () => {
             <Text style={styles.modalLabel}>Relationship Type</Text>
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={selectedRelationshipType}
-                onValueChange={itemValue =>
-                  setSelectedRelationshipType(itemValue)
-                }
+                selectedValue={selectedRelationshipTypeId}
+                onValueChange={itemValue => {
+                  setSelectedRelationshipTypeId(itemValue);
+                  setSelectedDirection('forward');
+                }}
                 style={styles.picker}
                 dropdownIconColor={themeColors.text.primary}
               >
-                {Object.values(RelationshipStanding).map(standing => (
+                {(factionFactionRelationship?.entries ?? []).map(entry => (
                   <Picker.Item
-                    key={standing}
-                    label={standing}
-                    value={standing}
+                    key={entry.id}
+                    label={relationshipLabel(entry)}
+                    value={entry.id}
                   />
                 ))}
               </Picker>
             </View>
 
+            {selectedRelationshipEntry &&
+              !isSymmetric(selectedRelationshipEntry) && (
+                <>
+                  <Text style={styles.modalLabel}>Direction</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={selectedDirection}
+                      onValueChange={itemValue =>
+                        setSelectedDirection(itemValue)
+                      }
+                      style={styles.picker}
+                      dropdownIconColor={themeColors.text.primary}
+                    >
+                      <Picker.Item
+                        label={`This ${label('faction.singular', 'lower')} is the ${relationshipLabel(selectedRelationshipEntry)}`}
+                        value="forward"
+                      />
+                      <Picker.Item
+                        label={`This ${label('faction.singular', 'lower')} is the ${relationshipLabel(selectedRelationshipEntry, 'inverse')}`}
+                        value="inverse"
+                      />
+                    </Picker>
+                  </View>
+                </>
+              )}
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancelButton]}
-                onPress={() => {
-                  setShowRelationshipModal(false);
-                  setSelectedFactionForRelationship('');
-                  setSelectedRelationshipType(RelationshipStanding.Neutral);
-                }}
+                onPress={resetRelationshipModal}
               >
                 <Text style={styles.modalCancelButtonText}>Cancel</Text>
               </TouchableOpacity>

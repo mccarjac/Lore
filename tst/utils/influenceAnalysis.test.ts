@@ -8,7 +8,7 @@ import {
   findKeyConnectors,
   findPowerCenters,
 } from '@/utils/influenceAnalysis';
-import { GameCharacter, RelationshipStanding } from '@/models/types';
+import { GameCharacter } from '@/models/types';
 import { makeCharacter, makeStoredFaction } from '../helpers/factories';
 import { getStorageMock, primeStorageDefaults } from '../helpers/storage';
 
@@ -20,14 +20,12 @@ describe('influenceAnalysis', () => {
       const character = makeCharacter({
         id: '1',
         name: 'Alice',
-        factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
         relationships: [
-          { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
+          { characterName: 'Bob', relationshipTypeId: 'ally' },
           {
             characterName: 'Carl',
-            relationshipType: RelationshipStanding.Enemy,
+            relationshipTypeId: 'enemy',
           },
         ],
       });
@@ -47,9 +45,7 @@ describe('influenceAnalysis', () => {
       const alice = makeCharacter({
         id: '1',
         name: 'Alice',
-        relationships: [
-          { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-        ],
+        relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
       });
       const bob = makeCharacter({
         id: '2',
@@ -62,7 +58,7 @@ describe('influenceAnalysis', () => {
         relationships: [
           {
             characterName: 'Alice',
-            relationshipType: RelationshipStanding.Friend,
+            relationshipTypeId: 'friend',
           },
         ],
       });
@@ -87,9 +83,7 @@ describe('influenceAnalysis', () => {
       const influential = makeCharacter({
         id: '1',
         name: 'Influential',
-        factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
       });
       const neutral = makeCharacter({ id: '2', name: 'Neutral' });
       const negative = makeCharacter({
@@ -98,7 +92,7 @@ describe('influenceAnalysis', () => {
         relationships: [
           {
             characterName: 'Influential',
-            relationshipType: RelationshipStanding.Enemy,
+            relationshipTypeId: 'enemy',
           },
         ],
       });
@@ -113,9 +107,7 @@ describe('influenceAnalysis', () => {
         makeCharacter({
           id: `${i}`,
           name: `Char ${i}`,
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
         })
       );
 
@@ -137,19 +129,13 @@ describe('influenceAnalysis', () => {
       const alice = makeCharacter({
         id: '1',
         name: 'Alice',
-        factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-        ],
-        relationships: [
-          { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
+        relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
       });
       const bob = makeCharacter({
         id: '2',
         name: 'Bob',
-        factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Friend },
-        ],
+        factions: [{ name: 'Brotherhood', relationshipTypeId: 'friend' }],
       });
 
       const result = await analyzeFactionInfluence([alice, bob]);
@@ -171,9 +157,7 @@ describe('influenceAnalysis', () => {
       const alice = makeCharacter({
         id: '1',
         name: 'Alice',
-        factions: [
-          { name: 'Retired Faction', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Retired Faction', relationshipTypeId: 'ally' }],
       });
 
       const result = await analyzeFactionInfluence([alice]);
@@ -189,9 +173,9 @@ describe('influenceAnalysis', () => {
         id: '1',
         name: 'Alice',
         factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          { name: 'Raiders', standing: RelationshipStanding.Enemy },
-          { name: 'Scavengers', standing: RelationshipStanding.Ally },
+          { name: 'Brotherhood', relationshipTypeId: 'ally' },
+          { name: 'Raiders', relationshipTypeId: 'enemy' },
+          { name: 'Scavengers', relationshipTypeId: 'ally' },
         ],
       });
 
@@ -204,32 +188,17 @@ describe('influenceAnalysis', () => {
   });
 
   describe('buildRelationshipNetwork', () => {
-    it('buckets related characters by relationship standing', () => {
+    it('buckets related characters by relationship role', () => {
       const alice = makeCharacter({
         id: '1',
         name: 'Alice',
         relationships: [
-          { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-          {
-            characterName: 'Carl',
-            relationshipType: RelationshipStanding.Friend,
-          },
-          {
-            characterName: 'Dana',
-            relationshipType: RelationshipStanding.Neutral,
-          },
-          {
-            characterName: 'Eve',
-            relationshipType: RelationshipStanding.Hostile,
-          },
-          {
-            characterName: 'Frank',
-            relationshipType: RelationshipStanding.Enemy,
-          },
-          {
-            characterName: 'Unknown Person',
-            relationshipType: RelationshipStanding.Ally,
-          },
+          { characterName: 'Bob', relationshipTypeId: 'ally' },
+          { characterName: 'Carl', relationshipTypeId: 'friend' },
+          { characterName: 'Dana', relationshipTypeId: 'neutral' },
+          { characterName: 'Eve', relationshipTypeId: 'hostile' },
+          { characterName: 'Frank', relationshipTypeId: 'enemy' },
+          { characterName: 'Unknown Person', relationshipTypeId: 'ally' },
         ],
       });
       const others = ['Bob', 'Carl', 'Dana', 'Eve', 'Frank'].map(name =>
@@ -238,11 +207,12 @@ describe('influenceAnalysis', () => {
 
       const network = buildRelationshipNetwork(alice, [alice, ...others]);
 
-      expect(network.allies.map(c => c.name)).toEqual(['Bob']);
-      expect(network.friends.map(c => c.name)).toEqual(['Carl']);
+      expect(network.positive.map(c => c.name).sort()).toEqual(['Bob', 'Carl']);
       expect(network.neutral.map(c => c.name)).toEqual(['Dana']);
-      expect(network.hostile.map(c => c.name)).toEqual(['Eve']);
-      expect(network.enemies.map(c => c.name)).toEqual(['Frank']);
+      expect(network.negative.map(c => c.name).sort()).toEqual([
+        'Eve',
+        'Frank',
+      ]);
     });
   });
 
@@ -251,16 +221,12 @@ describe('influenceAnalysis', () => {
       const alice = makeCharacter({
         id: '1',
         name: 'Alice',
-        factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
       });
       const bob = makeCharacter({
         id: '2',
         name: 'Bob',
-        factions: [
-          { name: 'Brotherhood', standing: RelationshipStanding.Friend },
-        ],
+        factions: [{ name: 'Brotherhood', relationshipTypeId: 'friend' }],
       });
       const carl = makeCharacter({ id: '3', name: 'Carl', factions: [] });
 
@@ -274,9 +240,7 @@ describe('influenceAnalysis', () => {
       const alice = makeCharacter({
         id: '1',
         name: 'Alice',
-        factions: [
-          { name: 'Solo Faction', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Solo Faction', relationshipTypeId: 'ally' }],
       });
 
       const connections = findFactionConnections(alice, [alice]);
@@ -290,9 +254,7 @@ describe('influenceAnalysis', () => {
       const alice = makeCharacter({
         id: '1',
         name: 'Alice',
-        relationships: [
-          { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-        ],
+        relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
       });
       const bob = makeCharacter({
         id: '2',
@@ -300,7 +262,7 @@ describe('influenceAnalysis', () => {
         relationships: [
           {
             characterName: 'Alice',
-            relationshipType: RelationshipStanding.Friend,
+            relationshipTypeId: 'friend',
           },
         ],
       });
@@ -310,7 +272,7 @@ describe('influenceAnalysis', () => {
         relationships: [
           {
             characterName: 'Alice',
-            relationshipType: RelationshipStanding.Neutral,
+            relationshipTypeId: 'neutral',
           },
         ],
       });
@@ -320,17 +282,15 @@ describe('influenceAnalysis', () => {
       expect(mutuals).toHaveLength(1);
       expect(mutuals[0].character1.name).toBe('Alice');
       expect(mutuals[0].character2.name).toBe('Bob');
-      expect(mutuals[0].relationship1).toBe(RelationshipStanding.Ally);
-      expect(mutuals[0].relationship2).toBe(RelationshipStanding.Friend);
+      expect(mutuals[0].relationship1).toBe('ally');
+      expect(mutuals[0].relationship2).toBe('friend');
     });
 
     it('returns an empty array when no relationships are mutual', () => {
       const alice = makeCharacter({
         id: '1',
         name: 'Alice',
-        relationships: [
-          { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-        ],
+        relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
       });
       const bob = makeCharacter({ id: '2', name: 'Bob', relationships: [] });
 
@@ -344,35 +304,33 @@ describe('influenceAnalysis', () => {
         id: '1',
         name: 'Connector',
         factions: [
-          { name: 'A', standing: RelationshipStanding.Ally },
-          { name: 'B', standing: RelationshipStanding.Ally },
+          { name: 'A', relationshipTypeId: 'ally' },
+          { name: 'B', relationshipTypeId: 'ally' },
         ],
         relationships: [
-          { characterName: 'X', relationshipType: RelationshipStanding.Ally },
-          { characterName: 'Y', relationshipType: RelationshipStanding.Ally },
-          { characterName: 'Z', relationshipType: RelationshipStanding.Ally },
+          { characterName: 'X', relationshipTypeId: 'ally' },
+          { characterName: 'Y', relationshipTypeId: 'ally' },
+          { characterName: 'Z', relationshipTypeId: 'ally' },
         ],
       });
       const singleFaction = makeCharacter({
         id: '2',
         name: 'Single Faction',
-        factions: [{ name: 'A', standing: RelationshipStanding.Ally }],
+        factions: [{ name: 'A', relationshipTypeId: 'ally' }],
         relationships: [
-          { characterName: 'X', relationshipType: RelationshipStanding.Ally },
-          { characterName: 'Y', relationshipType: RelationshipStanding.Ally },
-          { characterName: 'Z', relationshipType: RelationshipStanding.Ally },
+          { characterName: 'X', relationshipTypeId: 'ally' },
+          { characterName: 'Y', relationshipTypeId: 'ally' },
+          { characterName: 'Z', relationshipTypeId: 'ally' },
         ],
       });
       const fewRelationships = makeCharacter({
         id: '3',
         name: 'Few Relationships',
         factions: [
-          { name: 'A', standing: RelationshipStanding.Ally },
-          { name: 'B', standing: RelationshipStanding.Ally },
+          { name: 'A', relationshipTypeId: 'ally' },
+          { name: 'B', relationshipTypeId: 'ally' },
         ],
-        relationships: [
-          { characterName: 'X', relationshipType: RelationshipStanding.Ally },
-        ],
+        relationships: [{ characterName: 'X', relationshipTypeId: 'ally' }],
       });
 
       const connectors = findKeyConnectors([
@@ -390,21 +348,21 @@ describe('influenceAnalysis', () => {
           id: `${i}`,
           name: `Char ${i}`,
           factions: [
-            { name: 'A', standing: RelationshipStanding.Ally },
-            { name: 'B', standing: RelationshipStanding.Ally },
+            { name: 'A', relationshipTypeId: 'ally' },
+            { name: 'B', relationshipTypeId: 'ally' },
           ],
           relationships: [
             {
               characterName: 'X',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
             {
               characterName: 'Y',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
             {
               characterName: 'Z',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
           ],
         })
@@ -420,23 +378,23 @@ describe('influenceAnalysis', () => {
         id: '1',
         name: 'Influential Ally',
         factions: [
-          { name: 'A', standing: RelationshipStanding.Ally },
-          { name: 'B', standing: RelationshipStanding.Ally },
-          { name: 'C', standing: RelationshipStanding.Ally },
+          { name: 'A', relationshipTypeId: 'ally' },
+          { name: 'B', relationshipTypeId: 'ally' },
+          { name: 'C', relationshipTypeId: 'ally' },
         ],
       });
       const powerCenter = makeCharacter({
         id: '2',
         name: 'Power Center',
         factions: [
-          { name: 'A', standing: RelationshipStanding.Ally },
-          { name: 'B', standing: RelationshipStanding.Ally },
-          { name: 'C', standing: RelationshipStanding.Ally },
+          { name: 'A', relationshipTypeId: 'ally' },
+          { name: 'B', relationshipTypeId: 'ally' },
+          { name: 'C', relationshipTypeId: 'ally' },
         ],
         relationships: [
           {
             characterName: 'Influential Ally',
-            relationshipType: RelationshipStanding.Ally,
+            relationshipTypeId: 'ally',
           },
         ],
       });

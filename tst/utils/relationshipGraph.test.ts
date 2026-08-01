@@ -1,4 +1,3 @@
-import { RelationshipStanding } from '@/models/types';
 import {
   makeCharacter,
   makeLocation,
@@ -19,9 +18,7 @@ describe('buildRelationshipGraph', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      relationships: [
-        { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-      ],
+      relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
     });
     const bob = makeCharacter({ id: 'c-bob', name: 'Bob' });
 
@@ -36,7 +33,7 @@ describe('buildRelationshipGraph', () => {
         kind: 'character-character',
         sourceId: characterNodeId('c-alice'),
         targetId: characterNodeId('c-bob'),
-        standing: RelationshipStanding.Ally,
+        relationshipTypeId: 'ally',
       }),
     ]);
   });
@@ -48,7 +45,7 @@ describe('buildRelationshipGraph', () => {
       relationships: [
         {
           characterName: 'Ghost',
-          relationshipType: RelationshipStanding.Enemy,
+          relationshipTypeId: 'enemy',
           customName: 'The Ghost',
         },
       ],
@@ -67,9 +64,7 @@ describe('buildRelationshipGraph', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      relationships: [
-        { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-      ],
+      relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
     });
     const bob = makeCharacter({
       id: 'c-bob',
@@ -77,7 +72,7 @@ describe('buildRelationshipGraph', () => {
       relationships: [
         {
           characterName: 'Alice',
-          relationshipType: RelationshipStanding.Hostile,
+          relationshipTypeId: 'hostile',
         },
       ],
     });
@@ -90,8 +85,8 @@ describe('buildRelationshipGraph', () => {
 
     expect(graph.edges).toHaveLength(1);
     expect(graph.edges[0]).toMatchObject({
-      standing: RelationshipStanding.Ally,
-      reciprocalStanding: RelationshipStanding.Hostile,
+      relationshipTypeId: 'ally',
+      reciprocalRelationshipTypeId: 'hostile',
     });
   });
 
@@ -100,8 +95,8 @@ describe('buildRelationshipGraph', () => {
       id: 'c-alice',
       name: 'Alice',
       factions: [
-        { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-        { name: 'Raiders', standing: RelationshipStanding.Enemy },
+        { name: 'Brotherhood', relationshipTypeId: 'ally' },
+        { name: 'Raiders', relationshipTypeId: 'enemy' },
       ],
     });
 
@@ -122,11 +117,11 @@ describe('buildRelationshipGraph', () => {
       expect.arrayContaining([
         expect.objectContaining({
           targetId: factionNodeId('Brotherhood'),
-          standing: RelationshipStanding.Ally,
+          relationshipTypeId: 'ally',
         }),
         expect.objectContaining({
           targetId: factionNodeId('Raiders'),
-          standing: RelationshipStanding.Enemy,
+          relationshipTypeId: 'enemy',
         }),
       ])
     );
@@ -136,7 +131,7 @@ describe('buildRelationshipGraph', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      factions: [{ name: 'Scavengers', standing: RelationshipStanding.Ally }],
+      factions: [{ name: 'Scavengers', relationshipTypeId: 'ally' }],
     });
 
     const graph = buildRelationshipGraph({
@@ -172,7 +167,7 @@ describe('buildRelationshipGraph', () => {
         kind: 'character-location',
         sourceId: characterNodeId('c-alice'),
         targetId: locationNodeId('loc-1'),
-        standing: RelationshipStanding.Neutral,
+        role: 'neutral',
       })
     );
   });
@@ -200,7 +195,7 @@ describe('buildRelationshipGraph', () => {
       relationships: [
         {
           factionName: 'Raiders',
-          relationshipType: RelationshipStanding.Enemy,
+          relationshipTypeId: 'enemy',
         },
       ],
     });
@@ -209,7 +204,7 @@ describe('buildRelationshipGraph', () => {
       relationships: [
         {
           factionName: 'Brotherhood',
-          relationshipType: RelationshipStanding.Hostile,
+          relationshipTypeId: 'hostile',
         },
       ],
     });
@@ -223,8 +218,8 @@ describe('buildRelationshipGraph', () => {
     const ffEdges = graph.edges.filter(e => e.kind === 'faction-faction');
     expect(ffEdges).toHaveLength(1);
     expect(ffEdges[0]).toMatchObject({
-      standing: RelationshipStanding.Enemy,
-      reciprocalStanding: RelationshipStanding.Hostile,
+      relationshipTypeId: 'enemy',
+      reciprocalRelationshipTypeId: 'hostile',
     });
   });
 
@@ -273,9 +268,7 @@ describe('buildRelationshipGraph', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      relationships: [
-        { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-      ],
+      relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
     });
     const bob = makeCharacter({ id: 'c-bob', name: 'Bob' });
 
@@ -300,10 +293,8 @@ describe('buildRelationshipGraph', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      relationships: [
-        { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-      ],
-      factions: [{ name: 'Brotherhood', standing: RelationshipStanding.Ally }],
+      relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
+      factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
       locationId: 'loc-1',
     });
     const bob = makeCharacter({ id: 'c-bob', name: 'Bob' });
@@ -326,9 +317,7 @@ describe('computeGraphLayout', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      relationships: [
-        { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-      ],
+      relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
     });
     const bob = makeCharacter({ id: 'c-bob', name: 'Bob' });
     const graph = buildRelationshipGraph({
@@ -362,7 +351,7 @@ describe('computeGraphLayout', () => {
           .filter(other => other !== name)
           .map(other => ({
             factionName: other,
-            relationshipType: RelationshipStanding.Enemy,
+            relationshipTypeId: 'enemy',
           })),
       })
     );
@@ -386,7 +375,7 @@ describe('computeGraphLayout', () => {
         relationships: [
           {
             characterName: 'Two',
-            relationshipType: RelationshipStanding.Friend,
+            relationshipTypeId: 'friend',
           },
         ],
       }),
@@ -448,7 +437,8 @@ describe('computeGraphLayout', () => {
           sourceId: characterNodeId('c-1'),
           targetId: characterNodeId('c-ghost'),
           kind: 'character-character' as const,
-          standing: RelationshipStanding.Ally,
+          relationshipTypeId: 'ally',
+          role: 'positive' as const,
         },
       ],
     };
@@ -463,10 +453,10 @@ describe('computeGraphLayout', () => {
       id: 'c-hub',
       name: 'Hub',
       relationships: [
-        { characterName: 'Buddy', relationshipType: RelationshipStanding.Ally },
+        { characterName: 'Buddy', relationshipTypeId: 'ally' },
         {
           characterName: 'Rival',
-          relationshipType: RelationshipStanding.Enemy,
+          relationshipTypeId: 'enemy',
         },
       ],
     });
@@ -506,11 +496,11 @@ describe('computeGraphLayout', () => {
         relationships: [
           {
             characterName: 'Two',
-            relationshipType: RelationshipStanding.Neutral,
+            relationshipTypeId: 'neutral',
           },
           {
             characterName: 'Three',
-            relationshipType: RelationshipStanding.Neutral,
+            relationshipTypeId: 'neutral',
           },
         ],
       }),
@@ -547,41 +537,33 @@ describe('computeGraphLayout', () => {
 });
 
 describe('standingDistanceFactor', () => {
-  it('orders factors Ally < Friend < Neutral < Hostile < Enemy', () => {
-    const factors = [
-      RelationshipStanding.Ally,
-      RelationshipStanding.Friend,
-      RelationshipStanding.Neutral,
-      RelationshipStanding.Hostile,
-      RelationshipStanding.Enemy,
-    ].map(standing => standingDistanceFactor({ standing }, 1));
+  it('orders factors positive < neutral < negative', () => {
+    const roles = ['positive', 'neutral', 'negative'] as const;
+    const factors = roles.map(role => standingDistanceFactor({ role }, 1));
 
     const sorted = [...factors].sort((a, b) => a - b);
     expect(factors).toEqual(sorted);
     expect(new Set(factors).size).toBe(factors.length);
   });
 
-  it('returns 1 for every standing when standingSpread is 0', () => {
-    Object.values(RelationshipStanding).forEach(standing => {
-      expect(standingDistanceFactor({ standing }, 0)).toBe(1);
+  it('returns 1 for every role when standingSpread is 0', () => {
+    (['positive', 'neutral', 'negative'] as const).forEach(role => {
+      expect(standingDistanceFactor({ role }, 0)).toBe(1);
     });
   });
 
-  it('lets the worse standing win when the reciprocal side disagrees', () => {
+  it('lets the worse role win when the reciprocal side disagrees', () => {
     expect(
       standingDistanceFactor(
-        {
-          standing: RelationshipStanding.Ally,
-          reciprocalStanding: RelationshipStanding.Enemy,
-        },
+        { role: 'positive', reciprocalRole: 'negative' },
         1
       )
-    ).toBe(standingDistanceFactor({ standing: RelationshipStanding.Enemy }, 1));
+    ).toBe(standingDistanceFactor({ role: 'negative' }, 1));
   });
 
   it('never drops below the 0.4 floor, even at maximum spread', () => {
     expect(
-      standingDistanceFactor({ standing: RelationshipStanding.Ally }, 2)
+      standingDistanceFactor({ role: 'positive' }, 2)
     ).toBeGreaterThanOrEqual(0.4);
   });
 });
@@ -592,9 +574,7 @@ describe('getNeighborhood', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      relationships: [
-        { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-      ],
+      relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
     });
     const bob = makeCharacter({
       id: 'c-bob',
@@ -602,7 +582,7 @@ describe('getNeighborhood', () => {
       relationships: [
         {
           characterName: 'Carol',
-          relationshipType: RelationshipStanding.Friend,
+          relationshipTypeId: 'friend',
         },
       ],
     });
@@ -612,7 +592,7 @@ describe('getNeighborhood', () => {
       relationships: [
         {
           characterName: 'Dave',
-          relationshipType: RelationshipStanding.Neutral,
+          relationshipTypeId: 'neutral',
         },
       ],
     });

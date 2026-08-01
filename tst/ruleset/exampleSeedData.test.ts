@@ -155,8 +155,8 @@ describe('exampleSeedDataset', () => {
             r => r.factionName === faction.name
           );
           expect(reciprocal).toBeDefined();
-          expect(reciprocal?.relationshipType).toBe(
-            relationship.relationshipType
+          expect(reciprocal?.relationshipTypeId).toBe(
+            relationship.relationshipTypeId
           );
         });
       });

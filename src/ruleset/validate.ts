@@ -7,6 +7,7 @@ import {
 } from './attributes';
 import { FEATURE_KEYS } from './features';
 import type { FacetCollection } from './facets';
+import type { RelationshipTypeCollection } from './relationships';
 import type { RulesetDefinition } from './types';
 
 export interface ValidationIssue {
@@ -360,6 +361,96 @@ const checkFacetCollection = (
   }
 };
 
+const VALID_RELATIONSHIP_ENTITY_KINDS = [
+  'character',
+  'faction',
+  'event',
+  'quest',
+  'location',
+];
+
+const VALID_RELATIONSHIP_ROLES = ['positive', 'neutral', 'negative'];
+
+/**
+ * Checks one relationship-type collection: id/entry uniqueness, that
+ * `appliesTo` names two real entity kinds, that every entry has a valid
+ * `role`, that a directional (`symmetric: false`) entry supplies an
+ * `inverseLabel` to render its reciprocal side with, and that
+ * `defaultEntryId` (if set) resolves.
+ */
+const checkRelationshipTypeCollection = (
+  collection: RelationshipTypeCollection,
+  index: number,
+  issues: ValidationIssue[]
+): void => {
+  const path = `relationshipTypes[${index}]`;
+
+  if (!collection.id) {
+    issues.push({ path: `${path}.id`, message: 'id must be non-empty' });
+  }
+  if (!collection.singular) {
+    issues.push({
+      path: `${path}.singular`,
+      message: 'singular must be non-empty',
+    });
+  }
+  if (!collection.plural) {
+    issues.push({
+      path: `${path}.plural`,
+      message: 'plural must be non-empty',
+    });
+  }
+
+  collection.appliesTo.forEach((kind, ki) => {
+    if (!VALID_RELATIONSHIP_ENTITY_KINDS.includes(kind)) {
+      issues.push({
+        path: `${path}.appliesTo[${ki}]`,
+        message: `Unknown relationship entity kind '${kind}'`,
+      });
+    }
+  });
+
+  checkUniqueIds(collection.entries, `${path}.entries`, issues);
+
+  const entryIds = new Set(collection.entries.map(e => e.id));
+
+  collection.entries.forEach((entry, ei) => {
+    const entryPath = `${path}.entries[${ei}]`;
+
+    if (!entry.id) {
+      issues.push({ path: `${entryPath}.id`, message: 'id must be non-empty' });
+    }
+    if (!entry.label) {
+      issues.push({
+        path: `${entryPath}.label`,
+        message: 'label must be non-empty',
+      });
+    }
+    if (!VALID_RELATIONSHIP_ROLES.includes(entry.role)) {
+      issues.push({
+        path: `${entryPath}.role`,
+        message: `role must be one of ${VALID_RELATIONSHIP_ROLES.join(', ')}`,
+      });
+    }
+    if (entry.symmetric === false && !entry.inverseLabel) {
+      issues.push({
+        path: `${entryPath}.inverseLabel`,
+        message: `inverseLabel is required when symmetric is false`,
+      });
+    }
+  });
+
+  if (
+    collection.defaultEntryId !== undefined &&
+    !entryIds.has(collection.defaultEntryId)
+  ) {
+    issues.push({
+      path: `${path}.defaultEntryId`,
+      message: `Unknown entry id '${collection.defaultEntryId}' in relationship type collection '${collection.id}'`,
+    });
+  }
+};
+
 export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
   const issues: ValidationIssue[] = [];
 
@@ -374,6 +465,10 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
   checkUniqueIds(ruleset.attributes, 'attributes', issues);
   checkAttributeDefinitions(ruleset.attributes, issues);
   checkUniqueIds(ruleset.facets, 'facets', issues);
+  checkUniqueIds(ruleset.relationshipTypes, 'relationshipTypes', issues);
+  ruleset.relationshipTypes.forEach((collection, index) =>
+    checkRelationshipTypeCollection(collection, index, issues)
+  );
 
   // Every collection's own entry/group/category ids, built once so an entry
   // in one collection can validly cross-reference another's (`links`,

@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { RelationshipGraphScreen } from '@screens/RelationshipGraphScreen';
-import { RelationshipStanding } from '@models/types';
 import { getStorageMock, primeStorageDefaults } from '../helpers/storage';
 import {
   makeCharacter,
@@ -70,10 +69,8 @@ describe('RelationshipGraphScreen', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      relationships: [
-        { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-      ],
-      factions: [{ name: 'Brotherhood', standing: RelationshipStanding.Ally }],
+      relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
+      factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
       locationId: 'loc-1',
     });
     const bob = makeCharacter({ id: 'c-bob', name: 'Bob' });
@@ -114,7 +111,7 @@ describe('RelationshipGraphScreen', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      factions: [{ name: 'Brotherhood', standing: RelationshipStanding.Ally }],
+      factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
     });
     storage.loadCharacters.mockResolvedValue([alice]);
     storage.loadFactions.mockResolvedValue([
@@ -179,9 +176,7 @@ describe('RelationshipGraphScreen', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      relationships: [
-        { characterName: 'Bob', relationshipType: RelationshipStanding.Ally },
-      ],
+      relationships: [{ characterName: 'Bob', relationshipTypeId: 'ally' }],
     });
     const bob = makeCharacter({ id: 'c-bob', name: 'Bob' });
     const dave = makeCharacter({ id: 'c-dave', name: 'Dave' });
@@ -215,7 +210,7 @@ describe('RelationshipGraphScreen', () => {
     const alice = makeCharacter({
       id: 'c-alice',
       name: 'Alice',
-      factions: [{ name: 'Brotherhood', standing: RelationshipStanding.Ally }],
+      factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
     });
     storage.loadCharacters.mockResolvedValue([alice]);
     storage.loadFactions.mockResolvedValue([
