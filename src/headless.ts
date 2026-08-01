@@ -65,6 +65,11 @@ export {
   flipDirection,
   resolveRelationshipColor,
   roleColor,
+  // reports (#56-#58) — a ruleset declares which analytics screens it wants,
+  // in what order; the engine no longer fixes them as `FeatureFlags` booleans.
+  type ReportDefinition,
+  type ReportKind,
+  REPORT_KINDS,
   type RulesetAssets,
   resolveAsset,
   getLabel,
