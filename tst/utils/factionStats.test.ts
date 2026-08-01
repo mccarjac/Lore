@@ -54,7 +54,6 @@ describe('factionStats', () => {
       expect(stats).toEqual({
         factionName: 'Brotherhood',
         totalMembers: 0,
-        presentMembers: 0,
         facetCollections: [],
         relationships: [],
         alliedFactions: [],
@@ -91,28 +90,6 @@ describe('factionStats', () => {
       const stats = calculateFactionStats('Brotherhood', characters);
 
       expect(stats.totalMembers).toBe(2);
-    });
-
-    it('counts present members separately from total members', () => {
-      const characters: GameCharacter[] = [
-        makeCharacter({
-          id: '1',
-          name: 'Present',
-          present: true,
-          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
-        }),
-        makeCharacter({
-          id: '2',
-          name: 'Absent',
-          present: false,
-          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
-        }),
-      ];
-
-      const stats = calculateFactionStats('Brotherhood', characters);
-
-      expect(stats.totalMembers).toBe(2);
-      expect(stats.presentMembers).toBe(1);
     });
 
     it('aggregates category counts, top categories, top entries, and calling distribution', () => {

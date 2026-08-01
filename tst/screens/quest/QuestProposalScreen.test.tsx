@@ -26,7 +26,6 @@ const quest = makeQuest({
 const character = makeCharacter({
   id: 'char-1',
   name: 'Alice',
-  present: true,
 });
 
 describe('QuestProposalScreen', () => {

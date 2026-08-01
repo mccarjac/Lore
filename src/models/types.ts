@@ -105,7 +105,6 @@ export interface GameCharacter {
   notes?: string;
   locationId?: string; // Reference to GameLocation.id
   occupation?: string;
-  present?: boolean;
   retired?: boolean;
   createdAt: string;
   updatedAt: string;

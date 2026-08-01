@@ -14,7 +14,7 @@
 import {
   importDataset,
   migrateRulesetFields,
-  toggleCharacterPresent,
+  updateCharacter,
 } from '@/utils/characterStorage';
 import { SafeAsyncStorageJSONParser } from '@/utils/safeAsyncStorageJSONParser';
 import type { GameCharacter } from '@/models/types';
@@ -37,7 +37,6 @@ const legacyCharacter = (id: string, species = 'drifter') => ({
   qualityIds: [],
   factions: [],
   relationships: [],
-  present: false,
   retired: false,
   createdAt: TS,
   updatedAt: TS,
@@ -49,7 +48,6 @@ const currentCharacter = (id: string, archetypeId = 'drifter') => ({
   facets: { archetypes: [archetypeId], traits: ['tough'], qualities: [] },
   factions: [],
   relationships: [],
-  present: false,
   retired: false,
   createdAt: TS,
   updatedAt: TS,
@@ -199,8 +197,11 @@ describe('migrateRulesetFields', () => {
     });
 
     // Without runExclusive both read the same snapshot and the later write
-    // clobbers the earlier one — either the migration or the toggle is lost.
-    await Promise.all([migrateRulesetFields(), toggleCharacterPresent('a')]);
+    // clobbers the earlier one — either the migration or the update is lost.
+    await Promise.all([
+      migrateRulesetFields(),
+      updateCharacter('a', { retired: true }),
+    ]);
 
     const saved = store[CHARACTER_KEY] as { characters: GameCharacter[] };
     const a = saved.characters.find(c => c.id === 'a');
@@ -209,7 +210,7 @@ describe('migrateRulesetFields', () => {
       saved.characters.every(c => c.facets?.archetypes?.[0] === 'drifter')
     ).toBe(true);
     expect(saved.characters.some(c => 'species' in c)).toBe(false);
-    expect(a?.present).toBe(true);
+    expect(a?.retired).toBe(true);
   });
 });
 

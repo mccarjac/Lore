@@ -25,6 +25,11 @@
  *                    contributes: { stage: 'postBonus', deltaRoles: ['resource','cap'] }
  *   recipes       -> selection: 'catalog' (referenced via `links`, never held)
  *
+ * Issue #56 folded a seventh thing in: the builtin `GameCharacter.present`
+ * boolean, which was never a ruleset's to have. A game that tracks attendance
+ * declares a `selection: 'single'` collection for it (see the example
+ * ruleset's `attendance`); one that does not simply declares nothing.
+ *
  * Every behavior the engine used to hardcode now falls out of a collection's
  * declaration, including the three deliberately-preserved quirks pinned by
  * the parity suite: traits cannot raise caps (`deltaRoles` excludes `'cap'`),
@@ -98,6 +103,15 @@ export interface FacetEntry {
    * generalized form of `Trait.allowedArchetypeIds`/`Quality.allowedArchetypeIds`.
    */
   requires?: Record<string, string[]>;
+  /**
+   * The pre-migration stored value this entry replaces, for a collection that
+   * declares `legacyField`. Read by `rulesetFieldMigration.ts`; the same
+   * mechanism `RelationshipTypeEntry.legacyValue` uses, widened to `boolean`
+   * because the pre-#56 `present` field was a boolean rather than an enum
+   * member. Meaningless on a collection whose `legacyField` names an id-valued
+   * field (`archetypeId`, `traitIds`, ...) — those ids carried over as-is.
+   */
+  legacyValue?: string | boolean;
 }
 
 /**
@@ -164,11 +178,18 @@ export interface FacetCollection {
   /** Weight for a category-level quest preference. Defaults to 1. */
   categoryMatchWeight?: number;
   /**
-   * Which pre-#51 `GameCharacter` field this collection's stored selections
+   * Which retired `GameCharacter` field this collection's stored selections
    * migrate in from, if any. Read by `rulesetFieldMigration.ts`; absent for
-   * a collection with no legacy counterpart.
+   * a collection with no legacy counterpart. The first four are the pre-#51
+   * facet fields; `'present'` is the pre-#56 attendance boolean, whose two
+   * values map through each entry's `legacyValue`.
    */
-  legacyField?: 'archetypeId' | 'traitIds' | 'qualityIds' | 'modifications';
+  legacyField?:
+    | 'archetypeId'
+    | 'traitIds'
+    | 'qualityIds'
+    | 'modifications'
+    | 'present';
 }
 
 // --- Accessors ---------------------------------------------------------
@@ -180,6 +201,20 @@ export const findFacetCollection = (
   collectionId: string
 ): FacetCollection | undefined =>
   ruleset.facets.find(c => c.id === collectionId);
+
+/** The collection this ruleset declared for a given legacy field, if any. */
+export const findFacetCollectionByLegacyField = (
+  ruleset: RulesetDefinition,
+  legacyField: NonNullable<FacetCollection['legacyField']>
+): FacetCollection | undefined =>
+  ruleset.facets.find(c => c.legacyField === legacyField);
+
+/** The entry replacing a pre-migration stored value (see `legacyValue`). */
+export const findFacetEntryByLegacyValue = (
+  collection: FacetCollection | undefined,
+  legacyValue: string | boolean
+): FacetEntry | undefined =>
+  collection?.entries.find(entry => entry.legacyValue === legacyValue);
 
 /** Every catalog-entry id a character holds in `collectionId`. */
 export const getFacetIds = (

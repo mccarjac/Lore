@@ -158,7 +158,6 @@ export const loadCharacters = async (): Promise<GameCharacter[]> => {
   return dataset.characters.map(character =>
     normalizeImageUris({
       ...character,
-      present: character.present ?? false,
       retired: character.retired ?? false,
       relationships: character.relationships ?? [],
     })
@@ -173,7 +172,6 @@ export const addCharacter = async (
     const newCharacter: GameCharacter = {
       ...character,
       id: uuidv4(),
-      present: false, // Default to not present
       retired: false, // Default to not retired
       relationships: character.relationships ?? [], // Ensure relationships array exists
       createdAt: new Date().toISOString(),
@@ -860,38 +858,6 @@ export const applyMergedDataset = async (
     return false;
   }
 };
-
-export const toggleCharacterPresent = async (
-  id: string
-): Promise<GameCharacter | null> =>
-  runExclusive(STORAGE_KEY, async () => {
-    const characters = await loadCharacters();
-    const index = characters.findIndex(c => c.id === id);
-
-    if (index === -1) return null;
-
-    const updatedCharacter: GameCharacter = {
-      ...characters[index],
-      present: !characters[index].present,
-      updatedAt: new Date().toISOString(),
-    };
-
-    characters[index] = updatedCharacter;
-    await saveCharacters(characters);
-    return updatedCharacter;
-  });
-
-export const resetAllPresentStatus = async (): Promise<void> =>
-  runExclusive(STORAGE_KEY, async () => {
-    const characters = await loadCharacters();
-    const updatedCharacters = characters.map(character => ({
-      ...character,
-      present: false,
-      updatedAt: new Date().toISOString(),
-    }));
-
-    await saveCharacters(updatedCharacters);
-  });
 
 export const clearStorage = async (): Promise<void> => {
   await SafeAsyncStorageJSONParser.removeItem(STORAGE_KEY);

@@ -198,10 +198,6 @@ export const FactionStatsScreen: React.FC = () => {
 
           <View style={styles.quickStats}>
             <View style={styles.quickStatItem}>
-              <Text style={styles.quickStatValue}>{stats.presentMembers}</Text>
-              <Text style={styles.quickStatLabel}>Present</Text>
-            </View>
-            <View style={styles.quickStatItem}>
               <Text style={styles.quickStatValue}>
                 {stats.alliedFactions.length}
               </Text>

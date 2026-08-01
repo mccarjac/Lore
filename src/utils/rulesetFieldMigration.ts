@@ -23,7 +23,11 @@
 import type { GameCharacter, GameQuest } from '@models/types';
 import { getActiveRuleset } from '@/activeRuleset';
 import { roleOf } from '@/ruleset/attributes';
-import type { FacetCollection } from '@/ruleset/facets';
+import {
+  findFacetCollectionByLegacyField,
+  findFacetEntryByLegacyValue,
+  type FacetCollection,
+} from '@/ruleset/facets';
 import {
   findRelationshipEntryByLegacyValue,
   relationshipCollectionForLegacyField,
@@ -54,6 +58,24 @@ const collectionIdFor = (
   legacyField: NonNullable<FacetCollection['legacyField']>
 ): string | undefined =>
   ruleset.facets.find(c => c.legacyField === legacyField)?.id;
+
+/**
+ * Resolves a pre-#56 `present` boolean to the ruleset-declared attendance
+ * entry id that replaces it, via whichever facet collection declared
+ * `legacyField: 'present'`. Returns `undefined` (rather than inventing a
+ * fallback id, unlike `resolveRelationshipTypeId`) when no such collection
+ * exists or none of its entries claims the value — a ruleset that doesn't
+ * track attendance has nothing sensible to fold the boolean into, so
+ * `foldCharacterFacets` simply drops the legacy field in that case.
+ */
+const resolveAttendanceEntryId = (
+  ruleset: RulesetDefinition,
+  present: boolean
+): string | undefined =>
+  findFacetEntryByLegacyValue(
+    findFacetCollectionByLegacyField(ruleset, 'present'),
+    present
+  )?.id;
 
 /** A loosely-typed record, which is all a legacy-shape object can be. */
 type LooseRecord = Record<string, unknown>;
@@ -282,17 +304,19 @@ const nestModificationsCategoryDeltas = (
 };
 
 /**
- * Folds the four pre-#51 character fields (`archetypeId`/`traitIds`/
- * `qualityIds`/`modifications`) into `facets`, driven by which collection
- * each ruleset declared `legacyField` for — not by naming convention, so a
- * ruleset that renamed its collection id still migrates correctly. A
- * collection that already has an entry under `facets` wins over the legacy
- * field, mirroring `applyRenames`' "current name always wins".
+ * Folds the pre-#51 character fields (`archetypeId`/`traitIds`/`qualityIds`/
+ * `modifications`) and the pre-#56 `present` boolean into `facets`, driven by
+ * which collection each ruleset declared `legacyField` for — not by naming
+ * convention, so a ruleset that renamed its collection id still migrates
+ * correctly. A collection that already has an entry under `facets` wins over
+ * the legacy field, mirroring `applyRenames`' "current name always wins".
  *
  * Only reshapes; never invents data. A character with no `archetypeId` at
  * all simply gets no entry for that collection — a `selection: 'single'`
  * collection may legitimately be unset since #51, unlike the old required
- * `archetypeId: string`.
+ * `archetypeId: string`. `present` is dropped the same way when the ruleset
+ * declares no attendance collection (or none of its entries claims the
+ * boolean) — there is nothing sensible to fold it into.
  */
 const foldCharacterFacets = (
   base: LooseRecord,
@@ -302,13 +326,15 @@ const foldCharacterFacets = (
     base.archetypeId !== undefined ||
     base.traitIds !== undefined ||
     base.qualityIds !== undefined ||
-    base.modifications !== undefined;
+    base.modifications !== undefined ||
+    base.present !== undefined;
   if (!hasLegacyField) return { value: base, changed: false };
 
   const archetypeCollectionId = collectionIdFor(ruleset, 'archetypeId');
   const traitCollectionId = collectionIdFor(ruleset, 'traitIds');
   const qualityCollectionId = collectionIdFor(ruleset, 'qualityIds');
   const modificationCollectionId = collectionIdFor(ruleset, 'modifications');
+  const attendanceCollectionId = collectionIdFor(ruleset, 'present');
 
   const facets: LooseRecord = {
     ...((base.facets as LooseRecord | undefined) ?? {}),
@@ -338,12 +364,20 @@ const foldCharacterFacets = (
       nestModificationsCategoryDeltas(base.modifications, traitCollectionId)
     );
   }
+  if (typeof base.present === 'boolean') {
+    const entryId = resolveAttendanceEntryId(ruleset, base.present);
+    if (entryId !== undefined) {
+      foldInto(attendanceCollectionId, [entryId]);
+    }
+  }
 
-  const { archetypeId, traitIds, qualityIds, modifications, ...rest } = base;
+  const { archetypeId, traitIds, qualityIds, modifications, present, ...rest } =
+    base;
   void archetypeId;
   void traitIds;
   void qualityIds;
   void modifications;
+  void present;
 
   return { value: { ...rest, facets }, changed: true };
 };

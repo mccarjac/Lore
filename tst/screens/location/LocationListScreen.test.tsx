@@ -1,9 +1,9 @@
 import React from 'react';
-import { render, waitFor, fireEvent, act } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { LocationListScreen } from '@screens/location/LocationListScreen';
 import { describeListScreenContract } from '../../helpers/screenContracts';
 import { getStorageMock, primeStorageDefaults } from '../../helpers/storage';
-import { makeLocation, makeCharacter } from '../../helpers/factories';
+import { makeLocation } from '../../helpers/factories';
 import {
   installNavigationMock,
   resetNavigationMocks,
@@ -61,42 +61,5 @@ describe('LocationListScreen — header actions', () => {
 
     fireEvent.press(header.getByText('+'));
     expect(nav.navigate).toHaveBeenCalledWith('LocationForm', {});
-  });
-
-  it('narrows the list by occupancy when advanced filters are applied', async () => {
-    const nav = installNavigationMock();
-    storage.loadLocations.mockResolvedValue([
-      makeLocation({ id: 'loc-1', name: 'The Docks' }),
-      makeLocation({ id: 'loc-2', name: 'The Vault' }),
-    ]);
-    storage.loadCharacters.mockResolvedValue([
-      makeCharacter({ id: 'c1', locationId: 'loc-1', present: true }),
-    ]);
-    const screen = render(<LocationListScreen />);
-
-    await waitFor(() => expect(screen.getByText('The Docks')).toBeTruthy());
-    expect(screen.getByText('The Vault')).toBeTruthy();
-
-    fireEvent.press(screen.getByLabelText('Advanced search'));
-
-    expect(nav.navigate).toHaveBeenCalledWith(
-      'AdvancedSearch',
-      expect.objectContaining({
-        fields: expect.arrayContaining([
-          expect.objectContaining({ key: 'occupancy' }),
-        ]),
-      })
-    );
-
-    const onApply = nav.navigate.mock.calls.find(
-      call => call[0] === 'AdvancedSearch'
-    )?.[1].onApply as (values: Record<string, unknown>) => void;
-
-    act(() => onApply({ occupancy: 'occupied' }));
-
-    await waitFor(() => {
-      expect(screen.queryByText('The Vault')).toBeNull();
-      expect(screen.getByText('The Docks')).toBeTruthy();
-    });
   });
 });

@@ -86,7 +86,25 @@ const legacyShapedRuleset: RulesetDefinition = {
       legacyField: 'modifications',
       entries: [],
     },
+    {
+      id: 'attendance',
+      singular: 'Attendance',
+      plural: 'Attendance',
+      selection: 'single',
+      legacyField: 'present',
+      entries: [
+        { id: 'present', label: 'Present', legacyValue: true },
+        { id: 'absent', label: 'Absent', legacyValue: false },
+      ],
+    },
   ],
+};
+
+/** A ruleset that declares no attendance collection at all (no `legacyField: 'present'`). */
+const noAttendanceRuleset: RulesetDefinition = {
+  ...legacyShapedRuleset,
+  id: 'no-attendance',
+  facets: legacyShapedRuleset.facets.filter(c => c.id !== 'attendance'),
 };
 
 const normalizeCharacterRulesetFields = (
@@ -216,6 +234,64 @@ describe('normalizeCharacterRulesetFields', () => {
 
     const result = normalizeCharacterRulesetFields(orphan);
     expect(result.facets?.archetypes).toBeUndefined();
+  });
+});
+
+/**
+ * The pre-#56 `present` boolean folds into `facets` the same way the four
+ * pre-#51 fields do, via whichever collection declares
+ * `legacyField: 'present'` and an entry whose `legacyValue` matches.
+ */
+describe('normalizeCharacterRulesetFields — present (#56)', () => {
+  it('folds present: true into facets.attendance and drops the legacy key', () => {
+    const result = normalizeCharacterRulesetFields(
+      legacyCharacter({ present: true })
+    );
+
+    expect(result.facets?.attendance).toEqual(['present']);
+    expect('present' in result).toBe(false);
+  });
+
+  it('folds present: false into facets.attendance', () => {
+    const result = normalizeCharacterRulesetFields(
+      legacyCharacter({ present: false })
+    );
+
+    expect(result.facets?.attendance).toEqual(['absent']);
+    expect('present' in result).toBe(false);
+  });
+
+  it('returns the same reference when present is absent and nothing else is legacy', () => {
+    const input = currentCharacter();
+    expect(normalizeCharacterRulesetFields(input)).toBe(input);
+  });
+
+  it('drops present without inventing a facet when the ruleset declares no attendance collection', () => {
+    const result = normalizeCharacterRulesetFields(
+      legacyCharacter({ present: true }),
+      noAttendanceRuleset
+    );
+
+    expect('present' in result).toBe(false);
+    expect(result.facets?.attendance).toBeUndefined();
+  });
+
+  it('is idempotent', () => {
+    const once = normalizeCharacterRulesetFields(
+      legacyCharacter({ present: true })
+    );
+    const twice = normalizeCharacterRulesetFields(once);
+
+    expect(twice).toBe(once);
+    expect(twice.facets?.attendance).toEqual(['present']);
+  });
+
+  it('lets an already-populated attendance collection win over the legacy field', () => {
+    const result = normalizeCharacterRulesetFields(
+      legacyCharacter({ present: true, facets: { attendance: ['absent'] } })
+    );
+
+    expect(result.facets?.attendance).toEqual(['absent']);
   });
 });
 

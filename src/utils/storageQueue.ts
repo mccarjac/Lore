@@ -4,8 +4,8 @@
  * AsyncStorage-backed helpers in this app use a read-modify-write pattern
  * (load the full dataset, mutate it in memory, then write it back). When two
  * such operations for the same storage key run concurrently — e.g. rapidly
- * toggling "present" on several characters, or a faction op that rewrites
- * characters while another character write is in flight — they read the same
+ * editing several characters, or a faction op that rewrites characters while
+ * another character write is in flight — they read the same
  * starting state and the later write silently clobbers the earlier one
  * (a lost update).
  *

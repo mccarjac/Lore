@@ -518,9 +518,7 @@ const characterEntry = (
   const primaryCollection = ruleset.facets.find(c => c.selection === 'single');
 
   return `<div class="entry" id="${esc(anchor('character', character.id))}">
-    <h2>${esc(character.name)}${character.retired ? badge('Retired') : ''}${
-      character.present ? badge('Present') : ''
-    }</h2>
+    <h2>${esc(character.name)}${character.retired ? badge('Retired') : ''}</h2>
     ${gallery(character, images, character.name)}
     ${facts([
       primaryCollection

@@ -159,10 +159,6 @@ export const FactionDetailsScreen: React.FC = () => {
           marginBottom: 12,
           overflow: 'hidden',
         },
-        memberCardPresent: {
-          borderLeftWidth: 4,
-          borderLeftColor: themeColors.status.present,
-        },
         memberContainer: {
           padding: 16,
         },
@@ -301,26 +297,6 @@ export const FactionDetailsScreen: React.FC = () => {
         standingTextDark: {
           color: themeColors.text.primary,
         },
-        presentBadge: {
-          ...commonStyles.badge.base,
-          paddingHorizontal: 8,
-          paddingVertical: 3,
-          borderRadius: 12,
-        },
-        presentBadgeActive: {
-          backgroundColor: themeColors.status.present,
-          borderColor: themeColors.status.present,
-        },
-        presentBadgeText: {
-          fontSize: 10,
-          fontWeight: '600',
-          color: themeColors.text.muted,
-          letterSpacing: 0.3,
-        },
-        presentBadgeTextActive: {
-          color: themeColors.text.primary,
-        },
-
         // Faction Header Styles
         factionHeader: {
           ...commonStyles.card.base,
@@ -674,9 +650,6 @@ export const FactionDetailsScreen: React.FC = () => {
     );
 
     const totalMembers = actualMembers.length;
-    const presentMembers = actualMembers.filter(
-      m => m.character.present === true
-    ).length;
     const standingCounts: Record<string, number> = {};
 
     // Count all standings for display purposes (including neutral/negative)
@@ -685,16 +658,11 @@ export const FactionDetailsScreen: React.FC = () => {
         (standingCounts[member.faction.relationshipTypeId] || 0) + 1;
     });
 
-    return { totalMembers, presentMembers, standingCounts };
+    return { totalMembers, standingCounts };
   };
 
   const renderMember = ({ item }: { item: FactionMemberInfo }) => (
-    <View
-      style={[
-        styles.memberCard,
-        item.character.present && styles.memberCardPresent,
-      ]}
-    >
+    <View style={styles.memberCard}>
       <TouchableOpacity
         style={styles.memberContainer}
         onPress={() =>
@@ -731,21 +699,6 @@ export const FactionDetailsScreen: React.FC = () => {
                 : item.faction.relationshipTypeId}
             </Text>
           </TouchableOpacity>
-          <View
-            style={[
-              styles.presentBadge,
-              item.character.present && styles.presentBadgeActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.presentBadgeText,
-                item.character.present && styles.presentBadgeTextActive,
-              ]}
-            >
-              {item.character.present ? 'Present' : 'Absent'}
-            </Text>
-          </View>
           <TouchableOpacity
             style={styles.removeIconButton}
             onPress={e => {
@@ -876,16 +829,6 @@ export const FactionDetailsScreen: React.FC = () => {
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.totalMembers}</Text>
             <Text style={styles.statLabel}>Active Members</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.presentMembers}</Text>
-            <Text style={styles.statLabel}>Present Members</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {stats.totalMembers - stats.presentMembers}
-            </Text>
-            <Text style={styles.statLabel}>Absent</Text>
           </View>
         </View>
 

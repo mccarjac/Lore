@@ -158,14 +158,6 @@ const buildCardStyles = (colors: ColorPalette, shadows: Shadows) =>
       ...shadows.medium,
     },
 
-    present: {
-      backgroundColor: colors.surface,
-      borderLeftWidth: 4,
-      borderLeftColor: colors.status.present,
-      borderColor: colors.status.present,
-      shadowColor: colors.status.present,
-    },
-
     elevated: {
       backgroundColor: colors.elevated,
       borderColor: colors.border,
@@ -365,17 +357,6 @@ const buildBadgeStyles = (colors: ColorPalette) =>
       paddingHorizontal: spacing.sm,
       paddingVertical: 4,
       borderRadius: borderRadius.sm,
-    },
-
-    // Status badges
-    present: {
-      backgroundColor: colors.status.present,
-    },
-
-    absent: {
-      backgroundColor: colors.elevated,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
 
     // Standing badges

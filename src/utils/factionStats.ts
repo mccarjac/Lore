@@ -45,7 +45,6 @@ export interface FactionFacetStats {
 export interface FactionStats {
   factionName: string;
   totalMembers: number;
-  presentMembers: number;
 
   /** One entry per non-catalog facet collection the ruleset declares. */
   facetCollections: FactionFacetStats[];
@@ -125,7 +124,6 @@ export const calculateFactionStats = (
     return {
       factionName,
       totalMembers: 0,
-      presentMembers: 0,
       facetCollections: [],
       relationships: factionRelationships,
       alliedFactions,
@@ -134,7 +132,6 @@ export const calculateFactionStats = (
   }
 
   const totalMembers = members.length;
-  const presentMembers = members.filter(m => m.present === true).length;
 
   // One distribution per facet collection — the generalized form of the old
   // perkTagCounts/topPerkTags/commonPerks/commonDistinctions/
@@ -201,7 +198,6 @@ export const calculateFactionStats = (
   return {
     factionName,
     totalMembers,
-    presentMembers,
     facetCollections,
     relationships: factionRelationships,
     alliedFactions,

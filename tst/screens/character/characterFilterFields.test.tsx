@@ -2,6 +2,7 @@ import React from 'react';
 import { renderHook } from '@testing-library/react-native';
 import { useCharacterFilterFields } from '@screens/character/characterFilterFields';
 import { RulesetProvider, type RulesetDefinition } from '@/ruleset';
+import { exampleRuleset } from '@/ruleset/exampleRuleset';
 import { genericRuleset } from '../../fixtures/genericRuleset';
 import { makeCharacter } from '../../helpers/factories';
 import type {
@@ -111,24 +112,34 @@ describe('useCharacterFilterFields', () => {
     expect(minScoreField.matches(character, 1, {})).toBe(true);
   });
 
-  it('matches present/retired status', () => {
+  it('matches retired status', () => {
     const fields = renderFields();
-    const presentField = findField(
-      fields,
-      'presentStatus'
-    ) as SelectFilterField;
     const retiredField = findField(
       fields,
       'retiredStatus'
     ) as SelectFilterField;
 
-    const present = makeCharacter({ present: true, retired: false });
-    const retired = makeCharacter({ present: false, retired: true });
+    const active = makeCharacter({ retired: false });
+    const retired = makeCharacter({ retired: true });
 
-    expect(presentField.matches(present, 'present', {})).toBe(true);
-    expect(presentField.matches(retired, 'present', {})).toBe(false);
     expect(retiredField.matches(retired, 'retired', {})).toBe(true);
-    expect(retiredField.matches(present, 'active', {})).toBe(true);
+    expect(retiredField.matches(active, 'active', {})).toBe(true);
     expect(retiredField.matches(retired, 'active', {})).toBe(false);
+  });
+
+  it('generates an attendance facet field with no default, unset by default (#56)', () => {
+    // exampleRuleset (unlike genericRuleset) declares the `attendance`
+    // collection #56 replaced the builtin `present` boolean with.
+    const fields = renderFields(exampleRuleset);
+    const attendanceField = findField(
+      fields,
+      'facet:attendance'
+    ) as SelectFilterField;
+
+    expect(attendanceField.defaultValue).toBeUndefined();
+    expect(attendanceField.options.map(o => o.value).sort()).toEqual([
+      'absent',
+      'present',
+    ]);
   });
 });

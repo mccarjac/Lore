@@ -4,14 +4,12 @@ import { useCommonStyles } from '@/styles/commonStyles';
 
 interface CardProps {
   children: React.ReactNode;
-  present?: boolean;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
-  present = false,
   style,
   contentStyle,
 }) => {
@@ -20,13 +18,12 @@ export const Card: React.FC<CardProps> = ({
     () =>
       StyleSheet.create({
         card: commonStyles.card.base,
-        cardPresent: commonStyles.card.present,
       }),
     [commonStyles]
   );
 
   return (
-    <View style={[styles.card, present && styles.cardPresent, style]}>
+    <View style={[styles.card, style]}>
       <View style={contentStyle}>{children}</View>
     </View>
   );

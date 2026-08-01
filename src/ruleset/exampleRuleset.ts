@@ -198,6 +198,25 @@ const modifications: FacetCollection = {
   entries: [],
 };
 
+/**
+ * The old builtin `GameCharacter.present` boolean (#56), reproduced as a
+ * `single` collection so out-of-the-box behavior — a new character starting
+ * absent, presence editable per character, filterable and unset by default in
+ * advanced search — is unchanged from before attendance was ruleset-declared.
+ */
+const attendance: FacetCollection = {
+  id: 'attendance',
+  singular: 'Attendance',
+  plural: 'Attendance',
+  selection: 'single',
+  defaultEntryId: 'absent',
+  legacyField: 'present',
+  entries: [
+    { id: 'present', label: 'Present', legacyValue: true },
+    { id: 'absent', label: 'Absent', legacyValue: false },
+  ],
+};
+
 /** The old `recipes` collection: a catalog, only ever reached via `links`. */
 const recipes: FacetCollection = {
   id: 'recipes',
@@ -291,7 +310,7 @@ export const exampleRuleset: RulesetDefinition = {
   // Intentionally empty — see the note above.
   terminology: {},
   attributes,
-  facets: [archetypes, traits, qualities, modifications, recipes],
+  facets: [archetypes, traits, qualities, modifications, recipes, attendance],
   relationshipTypes: [
     characterStanding,
     characterFactionStanding,

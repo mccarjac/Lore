@@ -32,7 +32,6 @@ const makeCharacter = (
   facets: { callings: ['tinker'], knacks: [], temperaments: [] },
   factions: [],
   relationships: [],
-  present: true,
   retired: false,
   createdAt: mockDate,
   updatedAt: mockDate,
@@ -182,15 +181,17 @@ describe('questProposal', () => {
   });
 
   describe('getAvailableCharacters', () => {
-    it('only includes present, non-retired characters', () => {
+    it('only includes non-retired characters', () => {
       const characters = [
-        makeCharacter('a', { present: true, retired: false }),
-        makeCharacter('b', { present: false, retired: false }),
-        makeCharacter('c', { present: true, retired: true }),
-        makeCharacter('d', { present: undefined }),
+        makeCharacter('a', { retired: false }),
+        makeCharacter('b', { retired: true }),
+        makeCharacter('c', { retired: undefined }),
       ];
 
-      expect(getAvailableCharacters(characters).map(c => c.id)).toEqual(['a']);
+      expect(getAvailableCharacters(characters).map(c => c.id)).toEqual([
+        'a',
+        'c',
+      ]);
     });
   });
 
@@ -202,9 +203,9 @@ describe('questProposal', () => {
       expect(generateQuestProposals(quests, characters)).toEqual([]);
     });
 
-    it('proposes an empty team when no characters are present', () => {
+    it('proposes an empty team when all characters are retired', () => {
       const quests = [makeQuest('a')];
-      const characters = [makeCharacter('char-1', { present: false })];
+      const characters = [makeCharacter('char-1', { retired: true })];
 
       expect(generateQuestProposals(quests, characters)).toEqual([
         { questId: 'a', proposedCharacterIds: [] },
@@ -269,7 +270,7 @@ describe('questProposal', () => {
       expect(new Set(assignedIds).size).toBe(2);
     });
 
-    it('allows reusing a character once every present character has been used', () => {
+    it('allows reusing a character once every available character has been used', () => {
       const quests = [
         makeQuest('a', { teamSize: 1 }),
         makeQuest('b', { teamSize: 1 }),
@@ -279,9 +280,9 @@ describe('questProposal', () => {
 
       const proposals = generateQuestProposals(quests, characters);
 
-      // Only 2 present characters for 3 quest slots: every quest still gets a
-      // proposed character (a duplicate is unavoidable once the pool of 2 is
-      // exhausted), and both characters are used at least once.
+      // Only 2 available characters for 3 quest slots: every quest still gets
+      // a proposed character (a duplicate is unavoidable once the pool of 2
+      // is exhausted), and both characters are used at least once.
       expect(proposals.every(p => p.proposedCharacterIds.length === 1)).toBe(
         true
       );

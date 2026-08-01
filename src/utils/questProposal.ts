@@ -75,13 +75,10 @@ export const isProposalTarget = (quest: GameQuest): boolean =>
 export const getProposalTargetQuests = (quests: GameQuest[]): GameQuest[] =>
   quests.filter(isProposalTarget);
 
-/** Only present, non-retired characters are eligible to be proposed. */
+/** Only non-retired characters are eligible to be proposed. */
 export const getAvailableCharacters = (
   characters: GameCharacter[]
-): GameCharacter[] =>
-  characters.filter(
-    character => character.present === true && !character.retired
-  );
+): GameCharacter[] => characters.filter(character => !character.retired);
 
 const getTeamSize = (quest: GameQuest): number => {
   const size = quest.teamSize;
@@ -92,8 +89,8 @@ const getTeamSize = (quest: GameQuest): number => {
 
 /**
  * Proposes teams for every un-staffed, unresolved quest, drawing only from
- * present/non-retired characters. Characters are only assigned to one quest
- * each; the same character may be proposed for a second quest only once every
+ * non-retired characters. Characters are only assigned to one quest each; the
+ * same character may be proposed for a second quest only once every
  * available character has already been proposed for at least one quest.
  */
 export const generateQuestProposals = (
@@ -131,7 +128,7 @@ export const generateQuestProposals = (
 
   // Round-robin: each pass, every quest still short of its team size claims
   // its best remaining candidate. Preferring characters unused anywhere keeps
-  // duplicates out until the whole present pool has been drawn from once.
+  // duplicates out until the whole available pool has been drawn from once.
   let madeProgress = true;
   while (madeProgress) {
     madeProgress = false;

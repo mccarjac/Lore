@@ -1,5 +1,5 @@
 import {
-  toggleCharacterPresent,
+  updateCharacter,
   createFaction,
   updateFaction,
 } from '@/utils/characterStorage';
@@ -52,13 +52,12 @@ describe('characterStorage concurrency', () => {
     facets: { archetypes: ['Human'], traits: [], qualities: [] },
     factions: [],
     relationships: [],
-    present: false,
     retired: false,
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
   });
 
-  it('does not lose updates when toggling several characters concurrently', async () => {
+  it('does not lose updates when editing several characters concurrently', async () => {
     const store = installStatefulStore({
       gameCharacterManager: {
         characters: [
@@ -71,19 +70,19 @@ describe('characterStorage concurrency', () => {
       },
     });
 
-    // Fire all three toggles at once. Serialization must ensure each
+    // Fire all three updates at once. Serialization must ensure each
     // read-modify-write sees the previous one's result.
     await Promise.all([
-      toggleCharacterPresent('a'),
-      toggleCharacterPresent('b'),
-      toggleCharacterPresent('c'),
+      updateCharacter('a', { retired: true }),
+      updateCharacter('b', { retired: true }),
+      updateCharacter('c', { retired: true }),
     ]);
 
     const saved = store.gameCharacterManager as {
       characters: GameCharacter[];
     };
-    const present = saved.characters.filter(c => c.present).map(c => c.id);
-    expect(present.sort()).toEqual(['a', 'b', 'c']);
+    const retired = saved.characters.filter(c => c.retired).map(c => c.id);
+    expect(retired.sort()).toEqual(['a', 'b', 'c']);
   });
 });
 

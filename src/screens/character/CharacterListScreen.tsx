@@ -1,17 +1,8 @@
 import React, { useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Platform,
-  Text,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { GameCharacter } from '@models/types';
 import {
   loadCharacters,
-  toggleCharacterPresent,
-  resetAllPresentStatus,
   migrateImageUris,
   migrateRulesetFields,
 } from '@utils/characterStorage';
@@ -40,7 +31,6 @@ type NavigationProp = CompositeNavigationProp<
 
 export const CharacterListScreen: React.FC = () => {
   const [characters, setCharacters] = React.useState<GameCharacter[]>([]);
-  const [showOnlyPresent, setShowOnlyPresent] = React.useState<boolean>(false);
   const navigation = useNavigation<NavigationProp>();
   const label = useLabels();
   const commonStyles = useCommonStyles();
@@ -51,22 +41,7 @@ export const CharacterListScreen: React.FC = () => {
         listContentContainer: {
           paddingBottom: 100,
         },
-        headerButtons: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        },
-        actionButton: {
-          ...commonStyles.button.base,
-          flex: 1,
-          marginHorizontal: 4,
-        },
-        filterButton: commonStyles.button.outline,
-        filterButtonActive: commonStyles.button.outlineActive,
-        resetButton: commonStyles.button.warning,
-        buttonText: commonStyles.button.text,
         card: commonStyles.card.base,
-        cardPresent: commonStyles.card.present,
         cardHeader: commonStyles.card.header,
         name: {
           ...commonStyles.text.h3,
@@ -77,17 +52,6 @@ export const CharacterListScreen: React.FC = () => {
           marginTop: 8,
           fontStyle: 'italic',
         },
-        presentButton: {
-          ...commonStyles.badge.base,
-          ...commonStyles.badge.absent,
-          minWidth: 70,
-          paddingHorizontal: 12,
-          paddingVertical: 6,
-          borderRadius: 16,
-        },
-        presentButtonActive: commonStyles.badge.present,
-        presentText: commonStyles.badge.textMuted,
-        presentTextActive: commonStyles.badge.text,
         headerRight: {
           flexDirection: 'row',
           gap: 8,
@@ -112,43 +76,6 @@ export const CharacterListScreen: React.FC = () => {
     }, [loadData])
   );
 
-  const handleTogglePresent = useCallback(
-    async (id: string) => {
-      await toggleCharacterPresent(id);
-      await loadData();
-    },
-    [loadData]
-  );
-
-  const handleResetAllPresent = useCallback(async () => {
-    const confirmReset = () => {
-      const confirmMessage = `Are you sure you want to reset present status for all ${label('character.plural', 'lower')}?`;
-      if (Platform.OS === 'web') {
-        return window.confirm(confirmMessage);
-      } else {
-        return new Promise<boolean>(resolve => {
-          Alert.alert('Reset Present Status', confirmMessage, [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-              onPress: () => resolve(false),
-            },
-            {
-              text: 'Reset All',
-              onPress: () => resolve(true),
-            },
-          ]);
-        });
-      }
-    };
-
-    const shouldReset = await confirmReset();
-    if (shouldReset) {
-      await resetAllPresentStatus();
-      await loadData();
-    }
-  }, [loadData, label]);
-
   const {
     searchQuery,
     setSearchQuery,
@@ -171,16 +98,14 @@ export const CharacterListScreen: React.FC = () => {
     });
   }, [navigation, label, filterFields, filterValues, setFilterValues]);
 
-  const filteredCharacters = React.useMemo(() => {
-    const filtered = showOnlyPresent
-      ? results.filter(c => c.present === true)
-      : results;
-    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-  }, [results, showOnlyPresent]);
+  const filteredCharacters = React.useMemo(
+    () => [...results].sort((a, b) => a.name.localeCompare(b.name)),
+    [results]
+  );
 
   const renderItem = (item: GameCharacter) => (
     <TouchableOpacity
-      style={[styles.card, item.present && styles.cardPresent]}
+      style={styles.card}
       onPress={() =>
         navigation.navigate('CharacterDetail', { character: item })
       }
@@ -189,22 +114,6 @@ export const CharacterListScreen: React.FC = () => {
         <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
           {item.name}
         </Text>
-        <TouchableOpacity
-          style={[
-            styles.presentButton,
-            item.present && styles.presentButtonActive,
-          ]}
-          onPress={() => handleTogglePresent(item.id)}
-        >
-          <Text
-            style={[
-              styles.presentText,
-              item.present && styles.presentTextActive,
-            ]}
-          >
-            {item.present ? 'Present' : 'Absent'}
-          </Text>
-        </TouchableOpacity>
       </View>
       <Text style={styles.factions}>
         {(item.factions || []).map(f => f.name).join(', ') || 'No factions'}
@@ -213,32 +122,11 @@ export const CharacterListScreen: React.FC = () => {
   );
 
   const renderHeaderButtons = () => (
-    <>
-      <View style={styles.headerButtons}>
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
-            showOnlyPresent ? styles.filterButtonActive : styles.filterButton,
-          ]}
-          onPress={() => setShowOnlyPresent(!showOnlyPresent)}
-        >
-          <Text style={styles.buttonText}>
-            {showOnlyPresent ? 'Show All' : 'Present Only'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.resetButton]}
-          onPress={handleResetAllPresent}
-        >
-          <Text style={styles.buttonText}>Reset Present</Text>
-        </TouchableOpacity>
-      </View>
-      <ActiveFiltersBar
-        fields={filterFields}
-        values={filterValues}
-        onRemove={key => setFilterValues({ ...filterValues, [key]: undefined })}
-      />
-    </>
+    <ActiveFiltersBar
+      fields={filterFields}
+      values={filterValues}
+      onRemove={key => setFilterValues({ ...filterValues, [key]: undefined })}
+    />
   );
 
   const renderHeaderRight = () => (
