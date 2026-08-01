@@ -49,6 +49,10 @@ import {
   getPrimaryFacetLabel,
   type FacetCollection,
 } from '@/ruleset/facets';
+import {
+  findRelationshipEntryForPair,
+  relationshipLabel,
+} from '@/ruleset/relationships';
 import { getLabel } from '@/ruleset/terminology';
 import type { Modifier, RulesetDefinition } from '@/ruleset/types';
 import {
@@ -476,7 +480,8 @@ const facetList = (
 
 const relationshipList = (
   relationships: Relationship[],
-  lookups: Lookups
+  lookups: Lookups,
+  ruleset: RulesetDefinition
 ): string =>
   bullets(
     relationships.map(relationship => {
@@ -484,10 +489,15 @@ const relationshipList = (
       const who = named
         ? link(anchor('character', named.id), relationship.characterName)
         : esc(relationship.characterName);
+      const entry = findRelationshipEntryForPair(
+        ruleset,
+        ['character', 'character'],
+        relationship.relationshipTypeId
+      );
       return [
         who,
         relationship.customName ? ` (${esc(relationship.customName)})` : '',
-        ` — ${esc(relationship.relationshipType)}`,
+        entry ? ` — ${esc(relationshipLabel(entry))}` : '',
         relationship.description
           ? `<br />${prose(relationship.description)}`
           : '',
@@ -540,17 +550,21 @@ const characterEntry = (
     ${field(
       'Factions',
       bullets(
-        (character.factions ?? []).map(
-          faction =>
-            `${factionRef(faction.name, lookups)} — ${esc(faction.standing)}${
-              faction.description ? `<br />${prose(faction.description)}` : ''
-            }`
-        )
+        (character.factions ?? []).map(faction => {
+          const entry = findRelationshipEntryForPair(
+            ruleset,
+            ['character', 'faction'],
+            faction.relationshipTypeId
+          );
+          return `${factionRef(faction.name, lookups)}${
+            entry ? ` — ${esc(relationshipLabel(entry))}` : ''
+          }${faction.description ? `<br />${prose(faction.description)}` : ''}`;
+        })
       )
     )}
     ${field(
       'Relationships',
-      relationshipList(character.relationships ?? [], lookups)
+      relationshipList(character.relationships ?? [], lookups, ruleset)
     )}
     ${field(
       'Appears In',
@@ -573,6 +587,7 @@ const characterEntry = (
 
 const factionEntry = (
   faction: StoredFaction,
+  ruleset: RulesetDefinition,
   lookups: Lookups,
   images: ResolvedImages
 ): string => {
@@ -585,27 +600,40 @@ const factionEntry = (
     ${field(
       'Standings',
       bullets(
-        (faction.relationships ?? []).map(
-          relationship =>
-            `${factionRef(relationship.factionName, lookups)} — ${esc(
-              relationship.relationshipType
-            )}${
-              relationship.description
-                ? `<br />${prose(relationship.description)}`
-                : ''
-            }`
-        )
+        (faction.relationships ?? []).map(relationship => {
+          const entry = findRelationshipEntryForPair(
+            ruleset,
+            ['faction', 'faction'],
+            relationship.relationshipTypeId
+          );
+          return `${factionRef(relationship.factionName, lookups)}${
+            entry
+              ? ` — ${esc(relationshipLabel(entry, relationship.direction))}`
+              : ''
+          }${
+            relationship.description
+              ? `<br />${prose(relationship.description)}`
+              : ''
+          }`;
+        })
       )
     )}
     ${field(
       'Members',
       bullets(
         members.map(member => {
-          const standing = member.factions?.find(
+          const membership = member.factions?.find(
             f => f.name === faction.name
-          )?.standing;
+          );
+          const entry = membership
+            ? findRelationshipEntryForPair(
+                ruleset,
+                ['character', 'faction'],
+                membership.relationshipTypeId
+              )
+            : undefined;
           return `${link(anchor('character', member.id), member.name)}${
-            standing ? ` — ${esc(standing)}` : ''
+            entry ? ` — ${esc(relationshipLabel(entry))}` : ''
           }`;
         })
       )
@@ -1057,7 +1085,7 @@ export const renderCampaignHtml = (
       text: faction.name,
     })),
     body: factions
-      .map(faction => factionEntry(faction, lookups, images))
+      .map(faction => factionEntry(faction, ruleset, lookups, images))
       .join(''),
   });
 

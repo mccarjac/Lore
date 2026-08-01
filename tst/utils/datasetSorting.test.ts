@@ -1,6 +1,5 @@
 import { sortDatasetDeterministically } from '@utils/datasetSorting';
 import {
-  RelationshipStanding,
   type GameCharacter,
   type GameLocation,
   type GameEvent,
@@ -50,18 +49,18 @@ describe('sortDatasetDeterministically', () => {
             factions: [
               {
                 name: 'Zulu Faction',
-                standing: RelationshipStanding.Neutral,
+                relationshipTypeId: 'neutral',
               },
-              { name: 'Alpha Faction', standing: RelationshipStanding.Ally },
+              { name: 'Alpha Faction', relationshipTypeId: 'ally' },
             ],
             relationships: [
               {
                 characterName: 'Zoe',
-                relationshipType: RelationshipStanding.Friend,
+                relationshipTypeId: 'friend',
               },
               {
                 characterName: 'Alice',
-                relationshipType: RelationshipStanding.Ally,
+                relationshipTypeId: 'ally',
               },
             ],
             facets: {
@@ -115,11 +114,11 @@ describe('sortDatasetDeterministically', () => {
             relationships: [
               {
                 factionName: 'Zulu',
-                relationshipType: RelationshipStanding.Neutral,
+                relationshipTypeId: 'neutral',
               },
               {
                 factionName: 'Alpha',
-                relationshipType: RelationshipStanding.Ally,
+                relationshipTypeId: 'ally',
               },
             ],
             imageUris: ['img3.jpg', 'img1.jpg'],

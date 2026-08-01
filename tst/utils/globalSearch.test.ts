@@ -1,4 +1,3 @@
-import { RelationshipStanding } from '@models/types';
 import {
   GlobalSearchData,
   MAX_RESULTS_PER_DOMAIN,
@@ -80,7 +79,7 @@ describe('globalSearch', () => {
             factions: [
               {
                 name: 'Scrap Collective',
-                standing: RelationshipStanding.Neutral,
+                relationshipTypeId: 'neutral',
               },
             ],
           }),

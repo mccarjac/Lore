@@ -20,6 +20,10 @@ import { calculateDerivedStats, type DerivedStats } from '@/ruleset/derived';
 import { useLabels, useRuleset, useFeature } from '@/ruleset';
 import { roleOf } from '@/ruleset/attributes';
 import { getPrimaryFacetLabel } from '@/ruleset/facets';
+import {
+  findRelationshipEntryForPair,
+  relationshipLabel,
+} from '@/ruleset/relationships';
 import { GameCharacter, GameLocation, DiscordMessage } from '@/models/types';
 import {
   loadCharacters,
@@ -459,14 +463,25 @@ export const CharacterDetailScreen: React.FC = () => {
         title={label('faction.plural')}
         defaultCollapsed={true}
       >
-        {character.factions.map((faction, index) => (
-          <View key={index} style={styles.itemContainer}>
-            <View style={styles.headerContainer}>
-              <Text style={styles.titleText}>{faction.name}</Text>
-              <Text style={styles.standingText}>{faction.standing}</Text>
+        {character.factions.map((faction, index) => {
+          const entry = findRelationshipEntryForPair(
+            ruleset,
+            ['character', 'faction'],
+            faction.relationshipTypeId
+          );
+          return (
+            <View key={index} style={styles.itemContainer}>
+              <View style={styles.headerContainer}>
+                <Text style={styles.titleText}>{faction.name}</Text>
+                <Text style={styles.standingText}>
+                  {entry
+                    ? relationshipLabel(entry)
+                    : faction.relationshipTypeId}
+                </Text>
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </CollapsibleSection>
     );
   };
@@ -483,6 +498,11 @@ export const CharacterDetailScreen: React.FC = () => {
             relationship.characterName
           );
           const isClickable = !!targetCharacter;
+          const relationshipEntry = findRelationshipEntryForPair(
+            ruleset,
+            ['character', 'character'],
+            relationship.relationshipTypeId
+          );
 
           return (
             <TouchableOpacity
@@ -513,7 +533,9 @@ export const CharacterDetailScreen: React.FC = () => {
                   )}
                 </View>
                 <Text style={styles.relationshipTypeText}>
-                  {relationship.relationshipType}
+                  {relationshipEntry
+                    ? relationshipLabel(relationshipEntry)
+                    : relationship.relationshipTypeId}
                 </Text>
               </View>
               {relationship.description && (

@@ -24,7 +24,16 @@ import type { GameCharacter, GameQuest } from '@models/types';
 import { getActiveRuleset } from '@/activeRuleset';
 import { roleOf } from '@/ruleset/attributes';
 import type { FacetCollection } from '@/ruleset/facets';
+import {
+  findRelationshipEntryByLegacyValue,
+  relationshipCollectionForLegacyField,
+  type RelationshipTypeCollection,
+} from '@/ruleset/relationships';
 import type { RulesetDefinition } from '@/ruleset/types';
+// Type-only, so this creates no runtime coupling — `characterStorage.ts`
+// already imports this module (for the normalizers below), and `StoredFaction`
+// is that module's canonical faction shape rather than one duplicated here.
+import type { StoredFaction } from './characterStorage';
 
 /**
  * resourceId -> its cap attribute id, read off the ruleset. The ruleset is a
@@ -48,6 +57,27 @@ const collectionIdFor = (
 
 /** A loosely-typed record, which is all a legacy-shape object can be. */
 type LooseRecord = Record<string, unknown>;
+
+/**
+ * Resolves a pre-#50 `RelationshipStanding` member name (e.g. `'Ally'`) to
+ * the ruleset-declared relationship-type entry id that replaces it, via the
+ * owning collection's `legacyField`. Falls back to the raw legacy value
+ * itself when no collection/entry matches — same "keep the data rather than
+ * drop it" philosophy as `capAttributeIdFor`'s fallback — so a ruleset that
+ * dropped the legacy pair still leaves something for the validator to flag
+ * rather than silently losing the field.
+ */
+const resolveRelationshipTypeId = (
+  ruleset: RulesetDefinition,
+  legacyField: NonNullable<RelationshipTypeCollection['legacyField']>,
+  legacyValue: string
+): string => {
+  const collection = relationshipCollectionForLegacyField(ruleset, legacyField);
+  return (
+    findRelationshipEntryByLegacyValue(collection, legacyValue)?.id ??
+    legacyValue
+  );
+};
 
 /** old field name -> current (pre-#51) field name, applied to a stored character. */
 const CHARACTER_RENAMES: Record<string, string> = {
@@ -319,6 +349,81 @@ const foldCharacterFacets = (
 };
 
 /**
+ * Migrates `factions[].standing` (pre-#50) to `factions[].relationshipTypeId`,
+ * driven by the ruleset's `character`-`faction` collection's `legacyField`.
+ * An entry already carrying `relationshipTypeId` (or carrying neither) is
+ * left alone.
+ */
+const normalizeFactionMemberships = (
+  factions: unknown,
+  ruleset: RulesetDefinition
+): { value: unknown; changed: boolean } => {
+  if (!Array.isArray(factions)) return { value: factions, changed: false };
+
+  let changed = false;
+  const normalized = (factions as LooseRecord[]).map(membership => {
+    if (
+      membership.relationshipTypeId !== undefined ||
+      membership.standing === undefined
+    ) {
+      return membership;
+    }
+    changed = true;
+    const { standing, ...rest } = membership;
+    return {
+      ...rest,
+      relationshipTypeId: resolveRelationshipTypeId(
+        ruleset,
+        'characterFactionStanding',
+        standing as string
+      ),
+    };
+  });
+
+  return changed
+    ? { value: normalized, changed: true }
+    : { value: factions, changed: false };
+};
+
+/**
+ * Migrates `relationships[].relationshipType` (pre-#50) to
+ * `relationships[].relationshipTypeId`, the character-character counterpart
+ * of `normalizeFactionMemberships`.
+ */
+const normalizeCharacterRelationships = (
+  relationships: unknown,
+  ruleset: RulesetDefinition
+): { value: unknown; changed: boolean } => {
+  if (!Array.isArray(relationships)) {
+    return { value: relationships, changed: false };
+  }
+
+  let changed = false;
+  const normalized = (relationships as LooseRecord[]).map(relationship => {
+    if (
+      relationship.relationshipTypeId !== undefined ||
+      relationship.relationshipType === undefined
+    ) {
+      return relationship;
+    }
+    changed = true;
+    const { relationshipType, ...rest } = relationship;
+    return {
+      ...rest,
+      relationshipTypeId: resolveRelationshipTypeId(
+        ruleset,
+        'characterStanding',
+        relationshipType as string
+      ),
+    };
+  });
+
+  return changed
+    ? { value: normalized, changed: true }
+    : { value: relationships, changed: false };
+};
+
+/**
  * Returns the normalized character, or the original reference when it was
  * already current. Callers rely on referential equality to detect "nothing
  * changed" without a deep compare.
@@ -343,9 +448,83 @@ export const normalizeCharacterRulesetFields = (
 
   const folded = foldCharacterFacets(withReshapedModifications, ruleset);
 
-  if (!renamed && !remodified && !folded.changed) return character;
+  const factions = normalizeFactionMemberships(
+    (folded.value as LooseRecord).factions,
+    ruleset
+  );
+  const relationships = normalizeCharacterRelationships(
+    (folded.value as LooseRecord).relationships,
+    ruleset
+  );
 
-  return folded.value as unknown as GameCharacter;
+  if (
+    !renamed &&
+    !remodified &&
+    !folded.changed &&
+    !factions.changed &&
+    !relationships.changed
+  ) {
+    return character;
+  }
+
+  return {
+    ...folded.value,
+    ...(factions.changed ? { factions: factions.value } : {}),
+    ...(relationships.changed ? { relationships: relationships.value } : {}),
+  } as unknown as GameCharacter;
+};
+
+/**
+ * Migrates `relationships[].relationshipType` (pre-#50) to
+ * `relationships[].relationshipTypeId` on a stored faction — the
+ * faction-faction counterpart of `normalizeCharacterRelationships`.
+ */
+export const normalizeFactionRulesetFields = (
+  faction: StoredFaction,
+  ruleset: RulesetDefinition = getActiveRuleset()
+): StoredFaction => {
+  const relationships = (faction as unknown as LooseRecord).relationships as
+    | LooseRecord[]
+    | undefined;
+  if (!Array.isArray(relationships)) return faction;
+
+  let changed = false;
+  const normalized = relationships.map(relationship => {
+    if (
+      relationship.relationshipTypeId !== undefined ||
+      relationship.relationshipType === undefined
+    ) {
+      return relationship;
+    }
+    changed = true;
+    const { relationshipType, ...rest } = relationship;
+    return {
+      ...rest,
+      relationshipTypeId: resolveRelationshipTypeId(
+        ruleset,
+        'factionStanding',
+        relationshipType as string
+      ),
+    };
+  });
+
+  return changed
+    ? ({ ...faction, relationships: normalized } as unknown as StoredFaction)
+    : faction;
+};
+
+/** Array form; returns the original array when every entry was current. */
+export const normalizeFactionsRulesetFields = (
+  factions: StoredFaction[],
+  ruleset: RulesetDefinition = getActiveRuleset()
+): StoredFaction[] => {
+  let changed = false;
+  const normalized = factions.map(faction => {
+    const next = normalizeFactionRulesetFields(faction, ruleset);
+    if (next !== faction) changed = true;
+    return next;
+  });
+  return changed ? normalized : factions;
 };
 
 /**
@@ -488,10 +667,14 @@ export const normalizeQuestsRulesetFields = (
   return changed ? normalized : quests;
 };
 
-/** The character/quest-bearing subset of a dataset, whatever else it carries. */
+/**
+ * The character/quest/faction-bearing subset of a dataset, whatever else it
+ * carries.
+ */
 type RulesetFieldBearingDataset = {
   characters?: GameCharacter[];
   quests?: GameQuest[];
+  factions?: StoredFaction[];
 };
 
 /**
@@ -516,9 +699,16 @@ export const normalizeDatasetRulesetFields = <
   const quests = dataset.quests
     ? normalizeQuestsRulesetFields(dataset.quests, ruleset)
     : dataset.quests;
+  const factions = dataset.factions
+    ? normalizeFactionsRulesetFields(dataset.factions, ruleset)
+    : dataset.factions;
 
-  if (characters === dataset.characters && quests === dataset.quests) {
+  if (
+    characters === dataset.characters &&
+    quests === dataset.quests &&
+    factions === dataset.factions
+  ) {
     return dataset;
   }
-  return { ...dataset, characters, quests };
+  return { ...dataset, characters, quests, factions };
 };

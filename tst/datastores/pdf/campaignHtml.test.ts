@@ -6,7 +6,7 @@
 
 import { renderCampaignHtml } from '@/datastores/pdf/campaignHtml';
 import type { CampaignDataset, ResolvedImages } from '@/datastores/pdf/dataset';
-import { QuestStatus, RelationshipStanding } from '@models/types';
+import { QuestStatus } from '@models/types';
 import { num } from '@/ruleset/attributes';
 import type { RulesetDefinition } from '@/ruleset/types';
 import { genericRuleset } from '../../fixtures/genericRuleset';
@@ -72,14 +72,14 @@ const fullDataset = (): CampaignDataset => ({
       factions: [
         {
           name: 'The Combine',
-          standing: RelationshipStanding.Ally,
+          relationshipTypeId: 'sworn',
           description: 'Dues paid.',
         },
       ],
       relationships: [
         {
           characterName: 'Mara Voss',
-          relationshipType: RelationshipStanding.Hostile,
+          relationshipTypeId: 'feuding',
           description: 'A bad trade.',
         },
       ],
@@ -97,7 +97,7 @@ const fullDataset = (): CampaignDataset => ({
       relationships: [
         {
           factionName: 'The Ash Union',
-          relationshipType: RelationshipStanding.Enemy,
+          relationshipTypeId: 'blood_feud',
         },
       ],
     }),
@@ -373,7 +373,7 @@ describe('renderCampaignHtml', () => {
       const html = render(fullDataset());
 
       expect(html).toContain('href="#character-char_mara"');
-      expect(html).toContain('Hostile');
+      expect(html).toContain('Feuding');
       expect(html).toContain('A bad trade.');
     });
 
@@ -398,7 +398,7 @@ describe('renderCampaignHtml', () => {
 
       expect(chapter).toContain('Members');
       expect(chapter).toContain('Hale Winters');
-      expect(chapter).toContain('Ally');
+      expect(chapter).toContain('Sworn');
     });
 
     it('lists the events and quests a character took part in', () => {

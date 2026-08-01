@@ -1,8 +1,13 @@
-import { GameCharacter, RelationshipStanding } from '../models/types';
+import { GameCharacter } from '../models/types';
 import { FactionRelationship } from './characterStorage';
 import { type RulesetDefinition } from '../ruleset';
 import { getActiveRuleset } from '@/activeRuleset';
 import { getFacetIds } from '@/ruleset/facets';
+import {
+  findRelationshipEntryForPair,
+  isNegativeRelationship,
+  isPositiveRelationship,
+} from '@/ruleset/relationships';
 
 /** A category's member count within one facet collection, plus its share. */
 export interface FactionFacetCategoryStats {
@@ -77,30 +82,41 @@ export const calculateFactionStats = (
   factionRelationships: FactionRelationship[] = [],
   ruleset: RulesetDefinition = getActiveRuleset()
 ): FactionStats => {
-  // Get faction members (only positive relationships count as members)
+  // Get faction members (only a positive-role relationship counts as membership)
   const members = allCharacters.filter(char => {
     const faction = char.factions.find(f => f.name === factionName);
-    return (
-      faction &&
-      (faction.standing === RelationshipStanding.Ally ||
-        faction.standing === RelationshipStanding.Friend)
+    if (!faction) return false;
+    const entry = findRelationshipEntryForPair(
+      ruleset,
+      ['character', 'faction'],
+      faction.relationshipTypeId
     );
+    return isPositiveRelationship(entry);
   });
 
-  // Analyze relationships
+  // Analyze relationships, by role rather than a hardcoded vocabulary — a
+  // ruleset declares which of its faction-faction entries are positive/negative.
   const alliedFactions = factionRelationships
-    .filter(
-      rel =>
-        rel.relationshipType === RelationshipStanding.Ally ||
-        rel.relationshipType === RelationshipStanding.Friend
+    .filter(rel =>
+      isPositiveRelationship(
+        findRelationshipEntryForPair(
+          ruleset,
+          ['faction', 'faction'],
+          rel.relationshipTypeId
+        )
+      )
     )
     .map(rel => rel.factionName);
 
   const enemyFactions = factionRelationships
-    .filter(
-      rel =>
-        rel.relationshipType === RelationshipStanding.Enemy ||
-        rel.relationshipType === RelationshipStanding.Hostile
+    .filter(rel =>
+      isNegativeRelationship(
+        findRelationshipEntryForPair(
+          ruleset,
+          ['faction', 'faction'],
+          rel.relationshipTypeId
+        )
+      )
     )
     .map(rel => rel.factionName);
 

@@ -14,7 +14,6 @@ import {
 import { renderWithRuleset } from '../helpers/ruleset';
 import { genericRuleset } from '../fixtures/genericRuleset';
 import { CHART_PALETTE } from '@/styles/chartPalette';
-import { RelationshipStanding } from '@models/types';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 jest.mock('@utils/characterStorage');
@@ -56,9 +55,7 @@ describe('FactionStatsScreen', () => {
         id: 'c1',
         name: 'Bram',
         facets: { lineages: ['scholar'], talents: ['well_read'] },
-        factions: [
-          { name: 'The Athenaeum', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'The Athenaeum', relationshipTypeId: 'sworn' }],
       }),
     ]);
   });
@@ -101,9 +98,7 @@ describe('FactionStatsScreen', () => {
         id: 'c1',
         name: 'Bram',
         facets: { lineages: ['scholar'], talents: ['sly'] },
-        factions: [
-          { name: 'The Athenaeum', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'The Athenaeum', relationshipTypeId: 'sworn' }],
       }),
     ]);
 

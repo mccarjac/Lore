@@ -1,7 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { CharacterListScreen } from '@screens/character/CharacterListScreen';
-import { RelationshipStanding } from '@models/types';
 import { describeListScreenContract } from '../../helpers/screenContracts';
 import { getStorageMock } from '../../helpers/storage';
 import { makeCharacter } from '../../helpers/factories';
@@ -22,9 +21,7 @@ describeListScreenContract({
         id: 'char-1',
         name: 'Alice',
         present: true,
-        factions: [
-          { name: 'Iron Legion', standing: RelationshipStanding.Ally },
-        ],
+        factions: [{ name: 'Iron Legion', relationshipTypeId: 'ally' }],
       }),
       makeCharacter({ id: 'char-2', name: 'Bob' }),
     ]);

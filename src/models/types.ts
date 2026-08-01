@@ -19,35 +19,40 @@ export interface LocationDataset {
   lastUpdated: string;
 }
 
-export enum RelationshipStanding {
-  Ally = 'Ally',
-  Friend = 'Friend',
-  Neutral = 'Neutral',
-  Hostile = 'Hostile',
-  Enemy = 'Enemy',
-}
-
-export const POSITIVE_RELATIONSHIP_TYPE: RelationshipStanding[] = [
-  RelationshipStanding.Ally,
-  RelationshipStanding.Friend,
-];
-
-export const NEGATIVE_RELATIONSHIP_TYPE: RelationshipStanding[] = [
-  RelationshipStanding.Hostile,
-  RelationshipStanding.Enemy,
-];
-
-export interface Faction {
+/**
+ * A character's membership in a faction — `relationshipTypeId` resolves into
+ * one of the active ruleset's `character`-`faction` `RelationshipTypeCollection`
+ * entries (`src/ruleset/relationships.ts`), replacing the pre-#50
+ * `standing: RelationshipStanding` field.
+ */
+export interface FactionMembership {
   name: string;
-  standing: RelationshipStanding;
+  relationshipTypeId: string;
   description?: string;
 }
 
+/**
+ * A character-to-character relationship — `relationshipTypeId` resolves into
+ * one of the active ruleset's `character`-`character` `RelationshipTypeCollection`
+ * entries, replacing the pre-#50 `relationshipType: RelationshipStanding`
+ * field.
+ */
 export interface Relationship {
   characterName: string;
-  relationshipType: RelationshipStanding;
+  relationshipTypeId: string;
   description?: string;
   customName?: string;
+}
+
+/**
+ * A character-to-event relationship — a net-new pair (#50) with no legacy
+ * counterpart, proving `RelationshipTypeCollection` generalizes beyond the
+ * three pairs `RelationshipStanding` used to hardcode.
+ */
+export interface EventRelationship {
+  eventId: string;
+  relationshipTypeId: string;
+  description?: string;
 }
 
 /**
@@ -92,8 +97,10 @@ export interface GameCharacter {
    * attributes.
    */
   attributes?: AttributeBag;
-  factions: Faction[];
+  factions: FactionMembership[];
   relationships: Relationship[];
+  /** This character's typed relationships to events (#50). */
+  eventRelationships?: EventRelationship[];
   imageUris?: string[];
   notes?: string;
   locationId?: string; // Reference to GameLocation.id

@@ -22,12 +22,17 @@ import {
   loadQuests,
   deleteEvent,
 } from '@utils/characterStorage';
-import { GameEvent, QuestStatus } from '@models/types';
+import { GameCharacter, GameEvent, QuestStatus } from '@models/types';
 import { useTheme } from '@/styles/theme';
 import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
 import Markdown from 'react-native-markdown-display';
 import { formatEventDate } from '@utils/dateUtils';
-import { useFeature } from '@/ruleset';
+import { useFeature, useRuleset } from '@/ruleset';
+import {
+  findRelationshipCollectionForPair,
+  findRelationshipEntry,
+  relationshipLabel,
+} from '@/ruleset/relationships';
 
 const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
   [QuestStatus.NotStarted]: 'Not Started',
@@ -50,15 +55,27 @@ interface EventQuestInfo {
   status: QuestStatus;
 }
 
+/** A character related to this event via `GameCharacter.eventRelationships` — discovered by scanning characters, the same reverse-lookup technique other screens use for faction membership. */
+interface RelatedCharacterInfo {
+  character: GameCharacter;
+  relationshipTypeId: string;
+}
+
 interface EventWithDetails extends GameEvent {
   locationName?: string;
   characterNames: string[];
   quests: EventQuestInfo[];
+  relatedCharacters: RelatedCharacterInfo[];
 }
 
 export const EventsDetailScreen: React.FC = () => {
   const navigation = useNavigation<EventsDetailNavigationProp>();
   const questsEnabled = useFeature('quests');
+  const { ruleset } = useRuleset();
+  const characterEventRole = useMemo(
+    () => findRelationshipCollectionForPair(ruleset, ['character', 'event']),
+    [ruleset]
+  );
   const route = useRoute<EventsDetailRouteProp>();
   const { eventId } = route.params;
 
@@ -294,6 +311,16 @@ export const EventsDetailScreen: React.FC = () => {
     const characterMap = new Map(characters.map(c => [c.id, c.name]));
     const questMap = new Map(quests.map(q => [q.id, q]));
 
+    const relatedCharacters: RelatedCharacterInfo[] = characters.flatMap(
+      character =>
+        (character.eventRelationships ?? [])
+          .filter(rel => rel.eventId === eventId)
+          .map(rel => ({
+            character,
+            relationshipTypeId: rel.relationshipTypeId,
+          }))
+    );
+
     const eventWithDetails: EventWithDetails = {
       ...foundEvent,
       locationName: foundEvent.locationId
@@ -311,6 +338,7 @@ export const EventsDetailScreen: React.FC = () => {
             name: quest.name,
             status: quest.status,
           })) || [],
+      relatedCharacters,
     };
 
     setEvent(eventWithDetails);
@@ -412,6 +440,41 @@ export const EventsDetailScreen: React.FC = () => {
                 <Text style={styles.listText}>{name}</Text>
               </View>
             ))}
+          </View>
+        </CollapsibleSection>
+      )}
+
+      {/* Related Characters — typed relationships (#50), distinct from the
+          plain "Characters Involved" membership list above. Discovered by
+          scanning characters for GameCharacter.eventRelationships, since
+          this is the untyped-participant screen's mirror for a typed one. */}
+      {event.relatedCharacters.length > 0 && (
+        <CollapsibleSection title="Related Characters">
+          <View style={styles.list}>
+            {event.relatedCharacters.map(related => {
+              const entry = findRelationshipEntry(
+                characterEventRole,
+                related.relationshipTypeId
+              );
+              return (
+                <TouchableOpacity
+                  key={related.character.id}
+                  style={styles.questRow}
+                  onPress={() =>
+                    navigation.navigate('CharacterDetail', {
+                      character: related.character,
+                    })
+                  }
+                >
+                  <Text style={styles.listText}>{related.character.name}</Text>
+                  <Text style={styles.questStatus}>
+                    {entry
+                      ? relationshipLabel(entry)
+                      : related.relationshipTypeId}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </CollapsibleSection>
       )}

@@ -23,15 +23,16 @@ import {
   CharacterFormData,
   FacetValue,
   GameCharacter,
+  GameEvent,
   GameLocation,
   Relationship,
-  RelationshipStanding,
 } from '@models/types';
 import {
   addCharacter,
   updateCharacter,
   loadCharacters,
   saveCharacters,
+  loadEvents,
   loadFactions,
   loadLocations,
 } from '@utils/characterStorage';
@@ -44,6 +45,10 @@ import {
   FacetSingleSelectField,
 } from '@/components';
 import { useLabels, useRuleset } from '@/ruleset';
+import {
+  findRelationshipCollectionForPair,
+  relationshipLabel,
+} from '@/ruleset/relationships';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 /**
@@ -70,12 +75,38 @@ export const CharacterFormScreen: React.FC = () => {
   const route = useRoute<CharacterFormRouteProp>();
   const label = useLabels();
   const { ruleset } = useRuleset();
+  const characterFactionStanding = useMemo(
+    () => findRelationshipCollectionForPair(ruleset, ['character', 'faction']),
+    [ruleset]
+  );
+  const characterStanding = useMemo(
+    () =>
+      findRelationshipCollectionForPair(ruleset, ['character', 'character']),
+    [ruleset]
+  );
+  const characterEventRole = useMemo(
+    () => findRelationshipCollectionForPair(ruleset, ['character', 'event']),
+    [ruleset]
+  );
+  const defaultEventRelationshipTypeId =
+    characterEventRole?.defaultEntryId ??
+    characterEventRole?.entries[0]?.id ??
+    '';
+  const defaultFactionRelationshipTypeId =
+    characterFactionStanding?.defaultEntryId ??
+    characterFactionStanding?.entries[0]?.id ??
+    '';
+  const defaultCharacterRelationshipTypeId =
+    characterStanding?.defaultEntryId ??
+    characterStanding?.entries[0]?.id ??
+    '';
   const editingCharacter = route.params?.character;
   const [allCharacters, setAllCharacters] = useState<GameCharacter[]>([]);
   const [availableFactions, setAvailableFactions] = useState<string[]>([]);
   const [availableLocations, setAvailableLocations] = useState<GameLocation[]>(
     []
   );
+  const [availableEvents, setAvailableEvents] = useState<GameEvent[]>([]);
   const [showCustomFactionInput, setShowCustomFactionInput] = useState<{
     [key: number]: boolean;
   }>({});
@@ -467,6 +498,7 @@ export const CharacterFormScreen: React.FC = () => {
           facets: { ...(editingCharacter.facets ?? {}) },
           factions: [...editingCharacter.factions],
           relationships: [...(editingCharacter.relationships || [])],
+          eventRelationships: [...(editingCharacter.eventRelationships || [])],
           notes: editingCharacter.notes || '',
           occupation: editingCharacter.occupation || '',
           imageUris: editingCharacter.imageUris || [],
@@ -478,6 +510,7 @@ export const CharacterFormScreen: React.FC = () => {
           facets: buildDefaultFacets(ruleset),
           factions: [],
           relationships: [],
+          eventRelationships: [],
           notes: '',
           occupation: '',
           imageUris: [],
@@ -541,6 +574,12 @@ export const CharacterFormScreen: React.FC = () => {
       const locations = await loadLocations();
       setAvailableLocations(
         locations.sort((a, b) => a.name.localeCompare(b.name))
+      );
+
+      // Load available events, for the Event Relationships section
+      const events = await loadEvents();
+      setAvailableEvents(
+        [...events].sort((a, b) => a.title.localeCompare(b.title))
       );
     } catch (error) {
       console.error('Failed to load characters:', error);
@@ -608,7 +647,7 @@ export const CharacterFormScreen: React.FC = () => {
           // Add the reciprocal relationship
           const reciprocalRelationship: Relationship = {
             characterName: currentCharacter.name,
-            relationshipType: relationship.relationshipType,
+            relationshipTypeId: relationship.relationshipTypeId,
             description: relationship.description || '',
           };
 
@@ -888,16 +927,20 @@ export const CharacterFormScreen: React.FC = () => {
               </Picker>
             )}
             <Picker
-              selectedValue={faction.standing}
+              selectedValue={faction.relationshipTypeId}
               style={styles.factionStanding}
               onValueChange={value => {
                 const newFactions = [...form.factions];
-                newFactions[index] = { ...faction, standing: value };
+                newFactions[index] = { ...faction, relationshipTypeId: value };
                 handleChange('factions', newFactions);
               }}
             >
-              {Object.values(RelationshipStanding).map(standing => (
-                <Picker.Item key={standing} label={standing} value={standing} />
+              {(characterFactionStanding?.entries ?? []).map(entry => (
+                <Picker.Item
+                  key={entry.id}
+                  label={relationshipLabel(entry)}
+                  value={entry.id}
+                />
               ))}
             </Picker>
             <TouchableOpacity
@@ -916,7 +959,10 @@ export const CharacterFormScreen: React.FC = () => {
           onPress={() => {
             handleChange('factions', [
               ...form.factions,
-              { name: '', standing: 'Neutral' },
+              {
+                name: '',
+                relationshipTypeId: defaultFactionRelationshipTypeId,
+              },
             ]);
           }}
         >
@@ -955,19 +1001,23 @@ export const CharacterFormScreen: React.FC = () => {
                 </Picker>
               </View>
               <Picker
-                selectedValue={relationship.relationshipType}
+                selectedValue={relationship.relationshipTypeId}
                 style={styles.relationshipType}
                 onValueChange={value => {
                   const newRelationships = [...form.relationships];
                   newRelationships[index] = {
                     ...relationship,
-                    relationshipType: value,
+                    relationshipTypeId: value,
                   };
                   handleChange('relationships', newRelationships);
                 }}
               >
-                {Object.values(RelationshipStanding).map(type => (
-                  <Picker.Item key={type} label={type} value={type} />
+                {(characterStanding?.entries ?? []).map(entry => (
+                  <Picker.Item
+                    key={entry.id}
+                    label={relationshipLabel(entry)}
+                    value={entry.id}
+                  />
                 ))}
               </Picker>
               <TouchableOpacity
@@ -1024,7 +1074,7 @@ export const CharacterFormScreen: React.FC = () => {
               ...form.relationships,
               {
                 characterName: '',
-                relationshipType: RelationshipStanding.Friend,
+                relationshipTypeId: defaultCharacterRelationshipTypeId,
                 description: '',
               },
             ]);
@@ -1033,6 +1083,90 @@ export const CharacterFormScreen: React.FC = () => {
           <Text style={styles.addButtonText}>Add Relationship</Text>
         </TouchableOpacity>
       </View>
+
+      {characterEventRole && (
+        <View style={styles.formSection}>
+          <Text style={styles.label}>Event Relationships</Text>
+          {(form.eventRelationships ?? []).map((eventRelationship, index) => (
+            <View key={index} style={styles.relationshipGroup}>
+              <View style={styles.relationshipContainer}>
+                <View style={styles.relationshipPickerContainer}>
+                  <Picker
+                    selectedValue={eventRelationship.eventId}
+                    style={styles.relationshipNamePicker}
+                    onValueChange={value => {
+                      const newEventRelationships = [
+                        ...(form.eventRelationships ?? []),
+                      ];
+                      newEventRelationships[index] = {
+                        ...eventRelationship,
+                        eventId: value,
+                      };
+                      handleChange('eventRelationships', newEventRelationships);
+                    }}
+                  >
+                    <Picker.Item label="Select an event..." value="" />
+                    {availableEvents.map(event => (
+                      <Picker.Item
+                        key={event.id}
+                        label={event.title}
+                        value={event.id}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+                <Picker
+                  selectedValue={eventRelationship.relationshipTypeId}
+                  style={styles.relationshipType}
+                  onValueChange={value => {
+                    const newEventRelationships = [
+                      ...(form.eventRelationships ?? []),
+                    ];
+                    newEventRelationships[index] = {
+                      ...eventRelationship,
+                      relationshipTypeId: value,
+                    };
+                    handleChange('eventRelationships', newEventRelationships);
+                  }}
+                >
+                  {characterEventRole.entries.map(entry => (
+                    <Picker.Item
+                      key={entry.id}
+                      label={relationshipLabel(entry)}
+                      value={entry.id}
+                    />
+                  ))}
+                </Picker>
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => {
+                    const newEventRelationships = (
+                      form.eventRelationships ?? []
+                    ).filter((_, i) => i !== index);
+                    handleChange('eventRelationships', newEventRelationships);
+                  }}
+                >
+                  <Text style={styles.removeButtonText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => {
+              handleChange('eventRelationships', [
+                ...(form.eventRelationships ?? []),
+                {
+                  eventId: '',
+                  relationshipTypeId: defaultEventRelationshipTypeId,
+                },
+              ]);
+            }}
+          >
+            <Text style={styles.addButtonText}>Add Event Relationship</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.formSection}>
         <Text style={styles.label}>Status</Text>

@@ -1,6 +1,10 @@
 import { APP_NAME } from '@/branding';
 import { flag, num, text, type AttributeDefinition } from './attributes';
 import type { FacetCollection } from './facets';
+import type {
+  RelationshipTypeCollection,
+  RelationshipTypeEntry,
+} from './relationships';
 import type { RulesetDefinition } from './types';
 
 /**
@@ -210,6 +214,76 @@ const recipes: FacetCollection = {
   ],
 };
 
+/**
+ * The old `RelationshipStanding` enum (#50), reproduced as one entry list
+ * shared by all three legacy pairs so out-of-the-box behavior — values,
+ * polarity, and (via `resolveRelationshipColor`'s role fallback) color — is
+ * unchanged from before relationship types were ruleset-declared.
+ */
+const STANDING_ENTRIES: RelationshipTypeEntry[] = [
+  { id: 'ally', label: 'Ally', role: 'positive', legacyValue: 'Ally' },
+  { id: 'friend', label: 'Friend', role: 'positive', legacyValue: 'Friend' },
+  {
+    id: 'neutral',
+    label: 'Neutral',
+    role: 'neutral',
+    legacyValue: 'Neutral',
+  },
+  {
+    id: 'hostile',
+    label: 'Hostile',
+    role: 'negative',
+    legacyValue: 'Hostile',
+  },
+  { id: 'enemy', label: 'Enemy', role: 'negative', legacyValue: 'Enemy' },
+];
+
+const characterStanding: RelationshipTypeCollection = {
+  id: 'characterStanding',
+  singular: 'Relationship',
+  plural: 'Relationships',
+  appliesTo: ['character', 'character'],
+  legacyField: 'characterStanding',
+  defaultEntryId: 'neutral',
+  entries: STANDING_ENTRIES,
+};
+
+const characterFactionStanding: RelationshipTypeCollection = {
+  id: 'characterFactionStanding',
+  singular: 'Standing',
+  plural: 'Standings',
+  appliesTo: ['character', 'faction'],
+  legacyField: 'characterFactionStanding',
+  defaultEntryId: 'neutral',
+  entries: STANDING_ENTRIES,
+};
+
+const factionStanding: RelationshipTypeCollection = {
+  id: 'factionStanding',
+  singular: 'Relationship',
+  plural: 'Relationships',
+  appliesTo: ['faction', 'faction'],
+  legacyField: 'factionStanding',
+  defaultEntryId: 'neutral',
+  entries: STANDING_ENTRIES,
+};
+
+/**
+ * A net-new pair (character-event) with no legacy counterpart — proves the
+ * relationship-type mechanism generalizes beyond the three pairs
+ * `RelationshipStanding` used to hardcode.
+ */
+const characterEventRole: RelationshipTypeCollection = {
+  id: 'characterEventRole',
+  singular: 'Role',
+  plural: 'Roles',
+  appliesTo: ['character', 'event'],
+  entries: [
+    { id: 'witness', label: 'Witness', role: 'neutral' },
+    { id: 'organizer', label: 'Organizer', role: 'positive' },
+  ],
+};
+
 export const exampleRuleset: RulesetDefinition = {
   id: 'example',
   name: 'Lore Example',
@@ -218,6 +292,12 @@ export const exampleRuleset: RulesetDefinition = {
   terminology: {},
   attributes,
   facets: [archetypes, traits, qualities, modifications, recipes],
+  relationshipTypes: [
+    characterStanding,
+    characterFactionStanding,
+    factionStanding,
+    characterEventRole,
+  ],
   features: {
     quests: true,
     discord: true,

@@ -3,7 +3,7 @@ import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { EventsDetailScreen } from '@screens/events/EventsDetailScreen';
 import { describeDetailScreenContract } from '../../helpers/screenContracts';
 import { getStorageMock, primeStorageDefaults } from '../../helpers/storage';
-import { makeEvent, makeQuest } from '../../helpers/factories';
+import { makeCharacter, makeEvent, makeQuest } from '../../helpers/factories';
 import { QuestStatus } from '@models/types';
 import {
   installNavigationMock,
@@ -31,7 +31,12 @@ describeDetailScreenContract({
   edit: {
     expectedScreen: 'EventsForm',
     expectedParams: {
-      event: { ...event, characterNames: [], quests: [] },
+      event: {
+        ...event,
+        characterNames: [],
+        quests: [],
+        relatedCharacters: [],
+      },
     },
   },
   del: {
@@ -105,5 +110,42 @@ describe('EventsDetailScreen — narrative thread', () => {
 
     await waitFor(() => expect(getByText('The Great Fire')).toBeTruthy());
     expect(queryByText('Recover the Cargo')).toBeNull();
+  });
+
+  it('shows characters with a typed event relationship and navigates to one on tap', async () => {
+    // Discovered by scanning GameCharacter.eventRelationships (#50) — distinct
+    // from the plain "Characters Involved" list, which comes from
+    // GameEvent.characterIds.
+    const witness = makeCharacter({
+      id: 'char-witness',
+      name: 'Nadia Reyes',
+      eventRelationships: [
+        { eventId: EVENT_ID, relationshipTypeId: 'witness' },
+      ],
+    });
+
+    storage.loadEvents.mockResolvedValue([event]);
+    storage.loadCharacters.mockResolvedValue([witness]);
+
+    const { getByText } = render(<EventsDetailScreen />);
+
+    await waitFor(() => expect(getByText('Nadia Reyes')).toBeTruthy());
+    expect(getByText('Witness')).toBeTruthy();
+
+    fireEvent.press(getByText('Nadia Reyes'));
+
+    expect(nav.navigate).toHaveBeenCalledWith('CharacterDetail', {
+      character: witness,
+    });
+  });
+
+  it('omits the Related Characters section when no character has one', async () => {
+    storage.loadEvents.mockResolvedValue([event]);
+    storage.loadCharacters.mockResolvedValue([makeCharacter()]);
+
+    const { getByText, queryByText } = render(<EventsDetailScreen />);
+
+    await waitFor(() => expect(getByText('The Great Fire')).toBeTruthy());
+    expect(queryByText('Related Characters')).toBeNull();
   });
 });

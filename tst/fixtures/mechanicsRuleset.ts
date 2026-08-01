@@ -35,6 +35,7 @@
  */
 import { num, flag, type AttributeDefinition } from '@/ruleset/attributes';
 import type { FacetCollection } from '@/ruleset/facets';
+import type { RelationshipTypeCollection } from '@/ruleset/relationships';
 import type { RulesetDefinition } from '@/ruleset/types';
 
 const attributes: AttributeDefinition[] = [
@@ -259,6 +260,54 @@ const charms: FacetCollection = {
   ],
 };
 
+const clanTie: RelationshipTypeCollection = {
+  id: 'clan_tie',
+  singular: 'Clan Tie',
+  plural: 'Clan Ties',
+  appliesTo: ['character', 'character'],
+  defaultEntryId: 'clan_neutral',
+  entries: [
+    { id: 'clan_ally', label: 'Clan Ally', role: 'positive' },
+    { id: 'clan_neutral', label: 'Clan Neutral', role: 'neutral' },
+    { id: 'clan_foe', label: 'Clan Foe', role: 'negative' },
+  ],
+};
+
+const oath: RelationshipTypeCollection = {
+  id: 'oath',
+  singular: 'Oath',
+  plural: 'Oaths',
+  appliesTo: ['character', 'faction'],
+  defaultEntryId: 'oath_free',
+  entries: [
+    { id: 'oath_sworn', label: 'Oath Sworn', role: 'positive' },
+    { id: 'oath_free', label: 'Oath Free', role: 'neutral' },
+    { id: 'oath_broken', label: 'Oath Broken', role: 'negative' },
+  ],
+};
+
+// Exercises a directional (`symmetric: false`) entry alongside ordinary
+// symmetric ones, so engine-level tests (bidirectional faction sync,
+// role-based polarity) can prove both storage topologies against one fixture.
+const pact: RelationshipTypeCollection = {
+  id: 'pact',
+  singular: 'Pact',
+  plural: 'Pacts',
+  appliesTo: ['faction', 'faction'],
+  defaultEntryId: 'pact_rival',
+  entries: [
+    { id: 'pact_allied', label: 'Allied', role: 'positive' },
+    { id: 'pact_rival', label: 'Rival', role: 'negative' },
+    {
+      id: 'pact_vassal',
+      label: 'Vassal of',
+      inverseLabel: 'Suzerain of',
+      symmetric: false,
+      role: 'neutral',
+    },
+  ],
+};
+
 export const mechanicsRuleset: RulesetDefinition = {
   id: 'mechanics',
   name: 'Mechanics Fixture',
@@ -266,6 +315,7 @@ export const mechanicsRuleset: RulesetDefinition = {
   terminology: {},
   attributes,
   facets: [callings, knacks, bonds, temperaments, rigs, charms],
+  relationshipTypes: [clanTie, oath, pact],
   features: {
     quests: true,
     discord: false,

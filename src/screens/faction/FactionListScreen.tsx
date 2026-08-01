@@ -1,12 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import {
-  GameCharacter,
-  Faction,
-  RelationshipStanding,
-  POSITIVE_RELATIONSHIP_TYPE,
-  NEGATIVE_RELATIONSHIP_TYPE,
-} from '@models/types';
+import { GameCharacter, FactionMembership } from '@models/types';
 import {
   loadCharacters,
   getFactionDescription,
@@ -30,7 +24,15 @@ import {
   useEntitySearch,
   type FilterFieldConfig,
 } from '@/components';
-import { useLabels } from '@/ruleset';
+import { useLabels, useRuleset } from '@/ruleset';
+import {
+  findRelationshipCollectionForPair,
+  findRelationshipEntry,
+  isPositiveRelationship,
+  relationshipLabel,
+  resolveRelationshipColor,
+  type RelationshipTypeCollection,
+} from '@/ruleset/relationships';
 
 type FactionNavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'Factions'>,
@@ -38,7 +40,7 @@ type FactionNavigationProp = CompositeNavigationProp<
 >;
 
 interface FactionInfo {
-  faction: Faction;
+  faction: FactionMembership;
   characters: GameCharacter[];
   totalCount: number;
   presentCount: number;
@@ -46,14 +48,16 @@ interface FactionInfo {
   retired?: boolean;
 }
 
-const factionFilterFields: FilterFieldConfig[] = [
+const buildFactionFilterFields = (
+  characterFactionStanding: RelationshipTypeCollection | undefined
+): FilterFieldConfig[] => [
   {
     key: 'standing',
     type: 'select',
     label: 'Standing',
-    options: Object.values(RelationshipStanding).map(standing => ({
-      value: standing,
-      label: standing,
+    options: (characterFactionStanding?.entries ?? []).map(entry => ({
+      value: entry.id,
+      label: relationshipLabel(entry),
     })),
     matches: (item, value) =>
       ((item as FactionInfo).standingCounts[value] ?? 0) > 0,
@@ -78,8 +82,18 @@ export const FactionListScreen: React.FC = () => {
   const [factionInfos, setFactionInfos] = useState<FactionInfo[]>([]);
   const navigation = useNavigation<FactionNavigationProp>();
   const label = useLabels();
+  const { ruleset } = useRuleset();
   const { colors: themeColors } = useTheme();
   const commonStyles = useCommonStyles();
+
+  const characterFactionStanding = useMemo(
+    () => findRelationshipCollectionForPair(ruleset, ['character', 'faction']),
+    [ruleset]
+  );
+  const factionFilterFields = useMemo(
+    () => buildFactionFilterFields(characterFactionStanding),
+    [characterFactionStanding]
+  );
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -119,14 +133,7 @@ export const FactionListScreen: React.FC = () => {
           ...commonStyles.badge.base,
           minWidth: 60,
         },
-        standingAllied: commonStyles.badge.allied,
-        standingFriendly: commonStyles.badge.friendly,
-        standingNeutral: commonStyles.badge.neutral,
-        standingHostile: commonStyles.badge.hostile,
-        standingEnemy: commonStyles.badge.enemy,
         standingText: commonStyles.badge.text,
-        standingTextLight: commonStyles.badge.text,
-        standingTextDark: commonStyles.badge.text,
       }),
     [commonStyles, themeColors]
   );
@@ -141,11 +148,16 @@ export const FactionListScreen: React.FC = () => {
     const factionMap = new Map<
       string,
       {
-        faction: Faction;
+        faction: FactionMembership;
         characters: GameCharacter[];
         standings: Record<string, number>;
       }
     >();
+
+    const defaultRelationshipTypeId =
+      characterFactionStanding?.defaultEntryId ??
+      characterFactionStanding?.entries[0]?.id ??
+      '';
 
     // First, load centralized factions to ensure all created factions appear
     const storedFactions = await loadFactions();
@@ -156,7 +168,7 @@ export const FactionListScreen: React.FC = () => {
         factionMap.set(storedFaction.name, {
           faction: {
             name: storedFaction.name,
-            standing: RelationshipStanding.Neutral,
+            relationshipTypeId: defaultRelationshipTypeId,
             description: storedFaction.description,
           },
           characters: [],
@@ -179,18 +191,20 @@ export const FactionListScreen: React.FC = () => {
         const factionData = factionMap.get(faction.name)!;
 
         // Only count positive relationship standings as actual members
-        const standingValue = faction.standing as string;
         if (
-          POSITIVE_RELATIONSHIP_TYPE.includes(faction.standing) ||
-          standingValue === 'Allied' ||
-          standingValue === 'Friendly'
+          isPositiveRelationship(
+            findRelationshipEntry(
+              characterFactionStanding,
+              faction.relationshipTypeId
+            )
+          )
         ) {
           factionData.characters.push(character);
         }
 
         // Count all standings for display purposes
-        factionData.standings[faction.standing] =
-          (factionData.standings[faction.standing] || 0) + 1;
+        factionData.standings[faction.relationshipTypeId] =
+          (factionData.standings[faction.relationshipTypeId] || 0) + 1;
       });
     });
 
@@ -220,7 +234,7 @@ export const FactionListScreen: React.FC = () => {
     );
 
     setFactionInfos(factionInfosArray);
-  }, []);
+  }, [characterFactionStanding]);
 
   useFocusEffect(
     useCallback(() => {
@@ -248,7 +262,7 @@ export const FactionListScreen: React.FC = () => {
       initialValues: filterValues,
       onApply: setFilterValues,
     });
-  }, [navigation, label, filterValues, setFilterValues]);
+  }, [navigation, label, filterValues, setFilterValues, factionFilterFields]);
 
   const handleFactionSelect = (factionInfo: FactionInfo) => {
     navigation.navigate('FactionDetails', {
@@ -273,63 +287,37 @@ export const FactionListScreen: React.FC = () => {
         </View>
 
         <View style={styles.standingsContainer}>
-          {Object.entries(item.standingCounts).map(([standing, count]) => (
-            <View
-              key={standing}
-              style={[styles.standingBadge, getStandingStyle(standing)]}
-            >
-              <Text
-                style={[styles.standingText, getStandingTextStyle(standing)]}
-              >
-                {standing}: {count}
-              </Text>
-            </View>
-          ))}
+          {Object.entries(item.standingCounts).map(
+            ([relationshipTypeId, count]) => {
+              const entry = findRelationshipEntry(
+                characterFactionStanding,
+                relationshipTypeId
+              );
+              return (
+                <View
+                  key={relationshipTypeId}
+                  style={[
+                    styles.standingBadge,
+                    {
+                      backgroundColor: resolveRelationshipColor(
+                        entry,
+                        themeColors
+                      ),
+                    },
+                  ]}
+                >
+                  <Text style={styles.standingText}>
+                    {entry ? relationshipLabel(entry) : relationshipTypeId}:{' '}
+                    {count}
+                  </Text>
+                </View>
+              );
+            }
+          )}
         </View>
       </TouchableOpacity>
     </View>
   );
-
-  const getStandingStyle = (standing: string) => {
-    switch (standing) {
-      case RelationshipStanding.Ally:
-        return styles.standingAllied;
-      case RelationshipStanding.Friend:
-        return styles.standingFriendly;
-      case RelationshipStanding.Neutral:
-        return styles.standingNeutral;
-      case RelationshipStanding.Hostile:
-        return styles.standingHostile;
-      case RelationshipStanding.Enemy:
-        return styles.standingEnemy;
-      // Legacy support for faction standings that might use different values
-      case 'Allied':
-        return styles.standingAllied;
-      case 'Friendly':
-        return styles.standingFriendly;
-      default:
-        return styles.standingNeutral;
-    }
-  };
-
-  const getStandingTextStyle = (standing: string) => {
-    // Check if standing is positive (Allied/Ally/Friendly/Friend)
-    if (
-      POSITIVE_RELATIONSHIP_TYPE.includes(standing as RelationshipStanding) ||
-      standing === 'Allied' ||
-      standing === 'Friendly'
-    ) {
-      return styles.standingTextLight;
-    }
-
-    // Check if standing is negative (Hostile/Enemy)
-    if (NEGATIVE_RELATIONSHIP_TYPE.includes(standing as RelationshipStanding)) {
-      return styles.standingTextLight;
-    }
-
-    // Neutral or unknown standings
-    return styles.standingTextDark;
-  };
 
   const renderHeaderRight = () => (
     <View style={styles.headerRight}>

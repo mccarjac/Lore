@@ -40,8 +40,7 @@ import {
   GameEvent,
   GameQuest,
   QuestStatus,
-  RelationshipStanding,
-  Faction,
+  FactionMembership,
 } from '@/models/types';
 
 // Mock the SafeAsyncStorageJSONParser
@@ -73,7 +72,7 @@ describe('characterStorage', () => {
         traits: ['perk1'],
         qualities: ['dist1'],
       },
-      factions: [{ name: 'Brotherhood', standing: RelationshipStanding.Ally }],
+      factions: [{ name: 'Brotherhood', relationshipTypeId: 'ally' }],
       relationships: [],
       present: false,
       retired: false,
@@ -1326,8 +1325,8 @@ describe('characterStorage', () => {
           name: 'Test',
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
           factions: [
-            { name: 'ToDelete', standing: RelationshipStanding.Ally },
-            { name: 'ToKeep', standing: RelationshipStanding.Neutral },
+            { name: 'ToDelete', relationshipTypeId: 'ally' },
+            { name: 'ToKeep', relationshipTypeId: 'neutral' },
           ],
           relationships: [],
           present: false,
@@ -1360,9 +1359,7 @@ describe('characterStorage', () => {
           expect.objectContaining({
             characters: [
               expect.objectContaining({
-                factions: [
-                  { name: 'ToKeep', standing: RelationshipStanding.Neutral },
-                ],
+                factions: [{ name: 'ToKeep', relationshipTypeId: 'neutral' }],
               }),
             ],
           })
@@ -1395,7 +1392,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'ExistingFaction',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
           ],
         };
@@ -1411,7 +1408,7 @@ describe('characterStorage', () => {
                 relationships: [
                   {
                     factionName: 'NewFaction',
-                    relationshipType: RelationshipStanding.Ally,
+                    relationshipTypeId: 'ally',
                   },
                 ],
               }),
@@ -1432,7 +1429,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'OldName',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
           ],
         };
@@ -1441,7 +1438,7 @@ describe('characterStorage', () => {
           id: 'char-1',
           name: 'Test',
           facets: { archetypes: ['Human'], traits: [], qualities: [] },
-          factions: [{ name: 'OldName', standing: RelationshipStanding.Ally }],
+          factions: [{ name: 'OldName', relationshipTypeId: 'ally' }],
           relationships: [],
           present: false,
           retired: false,
@@ -1468,9 +1465,7 @@ describe('characterStorage', () => {
           expect.objectContaining({
             characters: [
               expect.objectContaining({
-                factions: [
-                  { name: 'NewName', standing: RelationshipStanding.Ally },
-                ],
+                factions: [{ name: 'NewName', relationshipTypeId: 'ally' }],
               }),
             ],
           })
@@ -1484,7 +1479,7 @@ describe('characterStorage', () => {
                 relationships: [
                   {
                     factionName: 'NewName',
-                    relationshipType: RelationshipStanding.Ally,
+                    relationshipTypeId: 'ally',
                   },
                 ],
               }),
@@ -1516,7 +1511,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'Faction2',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
           ],
         };
@@ -1526,7 +1521,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'Faction1',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
           ],
         };
@@ -1572,7 +1567,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'Faction2',
-              relationshipType: RelationshipStanding.Enemy,
+              relationshipTypeId: 'enemy',
             },
           ],
         });
@@ -1586,7 +1581,7 @@ describe('characterStorage', () => {
                 relationships: [
                   {
                     factionName: 'Faction1',
-                    relationshipType: RelationshipStanding.Enemy,
+                    relationshipTypeId: 'enemy',
                   },
                 ],
               }),
@@ -1602,7 +1597,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'Faction2',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
           ],
         };
@@ -1612,7 +1607,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'Faction1',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
             },
           ],
         };
@@ -1626,7 +1621,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'Faction2',
-              relationshipType: RelationshipStanding.Enemy,
+              relationshipTypeId: 'enemy',
             },
           ],
         });
@@ -1640,7 +1635,7 @@ describe('characterStorage', () => {
                 relationships: [
                   {
                     factionName: 'Faction1',
-                    relationshipType: RelationshipStanding.Enemy,
+                    relationshipTypeId: 'enemy',
                   },
                 ],
               }),
@@ -1696,7 +1691,7 @@ describe('characterStorage', () => {
           factions: [
             {
               name: 'Brotherhood',
-              standing: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
               description: 'A powerful faction from character data',
             },
           ],
@@ -1738,7 +1733,7 @@ describe('characterStorage', () => {
           factions: [
             {
               name: 'Brotherhood',
-              standing: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
               description: 'From character',
             },
           ],
@@ -2290,7 +2285,7 @@ describe('characterStorage', () => {
             traits: ['perk1'],
             qualities: ['dist1'],
           },
-          factions: [{ name: 'Faction1', standing: RelationshipStanding.Ally }],
+          factions: [{ name: 'Faction1', relationshipTypeId: 'ally' }],
           relationships: [],
           present: false,
           retired: false,
@@ -2306,9 +2301,7 @@ describe('characterStorage', () => {
             traits: ['perk2'],
             qualities: ['dist2'],
           },
-          factions: [
-            { name: 'Faction2', standing: RelationshipStanding.Neutral },
-          ],
+          factions: [{ name: 'Faction2', relationshipTypeId: 'neutral' }],
           relationships: [],
           present: false,
           retired: false,
@@ -2403,7 +2396,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               characterName: 'Alice',
-              relationshipType: RelationshipStanding.Friend,
+              relationshipTypeId: 'friend',
               description: 'Old friend',
             },
           ],
@@ -2421,12 +2414,12 @@ describe('characterStorage', () => {
           relationships: [
             {
               characterName: 'Alice',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'ally',
               description: 'Best friend now',
             },
             {
               characterName: 'Bob',
-              relationshipType: RelationshipStanding.Enemy,
+              relationshipTypeId: 'enemy',
               description: 'New enemy',
             },
           ],
@@ -2457,8 +2450,8 @@ describe('characterStorage', () => {
 
         expect(result.success).toBe(true);
         expect(result.merged[0].relationships).toHaveLength(2);
-        expect(result.merged[0].relationships[0].relationshipType).toBe(
-          RelationshipStanding.Ally
+        expect(result.merged[0].relationships[0].relationshipTypeId).toBe(
+          'ally'
         );
         expect(result.merged[0].relationships[0].description).toBe(
           'Best friend now'
@@ -2514,7 +2507,7 @@ describe('characterStorage', () => {
           relationships: [
             {
               factionName: 'TargetFaction',
-              relationshipType: RelationshipStanding.Hostile,
+              relationshipTypeId: 'hostile',
             },
           ],
         });
@@ -2530,7 +2523,7 @@ describe('characterStorage', () => {
                 relationships: expect.arrayContaining([
                   expect.objectContaining({
                     factionName: 'NewFaction',
-                    relationshipType: RelationshipStanding.Hostile,
+                    relationshipTypeId: 'hostile',
                   }),
                 ]),
               }),
@@ -2906,13 +2899,13 @@ describe('characterStorage', () => {
       });
 
       it('should update characters when they have the faction being deleted', async () => {
-        const factionToDelete: Faction = {
+        const factionToDelete: FactionMembership = {
           name: 'ToDelete',
-          standing: RelationshipStanding.Neutral,
+          relationshipTypeId: 'neutral',
         };
-        const factionToKeep: Faction = {
+        const factionToKeep: FactionMembership = {
           name: 'ToKeep',
-          standing: RelationshipStanding.Ally,
+          relationshipTypeId: 'ally',
         };
 
         const characterWithFaction: GameCharacter = {
@@ -2961,9 +2954,9 @@ describe('characterStorage', () => {
       });
 
       it('should not save characters if none were updated', async () => {
-        const otherFaction: Faction = {
+        const otherFaction: FactionMembership = {
           name: 'OtherFaction',
-          standing: RelationshipStanding.Ally,
+          relationshipTypeId: 'ally',
         };
 
         const characterWithoutFaction: GameCharacter = {
@@ -3076,13 +3069,13 @@ describe('characterStorage', () => {
       });
 
       it('should merge character arrays when ID already exists', async () => {
-        const faction1: Faction = {
+        const faction1: FactionMembership = {
           name: 'Faction1',
-          standing: RelationshipStanding.Ally,
+          relationshipTypeId: 'ally',
         };
-        const faction2: Faction = {
+        const faction2: FactionMembership = {
           name: 'Faction2',
-          standing: RelationshipStanding.Neutral,
+          relationshipTypeId: 'neutral',
         };
 
         const existingChar: GameCharacter = {

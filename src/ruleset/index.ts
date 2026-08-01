@@ -1,5 +1,6 @@
 export * from './types';
 export * from './facets';
+export * from './relationships';
 export * from './assets';
 export * from './validate';
 export * from './context';

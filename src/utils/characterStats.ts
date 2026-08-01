@@ -55,8 +55,8 @@ export const calculateCharacterStats = (
       if (!factionStandings[faction.name]) {
         factionStandings[faction.name] = {};
       }
-      factionStandings[faction.name][faction.standing] =
-        (factionStandings[faction.name][faction.standing] || 0) + 1;
+      factionStandings[faction.name][faction.relationshipTypeId] =
+        (factionStandings[faction.name][faction.relationshipTypeId] || 0) + 1;
     });
   });
 

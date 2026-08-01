@@ -4,7 +4,7 @@ import {
   getAllFactionStats as getAllFactionStatsWith,
   type FactionStats,
 } from '@/utils/factionStats';
-import { GameCharacter, RelationshipStanding } from '@/models/types';
+import { GameCharacter } from '@/models/types';
 import { FactionRelationship } from '@/utils/characterStorage';
 import { makeCharacter } from '../helpers/factories';
 import { mechanicsRuleset } from '../fixtures/mechanicsRuleset';
@@ -62,33 +62,29 @@ describe('factionStats', () => {
       });
     });
 
-    it('only counts Ally/Friend standings as members, ignoring Neutral/Hostile/Enemy', () => {
+    it('only counts positive-role standings as members, ignoring neutral/negative', () => {
       const characters: GameCharacter[] = [
         makeCharacter({
           id: '1',
           name: 'Ally Member',
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
         makeCharacter({
           id: '2',
           name: 'Friend Member',
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Friend },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
         makeCharacter({
           id: '3',
           name: 'Enemy Non-member',
           factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Enemy },
+            { name: 'Brotherhood', relationshipTypeId: 'oath_broken' },
           ],
         }),
         makeCharacter({
           id: '4',
           name: 'Unrelated',
-          factions: [{ name: 'Raiders', standing: RelationshipStanding.Ally }],
+          factions: [{ name: 'Raiders', relationshipTypeId: 'oath_sworn' }],
         }),
       ];
 
@@ -103,17 +99,13 @@ describe('factionStats', () => {
           id: '1',
           name: 'Present',
           present: true,
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
         makeCharacter({
           id: '2',
           name: 'Absent',
           present: false,
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
       ];
 
@@ -129,9 +121,7 @@ describe('factionStats', () => {
           id: '1',
           name: 'Member A',
           facets: { callings: ['tinker'], knacks: ['hammer_hand'] },
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
         makeCharacter({
           id: '2',
@@ -140,17 +130,13 @@ describe('factionStats', () => {
             callings: ['tinker'],
             knacks: ['hammer_hand', 'kin_secret'],
           },
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Friend },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
         makeCharacter({
           id: '3',
           name: 'Member C',
           facets: { callings: ['sentinel'], knacks: [] },
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
       ];
 
@@ -190,9 +176,7 @@ describe('factionStats', () => {
             knacks: ['not-a-real-perk'],
             temperaments: ['not-a-real-distinction'],
           },
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
       ];
 
@@ -208,31 +192,29 @@ describe('factionStats', () => {
 
     it('classifies faction relationships into allied and enemy factions', () => {
       const relationships: FactionRelationship[] = [
-        { factionName: 'Raiders', relationshipType: RelationshipStanding.Ally },
+        { factionName: 'Raiders', relationshipTypeId: 'pact_allied' },
         {
           factionName: 'Scavengers',
-          relationshipType: RelationshipStanding.Friend,
+          relationshipTypeId: 'pact_allied',
         },
         {
           factionName: 'Vault Dwellers',
-          relationshipType: RelationshipStanding.Enemy,
+          relationshipTypeId: 'pact_rival',
         },
         {
           factionName: 'Ghouls',
-          relationshipType: RelationshipStanding.Hostile,
+          relationshipTypeId: 'pact_rival',
         },
         {
           factionName: 'Traders',
-          relationshipType: RelationshipStanding.Neutral,
+          relationshipTypeId: 'pact_vassal',
         },
       ];
       const characters: GameCharacter[] = [
         makeCharacter({
           id: '1',
           name: 'Member A',
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
       ];
 
@@ -255,17 +237,13 @@ describe('factionStats', () => {
           id: '1',
           name: 'Brotherhood Member',
           facets: { knacks: ['hammer_hand'] },
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
         makeCharacter({
           id: '2',
           name: 'Ally Member',
           facets: { knacks: ['hammer_hand'] },
-          factions: [
-            { name: 'Scavengers', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Scavengers', relationshipTypeId: 'oath_sworn' }],
         }),
       ];
       const relationshipsMap = new Map<string, FactionRelationship[]>([
@@ -274,7 +252,7 @@ describe('factionStats', () => {
           [
             {
               factionName: 'Scavengers',
-              relationshipType: RelationshipStanding.Ally,
+              relationshipTypeId: 'pact_allied',
             },
           ],
         ],
@@ -326,9 +304,7 @@ describe('factionStats', () => {
         makeCharacter({
           id: '1',
           name: 'Member A',
-          factions: [
-            { name: 'Brotherhood', standing: RelationshipStanding.Ally },
-          ],
+          factions: [{ name: 'Brotherhood', relationshipTypeId: 'oath_sworn' }],
         }),
       ];
       const relationshipsMap = new Map<string, FactionRelationship[]>([

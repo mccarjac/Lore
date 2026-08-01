@@ -254,6 +254,16 @@ the images, and changes no tracked source at all.
   There is no `UNKNOWN_ARCHETYPE_ID` fallback any more: a `single`-selection
   collection may legitimately be unset (empty `facets[collectionId]`), unlike
   the old required `archetypeId: string`.
+  The same file also migrates the pre-#50 `RelationshipStanding` enum
+  (`character.factions[].standing`, `character.relationships[].relationshipType`,
+  `StoredFaction.relationships[].relationshipType`) into a ruleset-declared
+  `relationshipTypeId`, resolving each old member name (`'Ally'`, `'Hostile'`,
+  ...) through whichever `RelationshipTypeCollection` declared
+  `legacyField: 'characterFactionStanding' | 'characterStanding' |
+'factionStanding'` and an entry with a matching `legacyValue` — the same
+  `legacyField` pattern `FacetCollection` uses, one level up. This third
+  normalizer runs from `migrateRulesetFields()` under the faction storage
+  key, sequenced after (never nested with) the character and quest keys.
 - **Data stores are a plugin seam, not a fixed list (#29).** `src/datastores/`
   holds the `DataStore` contract, a registry, and the three built-ins. A store
   declares `actions` (the engine renders a button per action via
@@ -609,7 +619,12 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   relationship must keep the reciprocal relationship on the other faction in
   sync, and renaming a faction must update its references on characters and on
   other factions' relationships. See `updateFaction` / `createFaction` in
-  `characterStorage.ts` for the pattern.
+  `characterStorage.ts` for the pattern. When the relationship type's
+  `symmetric` is `false` (#50 — a directional/hierarchy relationship, not
+  mutual standing), the reciprocal's `FactionRelationship.direction` must be
+  the flip of the authored side's, via `flipDirection()`
+  (`src/ruleset/relationships.ts`); a symmetric entry leaves `direction`
+  unset on both sides, as it always has.
 - **Quest ↔ event links:** `GameQuest.eventIds` and `GameEvent.questIds` are
   mirrored back-references, kept in sync by `addQuest`/`updateQuest`/
   `deleteQuest`/`addEvent`/`updateEvent`/`deleteEvent` in `characterStorage.ts`
@@ -644,9 +659,10 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   stepper that leaks a frame callback into Jest teardown. Determinism is a
   documented, tested contract: circle-seeded positions in stable (type, id)
   order plus a seeded PRNG passed to each force's `initialize`. Edge rest
-  distances are standing-aware (`standingDistanceFactor`: Ally/Friend
-  shorter, Hostile/Enemy longer; the worse side of a disputed relationship
-  wins). The layout is an infinite canvas: positions are never clamped —
+  distances are role-aware (#50 — `standingDistanceFactor` dispatches on each
+  edge's resolved `role`, not a literal relationship-type id: positive
+  shorter, negative longer; the worse side of a disputed relationship wins).
+  The layout is an infinite canvas: positions are never clamped —
   `computeGraphLayout` returns `{ nodes, size }` where `size` is the natural
   content extent, and `GraphCanvas` pans/zooms it (`contentSize` vs
   `containerSize` — content must stay centered for `clampTranslation`'s
