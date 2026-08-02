@@ -25,7 +25,7 @@ describeListScreenContract({
       makeCharacter({ id: 'char-2', name: 'Bob' }),
     ]);
   },
-  populatedTexts: ['Alice', 'Iron Legion', 'Bob', 'No factions'],
+  populatedTexts: ['Alice', 'Iron Legion', 'Bob'],
 });
 
 // Presence (#56) left the engine — the list screen no longer shows a
@@ -46,5 +46,6 @@ describe('CharacterListScreen presence removal (#56)', () => {
     expect(queryByText('Absent')).toBeNull();
     expect(queryByText('Present Only')).toBeNull();
     expect(queryByText('Reset Present')).toBeNull();
+    expect(queryByText('No factions')).toBeNull();
   });
 });

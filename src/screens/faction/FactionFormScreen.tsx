@@ -721,73 +721,78 @@ export const FactionFormScreen: React.FC = () => {
           </Text>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>
-            {label('faction.singular')} Relationships
-          </Text>
-          <Text style={styles.helperText}>
-            Define relationships with other factions (allies, enemies, etc.)
-          </Text>
-
-          {formData.relationships && formData.relationships.length > 0 ? (
-            <View style={styles.relationshipsList}>
-              {formData.relationships.map((relationship, index) => {
-                const entry = findRelationshipEntry(
-                  factionFactionRelationship,
-                  relationship.relationshipTypeId
-                );
-                return (
-                  <View
-                    key={index}
-                    style={[
-                      styles.relationshipCard,
-                      {
-                        backgroundColor: resolveRelationshipColor(
-                          entry,
-                          themeColors
-                        ),
-                      },
-                    ]}
-                  >
-                    <View style={styles.relationshipCardContent}>
-                      <Text style={styles.relationshipFactionName}>
-                        {relationship.factionName}
-                      </Text>
-                      <Text style={styles.relationshipType}>
-                        {entry
-                          ? relationshipLabel(entry, relationship.direction)
-                          : relationship.relationshipTypeId}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.removeRelationshipButton}
-                      onPress={() =>
-                        handleRemoveRelationship(relationship.factionName)
-                      }
-                    >
-                      <Text style={styles.removeRelationshipButtonText}>×</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={styles.emptyRelationships}>
-              <Text style={styles.emptyRelationshipsText}>
-                No relationships defined yet
-              </Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.addRelationshipButton}
-            onPress={() => setShowRelationshipModal(true)}
-          >
-            <Text style={styles.addRelationshipButtonText}>
-              + Add Relationship
+        {(factionFactionRelationship ||
+          (formData.relationships || []).length > 0) && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>
+              {label('faction.singular')} Relationships
             </Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={styles.helperText}>
+              Define relationships with other factions (allies, enemies, etc.)
+            </Text>
+
+            {formData.relationships && formData.relationships.length > 0 ? (
+              <View style={styles.relationshipsList}>
+                {formData.relationships.map((relationship, index) => {
+                  const entry = findRelationshipEntry(
+                    factionFactionRelationship,
+                    relationship.relationshipTypeId
+                  );
+                  return (
+                    <View
+                      key={index}
+                      style={[
+                        styles.relationshipCard,
+                        {
+                          backgroundColor: resolveRelationshipColor(
+                            entry,
+                            themeColors
+                          ),
+                        },
+                      ]}
+                    >
+                      <View style={styles.relationshipCardContent}>
+                        <Text style={styles.relationshipFactionName}>
+                          {relationship.factionName}
+                        </Text>
+                        <Text style={styles.relationshipType}>
+                          {entry
+                            ? relationshipLabel(entry, relationship.direction)
+                            : relationship.relationshipTypeId}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.removeRelationshipButton}
+                        onPress={() =>
+                          handleRemoveRelationship(relationship.factionName)
+                        }
+                      >
+                        <Text style={styles.removeRelationshipButtonText}>
+                          ×
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyRelationships}>
+                <Text style={styles.emptyRelationshipsText}>
+                  No relationships defined yet
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={styles.addRelationshipButton}
+              onPress={() => setShowRelationshipModal(true)}
+            >
+              <Text style={styles.addRelationshipButtonText}>
+                + Add Relationship
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {factionName && (
           <View style={styles.inputGroup}>

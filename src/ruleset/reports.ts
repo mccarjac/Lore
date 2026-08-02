@@ -40,5 +40,5 @@ export interface ReportDefinition {
 /** Hook form, mirroring `useFeature`. */
 export function useReports(): ReportDefinition[] {
   const { ruleset } = useRuleset();
-  return ruleset.reports;
+  return ruleset.reports ?? [];
 }

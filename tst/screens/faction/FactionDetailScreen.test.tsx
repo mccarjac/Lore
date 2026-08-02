@@ -19,7 +19,7 @@ describeDetailScreenContract({
       makeStoredFaction({ name: FACTION_NAME }),
     ]);
   },
-  expectedContent: [FACTION_NAME, 'No description provided', 'Statistics'],
+  expectedContent: [FACTION_NAME, 'Statistics'],
   edit: {
     expectedScreen: 'FactionForm',
     expectedParams: { factionName: FACTION_NAME },

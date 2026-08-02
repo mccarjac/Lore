@@ -801,10 +801,10 @@ export const FactionDetailsScreen: React.FC = () => {
           </View>
         )}
 
-        <View style={styles.descriptionSection}>
-          <Text style={styles.descriptionLabel}>Description</Text>
-          <View style={styles.descriptionDisplay}>
-            {factionDescription ? (
+        {factionDescription && (
+          <View style={styles.descriptionSection}>
+            <Text style={styles.descriptionLabel}>Description</Text>
+            <View style={styles.descriptionDisplay}>
               <ErrorBoundary
                 fallback={
                   <Text style={styles.descriptionText}>
@@ -814,13 +814,9 @@ export const FactionDetailsScreen: React.FC = () => {
               >
                 <Markdown style={markdownStyles}>{factionDescription}</Markdown>
               </ErrorBoundary>
-            ) : (
-              <Text style={styles.descriptionText}>
-                No description provided
-              </Text>
-            )}
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
       {/* Faction Statistics */}
