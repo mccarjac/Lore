@@ -155,7 +155,7 @@ export interface RulesetDefinition {
    * They're grouped under a collapsible "Statistics" drawer section; an
    * empty array (the default) renders no such section. See `reports.ts`.
    */
-  reports: ReportDefinition[];
+  reports?: ReportDefinition[];
   /**
    * Asset key resolved through RulesetAssets — never a require() result.
    * The map's display name is `terminology['map.label']`, not a field here:

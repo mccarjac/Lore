@@ -533,6 +533,15 @@ describe('validateRuleset', () => {
     });
   });
 
+  it('does not flag a ruleset that omits reports (optional, defaults to [])', () => {
+    const ruleset = baseRuleset();
+    delete (ruleset as Partial<RulesetDefinition>).reports;
+    const result = validateRuleset(ruleset);
+    expect(
+      result.issues.filter(issue => issue.path.startsWith('reports'))
+    ).toEqual([]);
+  });
+
   it('flags an empty map.imageKey when map is present', () => {
     const ruleset = baseRuleset();
     ruleset.map = { imageKey: '' };

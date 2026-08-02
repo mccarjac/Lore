@@ -1,9 +1,15 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
 import { FactionFormScreen } from '@screens/faction/FactionFormScreen';
 import { describeFormScreenContract } from '../../helpers/screenContracts';
 import { getStorageMock } from '../../helpers/storage';
 import { makeStoredFaction } from '../../helpers/factories';
+import {
+  installRouteParams,
+  resetNavigationMocks,
+} from '../../helpers/navigation';
+import { renderWithRuleset } from '../../helpers/ruleset';
+import { genericRuleset } from '../../fixtures/genericRuleset';
 
 jest.mock('@utils/characterStorage');
 
@@ -34,4 +40,56 @@ describeFormScreenContract({
     },
     prefilledValue: FACTION_NAME,
   },
+});
+
+// The "Faction Relationships" section must not render for a ruleset that
+// declares no faction-faction pairing, unless the faction already has
+// stored relationship data from a ruleset that used to declare one — that
+// data must stay visible and removable rather than becoming orphaned.
+describe('FactionFormScreen — relationships section visibility', () => {
+  afterEach(() => {
+    resetNavigationMocks();
+  });
+
+  const rulesetWithoutFactionPairing = {
+    ...genericRuleset,
+    relationshipTypes: genericRuleset.relationshipTypes.filter(
+      collection => collection.id !== 'accord'
+    ),
+  };
+
+  it('hides the section for a new faction when the ruleset has no faction-faction pairing', async () => {
+    installRouteParams({});
+    storage.loadFactions.mockResolvedValue([]);
+
+    const { getByText, queryByText } = renderWithRuleset(
+      <FactionFormScreen />,
+      { ruleset: rulesetWithoutFactionPairing }
+    );
+
+    await waitFor(() => expect(getByText('Create Faction')).toBeTruthy());
+    expect(queryByText(/Relationships$/)).toBeNull();
+    expect(queryByText('+ Add Relationship')).toBeNull();
+  });
+
+  it('keeps the section for a faction with existing relationship data even when the ruleset drops the pairing', async () => {
+    installRouteParams({ factionName: FACTION_NAME });
+    storage.loadFactions.mockResolvedValue([
+      makeStoredFaction({
+        name: FACTION_NAME,
+        relationships: [
+          { factionName: 'Other Faction', relationshipTypeId: 'old-id' },
+        ],
+      }),
+    ]);
+
+    const { getByText, queryByText } = renderWithRuleset(
+      <FactionFormScreen />,
+      { ruleset: rulesetWithoutFactionPairing }
+    );
+
+    await waitFor(() => expect(getByText('Update Faction')).toBeTruthy());
+    expect(queryByText(/Relationships$/)).toBeTruthy();
+    expect(getByText('+ Add Relationship')).toBeTruthy();
+  });
 });

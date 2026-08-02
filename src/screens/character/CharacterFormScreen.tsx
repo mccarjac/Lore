@@ -972,117 +972,122 @@ export const CharacterFormScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.formSection}>
-        <Text style={styles.label}>Relationships</Text>
-        {form.relationships.map((relationship, index) => (
-          <View key={index} style={styles.relationshipGroup}>
-            <View style={styles.relationshipContainer}>
-              <View style={styles.relationshipPickerContainer}>
+      {(characterStanding || form.relationships.length > 0) && (
+        <View style={styles.formSection}>
+          <Text style={styles.label}>Relationships</Text>
+          {form.relationships.map((relationship, index) => (
+            <View key={index} style={styles.relationshipGroup}>
+              <View style={styles.relationshipContainer}>
+                <View style={styles.relationshipPickerContainer}>
+                  <Picker
+                    selectedValue={relationship.characterName}
+                    style={styles.relationshipNamePicker}
+                    onValueChange={value => {
+                      const newRelationships = [...form.relationships];
+                      newRelationships[index] = {
+                        ...relationship,
+                        characterName: value,
+                      };
+                      handleChange('relationships', newRelationships);
+                    }}
+                  >
+                    <Picker.Item
+                      label={`Select ${label('character.singular')}...`}
+                      value=""
+                    />
+                    {getAvailableCharacterNames().map(name => (
+                      <Picker.Item key={name} label={name} value={name} />
+                    ))}
+                    <Picker.Item
+                      label="Other (Custom Name)"
+                      value="__CUSTOM__"
+                    />
+                  </Picker>
+                </View>
                 <Picker
-                  selectedValue={relationship.characterName}
-                  style={styles.relationshipNamePicker}
+                  selectedValue={relationship.relationshipTypeId}
+                  style={styles.relationshipType}
                   onValueChange={value => {
                     const newRelationships = [...form.relationships];
                     newRelationships[index] = {
                       ...relationship,
-                      characterName: value,
+                      relationshipTypeId: value,
                     };
                     handleChange('relationships', newRelationships);
                   }}
                 >
-                  <Picker.Item
-                    label={`Select ${label('character.singular')}...`}
-                    value=""
-                  />
-                  {getAvailableCharacterNames().map(name => (
-                    <Picker.Item key={name} label={name} value={name} />
+                  {(characterStanding?.entries ?? []).map(entry => (
+                    <Picker.Item
+                      key={entry.id}
+                      label={relationshipLabel(entry)}
+                      value={entry.id}
+                    />
                   ))}
-                  <Picker.Item label="Other (Custom Name)" value="__CUSTOM__" />
                 </Picker>
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => {
+                    const newRelationships = form.relationships.filter(
+                      (_, i) => i !== index
+                    );
+                    handleChange('relationships', newRelationships);
+                  }}
+                >
+                  <Text style={styles.removeButtonText}>×</Text>
+                </TouchableOpacity>
               </View>
-              <Picker
-                selectedValue={relationship.relationshipTypeId}
-                style={styles.relationshipType}
-                onValueChange={value => {
-                  const newRelationships = [...form.relationships];
-                  newRelationships[index] = {
-                    ...relationship,
-                    relationshipTypeId: value,
-                  };
-                  handleChange('relationships', newRelationships);
-                }}
-              >
-                {(characterStanding?.entries ?? []).map(entry => (
-                  <Picker.Item
-                    key={entry.id}
-                    label={relationshipLabel(entry)}
-                    value={entry.id}
+              {relationship.characterName === '__CUSTOM__' && (
+                <View style={styles.customNameContainer}>
+                  <TextInput
+                    style={styles.customNameInput}
+                    value={relationship.customName || ''}
+                    onChangeText={value => {
+                      const newRelationships = [...form.relationships];
+                      newRelationships[index] = {
+                        ...relationship,
+                        customName: value,
+                      };
+                      handleChange('relationships', newRelationships);
+                    }}
+                    placeholder="Enter custom character name"
                   />
-                ))}
-              </Picker>
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => {
-                  const newRelationships = form.relationships.filter(
-                    (_, i) => i !== index
-                  );
-                  handleChange('relationships', newRelationships);
-                }}
-              >
-                <Text style={styles.removeButtonText}>×</Text>
-              </TouchableOpacity>
-            </View>
-            {relationship.characterName === '__CUSTOM__' && (
-              <View style={styles.customNameContainer}>
+                </View>
+              )}
+              <View style={styles.relationshipDescContainer}>
                 <TextInput
-                  style={styles.customNameInput}
-                  value={relationship.customName || ''}
+                  style={styles.relationshipDescInput}
+                  value={relationship.description || ''}
                   onChangeText={value => {
                     const newRelationships = [...form.relationships];
                     newRelationships[index] = {
                       ...relationship,
-                      customName: value,
+                      description: value,
                     };
                     handleChange('relationships', newRelationships);
                   }}
-                  placeholder="Enter custom character name"
+                  placeholder={`Description of relationship with ${relationship.characterName || 'character'}`}
+                  multiline
                 />
               </View>
-            )}
-            <View style={styles.relationshipDescContainer}>
-              <TextInput
-                style={styles.relationshipDescInput}
-                value={relationship.description || ''}
-                onChangeText={value => {
-                  const newRelationships = [...form.relationships];
-                  newRelationships[index] = {
-                    ...relationship,
-                    description: value,
-                  };
-                  handleChange('relationships', newRelationships);
-                }}
-                placeholder={`Description of relationship with ${relationship.characterName || 'character'}`}
-                multiline
-              />
             </View>
-          </View>
-        ))}
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => {
-            handleChange('relationships', [
-              ...form.relationships,
-              {
-                characterName: '',
-                relationshipTypeId: defaultCharacterRelationshipTypeId,
-                description: '',
-              },
-            ]);
-          }}
-        >
-          <Text style={styles.addButtonText}>Add Relationship</Text>
-        </TouchableOpacity>
-      </View>
+          ))}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => {
+              handleChange('relationships', [
+                ...form.relationships,
+                {
+                  characterName: '',
+                  relationshipTypeId: defaultCharacterRelationshipTypeId,
+                  description: '',
+                },
+              ]);
+            }}
+          >
+            <Text style={styles.addButtonText}>Add Relationship</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {characterEventRole && (
         <View style={styles.formSection}>

@@ -556,21 +556,23 @@ export const QuestFormScreen: React.FC = () => {
               )
               .map(collection => (
                 <React.Fragment key={collection.id}>
-                  <MultiSelectField
-                    label={collection.plural}
-                    placeholder={`Select ${collection.singular.toLowerCase()} to add...`}
-                    options={collection.entries.map(entry => ({
-                      value: entry.id,
-                      label: entry.label,
-                    }))}
-                    selected={formData[which].entries[collection.id] ?? []}
-                    onAdd={value =>
-                      addPreference(which, 'entries', collection.id, value)
-                    }
-                    onRemove={value =>
-                      removePreference(which, 'entries', collection.id, value)
-                    }
-                  />
+                  {collection.entries.length > 0 && (
+                    <MultiSelectField
+                      label={collection.plural}
+                      placeholder={`Select ${collection.singular.toLowerCase()} to add...`}
+                      options={collection.entries.map(entry => ({
+                        value: entry.id,
+                        label: entry.label,
+                      }))}
+                      selected={formData[which].entries[collection.id] ?? []}
+                      onAdd={value =>
+                        addPreference(which, 'entries', collection.id, value)
+                      }
+                      onRemove={value =>
+                        removePreference(which, 'entries', collection.id, value)
+                      }
+                    />
+                  )}
                   {collection.categories &&
                     collection.categories.length > 0 && (
                       <MultiSelectField

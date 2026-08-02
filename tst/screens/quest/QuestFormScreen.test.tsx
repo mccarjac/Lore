@@ -80,4 +80,26 @@ describe('QuestFormScreen — team preferences come from the ruleset', () => {
       expect(allLabels).not.toContain(afterworldsLabel);
     });
   });
+
+  it('hides a collection’s entries field when it has none, independent of its categories field', async () => {
+    const rulesetWithEmptyTalents = {
+      ...genericRuleset,
+      facets: genericRuleset.facets.map(collection =>
+        collection.id === 'talents'
+          ? { ...collection, entries: [] }
+          : collection
+      ),
+    };
+    const view = renderWithRuleset(<QuestFormScreen />, {
+      ruleset: rulesetWithEmptyTalents,
+    });
+    await waitFor(() => view.getByText('Team Preferences'));
+    fireEvent.press(view.getByText('Team Preferences'));
+
+    // The entries field (label "Talents") is gone on both axes...
+    expect(view.queryAllByText('Talents')).toHaveLength(0);
+    // ...but the categories field (label "Disciplines") still renders, since
+    // only `entries` was emptied.
+    expect(view.queryAllByText('Disciplines')).toHaveLength(2);
+  });
 });

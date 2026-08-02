@@ -273,3 +273,60 @@ describe('CharacterFormScreen — reads the active ruleset', () => {
     expect(queryByText('Health:')).toBeNull();
   });
 });
+
+// The character-character "Relationships" section must not render for a
+// ruleset that declares no such pairing, unless the character already has
+// stored relationship data from a ruleset that used to declare one — that
+// data must stay visible and removable rather than becoming orphaned.
+describe('CharacterFormScreen — relationships section visibility', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    primeStorageDefaults();
+    installRouteParams({});
+  });
+
+  afterEach(() => {
+    resetNavigationMocks();
+    jest.restoreAllMocks();
+  });
+
+  const rulesetWithoutCharacterPairing = {
+    ...genericRuleset,
+    relationshipTypes: genericRuleset.relationshipTypes.filter(
+      collection => collection.id !== 'rapport'
+    ),
+  };
+
+  it('hides the section for a new character when the ruleset has no character-character pairing', async () => {
+    const screen = renderWithRuleset(<CharacterFormScreen />, {
+      ruleset: rulesetWithoutCharacterPairing,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('Create Character')).toBeTruthy()
+    );
+    expect(screen.queryByText('Relationships')).toBeNull();
+    expect(screen.queryByText('Add Relationship')).toBeNull();
+  });
+
+  it('keeps the section for a character with existing relationship data even when the ruleset drops the pairing', async () => {
+    const existing = makeCharacter({
+      id: 'char-1',
+      name: 'Alice',
+      relationships: [
+        { characterName: 'Bob', relationshipTypeId: 'old-id', description: '' },
+      ],
+    });
+    installRouteParams({ character: existing });
+
+    const screen = renderWithRuleset(<CharacterFormScreen />, {
+      ruleset: rulesetWithoutCharacterPairing,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('Update Character')).toBeTruthy()
+    );
+    expect(screen.getByText('Relationships')).toBeTruthy();
+    expect(screen.getByText('Add Relationship')).toBeTruthy();
+  });
+});

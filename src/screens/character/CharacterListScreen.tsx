@@ -115,9 +115,11 @@ export const CharacterListScreen: React.FC = () => {
           {item.name}
         </Text>
       </View>
-      <Text style={styles.factions}>
-        {(item.factions || []).map(f => f.name).join(', ') || 'No factions'}
-      </Text>
+      {item.factions && item.factions.length > 0 && (
+        <Text style={styles.factions}>
+          {item.factions.map(f => f.name).join(', ')}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 

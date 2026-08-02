@@ -279,8 +279,9 @@ interface ReportDefinition {
 }
 ```
 
-`RulesetDefinition.reports: ReportDefinition[]` — array order is drawer
-order. An empty array (the default) declares no reports at all. Enabled
+`RulesetDefinition.reports?: ReportDefinition[]` — optional, defaulting to
+`[]`; array order is drawer order. Omitting it (or passing `[]`) declares no
+reports at all. Enabled
 reports are grouped under a single collapsible "Statistics" section in the
 drawer, collapsed by default; the section itself doesn't render when
 `reports` is empty. Omitting `title` falls back to the engine's default for
