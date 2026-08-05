@@ -106,7 +106,13 @@ const fullDataset = (): CampaignDataset => ({
       id: 'loc-vault',
       name: 'The Vault',
       description: 'Sealed since the fall.',
-      mapCoordinates: { x: 0.25, y: 0.75 },
+      mapImageUri: 'file:///vault-map.jpg',
+      mapPins: [{ id: 'pin-1', locationId: 'loc-threshold', x: 0.25, y: 0.75 }],
+    }),
+    makeLocation({
+      id: 'loc-threshold',
+      name: 'Threshold Market',
+      description: 'Marked on the Vault map.',
     }),
   ],
   events: [
@@ -471,17 +477,17 @@ describe('renderCampaignHtml', () => {
       expect(html).not.toContain('The seal is cracked.');
     });
 
-    it('omits map coordinates when the ruleset has no map', () => {
+    it('omits pinned-location list when the ruleset has the map feature off', () => {
       const html = render(fullDataset(), genericRuleset);
 
-      expect(html).not.toContain('0.250');
+      expect(html).not.toContain('Marked on this');
     });
 
-    it('renders map coordinates under the ruleset map label', () => {
+    it("lists locations pinned on this location's map, under the map label", () => {
       const html = render(fullDataset());
 
-      expect(html).toContain('Realm Map Position');
-      expect(html).toContain('0.250, 0.750');
+      expect(html).toContain('Marked on this Realm Map');
+      expect(html).toContain('Threshold Market');
     });
   });
 

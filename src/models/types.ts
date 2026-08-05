@@ -1,14 +1,22 @@
 import type { AttributeBag, Modifier } from '@/ruleset/types';
 
+/** A pin marking another location on the location's own map. */
+export interface LocationMapPin {
+  id: string;
+  locationId: string;
+  x: number; // Normalized coordinate (0-1) representing position on the map
+  y: number; // Normalized coordinate (0-1) representing position on the map
+}
+
 export interface GameLocation {
   id: string;
   name: string;
   description: string;
   imageUris?: string[];
-  mapCoordinates?: {
-    x: number; // Normalized coordinate (0-1) representing position on map
-    y: number; // Normalized coordinate (0-1) representing position on map
-  };
+  /** This location's own map image (a user photo, not a ruleset asset). */
+  mapImageUri?: string;
+  /** Other locations marked on this location's map. */
+  mapPins?: LocationMapPin[];
   createdAt: string;
   updatedAt: string;
 }

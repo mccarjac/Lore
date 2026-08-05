@@ -14,6 +14,7 @@ import { commonStyles } from '@/styles/commonStyles';
 interface MapLocationPickerModalProps {
   visible: boolean;
   locations: GameLocation[];
+  placedLocationIds: Set<string>;
   onSelect: (locationId: string) => void;
   onCancel: () => void;
 }
@@ -21,6 +22,7 @@ interface MapLocationPickerModalProps {
 export const MapLocationPickerModal: React.FC<MapLocationPickerModalProps> = ({
   visible,
   locations,
+  placedLocationIds,
   onSelect,
   onCancel,
 }) => {
@@ -52,7 +54,7 @@ export const MapLocationPickerModal: React.FC<MapLocationPickerModalProps> = ({
                   <Text style={styles.rowName} numberOfLines={1}>
                     {location.name}
                   </Text>
-                  {location.mapCoordinates && (
+                  {placedLocationIds.has(location.id) && (
                     <View style={styles.placedBadge}>
                       <Text style={styles.placedBadgeText}>placed</Text>
                     </View>

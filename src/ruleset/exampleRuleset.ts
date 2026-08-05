@@ -24,11 +24,10 @@ import type { RulesetDefinition } from './types';
  *   labels" literally checkable, and it is the only place the `useLabels` /
  *   `getLabel` fallback path is exercised in a running app rather than only
  *   under test.
- * - **`map` is off and absent.** The map is the one feature needing a bundled
- *   binary, and images belong to the ruleset that uses them. Shipping a
- *   placeholder PNG in the engine would put an asset in every fork's way for
- *   no benefit. Every other feature is on, so the engine's screens are all
- *   reachable out of the box.
+ * - **Every feature is on**, `map` included: a map is owned by a Location (a
+ *   user photo plus pins to other locations) rather than a ruleset-bundled
+ *   asset, so there is no binary for the engine to ship or withhold — every
+ *   screen is reachable out of the box.
  *
  * Five facet collections are declared — one more than the four the engine
  * used to hardcode, plus a catalog — proving the point of #51: a ruleset
@@ -320,7 +319,7 @@ export const exampleRuleset: RulesetDefinition = {
   features: {
     quests: true,
     discord: true,
-    map: false,
+    map: true,
   },
   // Reporting screens stay opt-in — see docs/ruleset-authoring.md. Two
   // enabled here so the collapsible "Statistics" nav section has something

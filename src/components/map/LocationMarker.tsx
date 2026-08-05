@@ -12,6 +12,8 @@ const MARKER_SIZE = 44;
 const DOT_SIZE = 20;
 
 interface LocationMarkerProps {
+  x: number;
+  y: number;
   location: GameLocation;
   imageWidth: number;
   imageHeight: number;
@@ -20,6 +22,8 @@ interface LocationMarkerProps {
 }
 
 export const LocationMarker: React.FC<LocationMarkerProps> = ({
+  x: normalizedX,
+  y: normalizedY,
   location,
   imageWidth,
   imageHeight,
@@ -30,14 +34,10 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     transform: [{ scale: 1 / scale.value }],
   }));
 
-  if (!location.mapCoordinates) {
-    return null;
-  }
-
-  const { x, y } = normalizedToImagePoint(location.mapCoordinates, {
-    width: imageWidth,
-    height: imageHeight,
-  });
+  const { x, y } = normalizedToImagePoint(
+    { x: normalizedX, y: normalizedY },
+    { width: imageWidth, height: imageHeight }
+  );
 
   return (
     <Animated.View

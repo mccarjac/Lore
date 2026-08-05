@@ -25,7 +25,7 @@ import { RootStackParamList } from '@/navigation/types';
 import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
-import { useRuleset } from '@/ruleset';
+import { useFeature, useRuleset } from '@/ruleset';
 import { getPrimaryFacetLabel } from '@/ruleset/facets';
 
 type LocationDetailsRouteProp = RouteProp<
@@ -44,6 +44,7 @@ export const LocationDetailsScreen: React.FC = () => {
   const { colors: themeColors } = useTheme();
   const commonStyles = useCommonStyles();
   const { ruleset } = useRuleset();
+  const mapEnabled = useFeature('map');
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -128,6 +129,12 @@ export const LocationDetailsScreen: React.FC = () => {
           textAlign: 'center',
           marginBottom: 16,
         },
+        viewMapButton: {
+          ...commonStyles.button.base,
+          ...commonStyles.button.secondary,
+          marginBottom: 16,
+        },
+        viewMapButtonText: commonStyles.button.text,
         imageGallery: {
           marginBottom: 16,
         },
@@ -268,6 +275,19 @@ export const LocationDetailsScreen: React.FC = () => {
       {/* Location Header */}
       <View style={styles.locationHeader}>
         <Text style={styles.locationName}>{location.name}</Text>
+
+        {mapEnabled && location.mapImageUri && (
+          <TouchableOpacity
+            style={styles.viewMapButton}
+            onPress={() =>
+              navigation.navigate('LocationMap', { locationId: location.id })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`View map for ${location.name}`}
+          >
+            <Text style={styles.viewMapButtonText}>View Map</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Location Images */}
         {location.imageUris && location.imageUris.length > 0 && (

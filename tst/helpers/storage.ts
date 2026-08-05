@@ -23,6 +23,7 @@ export function primeStorageDefaults(): void {
   storage.getFactionDescription.mockResolvedValue('');
   storage.migrateFactionDescriptions.mockResolvedValue(undefined);
   storage.migrateImageUris.mockResolvedValue(undefined);
+  storage.migrateLegacyLocationMapCoordinates.mockResolvedValue(undefined);
   storage.getLocation.mockResolvedValue(null);
   storage.getAllStoredFactions.mockResolvedValue([]);
 }

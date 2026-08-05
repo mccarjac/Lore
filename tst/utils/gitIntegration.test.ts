@@ -14,7 +14,7 @@ import {
   saveGitHubConfig,
   verifyGitHubToken,
 } from '@utils/gitIntegration';
-import { makeCharacter } from '../helpers/factories';
+import { makeCharacter, makeLocation } from '../helpers/factories';
 import type { SyncDataset, SyncPlan } from '@utils/syncMerge';
 import {
   createMockOctokitClient,
@@ -459,6 +459,80 @@ describe('gitIntegration', () => {
         'ZmFrZS1pbWFnZS1kYXRh',
         expect.objectContaining({ encoding: 'base64' })
       );
+    });
+
+    it("downloads a location's map image via the git blob API", async () => {
+      const dataset = {
+        ...remoteDataset([]),
+        locations: [
+          {
+            id: 'loc-1',
+            name: 'Portland 2026',
+            mapImageUri: 'images/locations/loc-1_map.png',
+          },
+        ],
+      };
+      client.rest.repos.getContent.mockImplementation(
+        ({ path }: { path: string }) => {
+          if (path === 'data.json') {
+            return Promise.resolve({
+              data: {
+                content: Buffer.from(JSON.stringify(dataset)).toString(
+                  'base64'
+                ),
+              },
+            });
+          }
+          return Promise.resolve({ data: { sha: 'map-img-sha', size: 100 } });
+        }
+      );
+      (FileSystem.getInfoAsync as jest.Mock).mockResolvedValue({
+        exists: false,
+      });
+      client.rest.git.getBlob.mockResolvedValue({
+        data: { content: 'ZmFrZS1tYXAtZGF0YQ==' },
+      });
+
+      const result = await importFromGitHub();
+
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.data as string);
+      expect(parsed.locations[0].mapImageUri).toBe(
+        'file://mock-document-directory/images/locations/loc-1_map.png'
+      );
+    });
+
+    it('clears mapImageUri when the map image fails to download', async () => {
+      const dataset = {
+        ...remoteDataset([]),
+        locations: [
+          {
+            id: 'loc-1',
+            name: 'Portland 2026',
+            mapImageUri: 'images/locations/loc-1_map.png',
+          },
+        ],
+      };
+      client.rest.repos.getContent.mockImplementation(
+        ({ path }: { path: string }) => {
+          if (path === 'data.json') {
+            return Promise.resolve({
+              data: {
+                content: Buffer.from(JSON.stringify(dataset)).toString(
+                  'base64'
+                ),
+              },
+            });
+          }
+          return Promise.reject(new Error('image fetch failed'));
+        }
+      );
+
+      const result = await importFromGitHub();
+
+      expect(result.success).toBe(true);
+      const parsed = JSON.parse(result.data as string);
+      expect(parsed.locations[0].mapImageUri).toBeUndefined();
     });
 
     it('clears imageUri/imageUris when every image for a record fails to download (current behavior)', async () => {
@@ -942,6 +1016,38 @@ describe('gitIntegration', () => {
       expect(result.success).toBe(true);
       expect(client.rest.git.createBlob).toHaveBeenCalledWith(
         expect.objectContaining({ content: 'AAAA' })
+      );
+    });
+
+    it("uploads a location's map image under a _map suffix, distinct from its gallery images", async () => {
+      client.rest.git.getRef.mockResolvedValue({
+        data: { object: { sha: 'head-sha' } },
+      });
+      (characterStorage.exportDataset as jest.Mock).mockResolvedValue(
+        JSON.stringify({
+          ...emptyDataset(),
+          locations: [
+            makeLocation({
+              id: 'loc-1',
+              name: 'Portland 2026',
+              mapImageUri: 'data:image/png;base64,BBBB',
+            }),
+          ],
+        })
+      );
+
+      const result = await pushDatasetToBranch({ expectedHeadSha: 'head-sha' });
+
+      expect(result.success).toBe(true);
+      expect(client.rest.git.createBlob).toHaveBeenCalledWith(
+        expect.objectContaining({ content: 'BBBB' })
+      );
+      expect(client.rest.git.createTree).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tree: expect.arrayContaining([
+            expect.objectContaining({ path: 'images/locations/loc-1_map.png' }),
+          ]),
+        })
       );
     });
   });

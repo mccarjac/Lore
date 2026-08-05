@@ -128,6 +128,23 @@ describe('computeSyncPlan', () => {
       expect(plan.conflicts).toEqual([]);
     });
 
+    it('ignores mapImageUri differences (file:// vs repo-relative paths)', () => {
+      const base = makeLocation({
+        name: 'Portland 2026',
+        mapImageUri: 'images/locations/loc-1_map.jpg',
+      });
+      const local = { ...base, mapImageUri: 'file:///local/loc-1_map.jpg' };
+      const remote = { ...base, mapImageUri: 'images/locations/loc-1_map.jpg' };
+
+      const plan = computeSyncPlan(
+        { ...emptyDataset(), locations: [base] },
+        { ...emptyDataset(), locations: [local] },
+        { ...emptyDataset(), locations: [remote] }
+      );
+
+      expect(plan.conflicts).toEqual([]);
+    });
+
     it('adds a record present only remotely', () => {
       const base = { ...emptyDataset() };
       const local = { ...emptyDataset() };

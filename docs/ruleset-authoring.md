@@ -154,7 +154,6 @@ deliberately small enough to hold in your head.
 | `facets`                | yes      | Every facet collection this ruleset declares — archetypes, traits, qualities, modifications, recipes and anything else you invent. See below. May be `[]` for a ruleset with no facets at all. |
 | `relationshipTypes`     | yes      | Every relationship-type collection this ruleset declares — the generalized form of the old `RelationshipStanding` enum. See below. May be `[]` for a ruleset with no typed relationships.      |
 | `features`              | yes      | Five booleans gating whole subsystems.                                                                                                                                                         |
-| `map`                   | no       | `{ imageKey }` — resolved through `RulesetAssets`, never a `require()`.                                                                                                                        |
 | `branding`              | yes      | `appName` plus optional `iconKey` / `splashKey` / `colors`. See "Theming".                                                                                                                     |
 
 There is no `groups`, `archetypes`, `traitCategories`, `traits`, `qualities`,
@@ -501,6 +500,10 @@ Three booleans — `quests`, `discord`, `map` — gate **route registration** in
 `src/navigation/AppNavigator.tsx`. Turning one off hides the screens; the
 data stays, and turning it back on restores everything intact.
 
+`map` gates the per-location map feature: a Location may own a map image
+(with other Locations pinned onto it) when the flag is on — see "Locations
+and maps" below. It no longer names a bundled ruleset asset.
+
 The four reporting/analytics screens (`characterStats`, `factionStats`,
 `influenceReport`, `relationshipGraph`) aren't feature flags — see "Reports"
 above for how a ruleset opts into them via `RulesetDefinition.reports`.
@@ -516,19 +519,39 @@ too. Grep `navigation.navigate(` when adding a flag.
 `require()` results, anywhere. That is what keeps a future in-app ruleset
 editor possible, and `validate.ts` enforces it at runtime.
 
-Bundled images therefore go through a separate string-keyed map:
+Bundled images therefore go through a separate string-keyed map, referenced by
+`branding.iconKey` / `branding.splashKey`:
 
 ```ts
 // src/rulesets/myflavor/assets.ts
 export const myFlavorAssets: RulesetAssets = {
-  map: require('./assets/RealmMap.png'),
+  icon: require('./assets/icon.png'),
+  splash: require('./assets/splash.png'),
 };
 ```
 
-The ruleset references the key (`map: { imageKey: 'map' }`), and
-`src/activeRuleset.ts` exports the asset map alongside the definition. The
-map's _display name_ is `terminology['map.label']` — the `map` field carries
-only the key, because two sources for one string only drift.
+`src/activeRuleset.ts` exports the asset map alongside the definition.
+
+### Locations and maps
+
+A map is not a ruleset asset — it's owned by a `Location`, the same way a
+location's photos are. When the `map` feature is on, a location can be given
+a `mapImageUri` (a user-picked photo, from the location's edit screen) and
+can have other locations pinned onto it (`mapPins: { id, locationId, x, y }[]`,
+normalized 0-1 coordinates, placed by long-pressing the map). There is no
+ruleset-level map field or bundled map asset to declare — every location that
+should have a map gets one through the app, and a campaign with maps per year
+or per venue just uses one `Location` per map (e.g. "Portland 2026").
+
+**Breaking change:** rulesets written before this had a top-level
+`map?: { imageKey: string }` field. That field is gone — delete it from your
+`RulesetDefinition`. If you shipped a bundled map image via `RulesetAssets`,
+it no longer has a consumer; re-upload it as a `mapImageUri` on the
+corresponding location through the app instead. Existing stored locations
+that had the old per-location `mapCoordinates` pin are migrated automatically
+into pins on a single synthetic "Legacy Map" location — that location has no
+image (the old one was a bundled asset, not a photo, so it can't be carried
+over automatically) and needs one attached by hand after upgrading.
 
 ---
 

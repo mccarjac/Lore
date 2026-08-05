@@ -4,6 +4,7 @@ import { GameCharacter } from '@models/types';
 import {
   loadCharacters,
   migrateImageUris,
+  migrateLegacyLocationMapCoordinates,
   migrateRulesetFields,
 } from '@utils/characterStorage';
 import {
@@ -61,8 +62,9 @@ export const CharacterListScreen: React.FC = () => {
   );
 
   const loadData = React.useCallback(async () => {
-    // Run migrations on first load (both idempotent)
+    // Run migrations on first load (all idempotent)
     await migrateImageUris();
+    await migrateLegacyLocationMapCoordinates();
     await migrateRulesetFields();
 
     const data = await loadCharacters();

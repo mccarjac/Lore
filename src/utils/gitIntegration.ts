@@ -171,6 +171,49 @@ const collectImageFiles = async (
     return images;
   };
 
+  // Handles a single-string image field (as opposed to `imageUris`, an
+  // array) — used for `GameLocation.mapImageUri`. Suffix keeps the filename
+  // distinct from the `_0`, `_1`, ... gallery naming above.
+  const collectSingleFieldImage = async (
+    uri: string,
+    entityType: 'characters' | 'locations' | 'events' | 'factions',
+    entityId: string,
+    suffix: string
+  ): Promise<string | undefined> => {
+    if (uri.startsWith('data:')) {
+      const imageData = extractImageData(uri);
+      if (!imageData) return undefined;
+      const filename = `images/${entityType}/${entityId}_${suffix}.${imageData.extension}`;
+      imageFiles.push({
+        path: filename,
+        content: imageData.base64Data,
+        entityType,
+        entityId,
+      });
+      return filename;
+    } else if (uri.startsWith('file://') || uri.startsWith('/')) {
+      try {
+        const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
+        const base64Data = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+        const filename = `images/${entityType}/${entityId}_${suffix}.${extension}`;
+        imageFiles.push({
+          path: filename,
+          content: base64Data,
+          entityType,
+          entityId,
+        });
+        return filename;
+      } catch (error) {
+        console.error(`Failed to read image file: ${uri}`, error);
+        return undefined;
+      }
+    }
+    return undefined;
+  };
+
   let totalImages = 0;
   console.log('[GitHub Export] Processing images for export...');
   if (dataset.characters) {
@@ -203,6 +246,21 @@ const collectImageFiles = async (
         console.log(
           `[GitHub Export] Processed ${images.length} images for location: ${location.name}`
         );
+      }
+
+      if (location.mapImageUri) {
+        const mapFilename = await collectSingleFieldImage(
+          location.mapImageUri,
+          'locations',
+          location.id,
+          'map'
+        );
+        if (mapFilename) {
+          location.mapImageUri = mapFilename;
+          totalImages += 1;
+        } else {
+          delete location.mapImageUri;
+        }
       }
     }
   }
@@ -909,6 +967,22 @@ export const importFromGitHub = async (): Promise<{
               );
               // Clear image references if download failed
               delete location.imageUris;
+            }
+          }
+
+          if (location.mapImageUri) {
+            console.log(
+              `[GitHub Import] Processing map image for location: ${location.name}`
+            );
+            const [localPath] = await downloadImages([location.mapImageUri]);
+            if (localPath) {
+              location.mapImageUri = localPath;
+              totalImagesDownloaded += 1;
+            } else {
+              console.warn(
+                `[GitHub Import] No map image downloaded for location: ${location.name}`
+              );
+              delete location.mapImageUri;
             }
           }
         }
