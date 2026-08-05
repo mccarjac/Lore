@@ -657,17 +657,13 @@ const locationEntry = (
     ${gallery(location, images, location.name)}
     ${location.description ? `<p>${prose(location.description)}</p>` : ''}
     ${
-      ruleset.features.map && location.mapCoordinates
-        ? facts([
-            row(
-              `${getLabel(ruleset, 'map.label')} Position`,
-              esc(
-                `${location.mapCoordinates.x.toFixed(
-                  3
-                )}, ${location.mapCoordinates.y.toFixed(3)}`
-              )
-            ),
-          ])
+      ruleset.features.map && location.mapPins && location.mapPins.length > 0
+        ? field(
+            `Marked on this ${getLabel(ruleset, 'map.label')}`,
+            bullets(
+              location.mapPins.map(pin => locationRef(pin.locationId, lookups))
+            )
+          )
         : ''
     }
     ${field(

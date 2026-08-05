@@ -14,6 +14,7 @@ describe('MapLocationPickerModal', () => {
       <MapLocationPickerModal
         visible
         locations={locations}
+        placedLocationIds={new Set()}
         onSelect={jest.fn()}
         onCancel={jest.fn()}
       />
@@ -23,13 +24,9 @@ describe('MapLocationPickerModal', () => {
     expect(getByText('Rust Alley')).toBeTruthy();
   });
 
-  it('shows a "placed" badge only for locations that already have coordinates', () => {
+  it('shows a "placed" badge only for locations already in placedLocationIds', () => {
     const locations = [
-      makeLocation({
-        id: 'loc-1',
-        name: 'The Docks',
-        mapCoordinates: { x: 0.5, y: 0.5 },
-      }),
+      makeLocation({ id: 'loc-1', name: 'The Docks' }),
       makeLocation({ id: 'loc-2', name: 'Rust Alley' }),
     ];
 
@@ -37,6 +34,7 @@ describe('MapLocationPickerModal', () => {
       <MapLocationPickerModal
         visible
         locations={locations}
+        placedLocationIds={new Set(['loc-1'])}
         onSelect={jest.fn()}
         onCancel={jest.fn()}
       />
@@ -50,6 +48,7 @@ describe('MapLocationPickerModal', () => {
       <MapLocationPickerModal
         visible
         locations={[]}
+        placedLocationIds={new Set()}
         onSelect={jest.fn()}
         onCancel={jest.fn()}
       />
@@ -66,6 +65,7 @@ describe('MapLocationPickerModal', () => {
       <MapLocationPickerModal
         visible
         locations={locations}
+        placedLocationIds={new Set()}
         onSelect={onSelect}
         onCancel={jest.fn()}
       />
@@ -83,6 +83,7 @@ describe('MapLocationPickerModal', () => {
       <MapLocationPickerModal
         visible
         locations={[]}
+        placedLocationIds={new Set()}
         onSelect={jest.fn()}
         onCancel={onCancel}
       />

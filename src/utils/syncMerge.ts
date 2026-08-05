@@ -155,12 +155,17 @@ const deepEqual = (a: unknown, b: unknown): boolean => {
 const stripImages = (
   record: Record<string, unknown>
 ): Record<string, unknown> => {
-  if (record.imageUri === undefined && record.imageUris === undefined) {
+  if (
+    record.imageUri === undefined &&
+    record.imageUris === undefined &&
+    record.mapImageUri === undefined
+  ) {
     return record;
   }
   const clone: Record<string, unknown> = { ...record };
   delete clone.imageUri;
   delete clone.imageUris;
+  delete clone.mapImageUri;
   return clone;
 };
 

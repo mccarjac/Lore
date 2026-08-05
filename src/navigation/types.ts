@@ -39,7 +39,7 @@ export type RootStackParamList = {
   FactionForm: { factionName?: string };
   LocationDetails: { locationId: string };
   LocationForm: { location?: GameLocation };
-  LocationMap: undefined;
+  LocationMap: { locationId: string };
   CharacterForm: {
     character?: GameCharacter;
     onSubmit?: (character: GameCharacter) => void;

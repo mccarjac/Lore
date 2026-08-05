@@ -76,9 +76,6 @@ describe('whatever ruleset is active', () => {
     const ruleset = getActiveRuleset();
     const assets = getActiveAssets();
 
-    if (ruleset.map) {
-      expect(assets[ruleset.map.imageKey]).toBeDefined();
-    }
     [ruleset.branding.iconKey, ruleset.branding.splashKey]
       .filter((key): key is string => key !== undefined)
       .forEach(key => expect(assets[key]).toBeDefined());

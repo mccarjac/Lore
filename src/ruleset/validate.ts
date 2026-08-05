@@ -539,12 +539,6 @@ export function validateRuleset(ruleset: RulesetDefinition): ValidationResult {
     seenReportKinds.add(report.kind);
   });
 
-  if (ruleset.map && !ruleset.map.imageKey) {
-    issues.push({
-      path: 'map.imageKey',
-      message: 'imageKey must be non-empty when map is present',
-    });
-  }
   if (ruleset.branding.iconKey === '') {
     issues.push({
       path: 'branding.iconKey',

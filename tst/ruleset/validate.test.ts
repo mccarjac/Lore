@@ -146,7 +146,6 @@ const baseRuleset = (): RulesetDefinition => ({
     { kind: 'characterStats' },
     { kind: 'factionStats' },
   ],
-  map: { imageKey: 'map' },
   branding: { appName: 'Fixture App' },
 });
 
@@ -540,16 +539,6 @@ describe('validateRuleset', () => {
     expect(
       result.issues.filter(issue => issue.path.startsWith('reports'))
     ).toEqual([]);
-  });
-
-  it('flags an empty map.imageKey when map is present', () => {
-    const ruleset = baseRuleset();
-    ruleset.map = { imageKey: '' };
-    const result = validateRuleset(ruleset);
-    expect(result.issues).toContainEqual({
-      path: 'map.imageKey',
-      message: 'imageKey must be non-empty when map is present',
-    });
   });
 
   it('flags empty branding asset keys when present', () => {

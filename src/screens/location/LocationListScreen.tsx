@@ -18,7 +18,6 @@ import {
   useEntitySearch,
   type FilterFieldConfig,
 } from '@/components';
-import { useFeature } from '@/ruleset';
 
 type LocationNavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<RootDrawerParamList, 'Locations'>,
@@ -39,7 +38,6 @@ const locationFilterFields: FilterFieldConfig[] = [];
 export const LocationListScreen: React.FC = () => {
   const [locationInfos, setLocationInfos] = useState<LocationInfo[]>([]);
   const navigation = useNavigation<LocationNavigationProp>();
-  const mapEnabled = useFeature('map');
   const commonStyles = useCommonStyles();
   const styles = useMemo(
     () =>
@@ -77,14 +75,6 @@ export const LocationListScreen: React.FC = () => {
         headerButtons: {
           flexDirection: 'row',
           gap: 8,
-        },
-        headerMapButton: {
-          ...commonStyles.headerButton.add,
-          marginRight: 4,
-        },
-        headerMapButtonText: {
-          ...commonStyles.headerButton.addText,
-          fontSize: 20,
         },
       }),
     [commonStyles]
@@ -165,10 +155,6 @@ export const LocationListScreen: React.FC = () => {
     navigation.navigate('LocationForm', {});
   };
 
-  const handleViewMap = () => {
-    navigation.navigate('LocationMap');
-  };
-
   const renderLocationItem = (item: LocationInfo) => (
     <View style={styles.locationCard}>
       <TouchableOpacity
@@ -197,14 +183,6 @@ export const LocationListScreen: React.FC = () => {
 
   const renderHeaderRight = () => (
     <View style={styles.headerButtons}>
-      {mapEnabled && (
-        <TouchableOpacity
-          style={styles.headerMapButton}
-          onPress={handleViewMap}
-        >
-          <Text style={styles.headerMapButtonText}>🗺️</Text>
-        </TouchableOpacity>
-      )}
       <HeaderAddButton onPress={handleCreateLocation} />
     </View>
   );

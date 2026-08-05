@@ -8,12 +8,16 @@ interface MapInfoCardProps {
   location: GameLocation;
   onViewDetails: (locationId: string) => void;
   onClose: () => void;
+  onViewMap?: () => void;
+  onRemovePin?: () => void;
 }
 
 export const MapInfoCard: React.FC<MapInfoCardProps> = ({
   location,
   onViewDetails,
   onClose,
+  onViewMap,
+  onRemovePin,
 }) => {
   return (
     <View style={styles.card}>
@@ -37,14 +41,38 @@ export const MapInfoCard: React.FC<MapInfoCardProps> = ({
         </Text>
       ) : null}
 
-      <TouchableOpacity
-        style={styles.detailsButton}
-        onPress={() => onViewDetails(location.id)}
-        accessibilityRole="button"
-        accessibilityLabel={`View details for ${location.name}`}
-      >
-        <Text style={styles.detailsButtonText}>View details</Text>
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={[styles.actionButton, commonStyles.button.primary]}
+          onPress={() => onViewDetails(location.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`View details for ${location.name}`}
+        >
+          <Text style={commonStyles.button.text}>View details</Text>
+        </TouchableOpacity>
+
+        {onViewMap && (
+          <TouchableOpacity
+            style={[styles.actionButton, commonStyles.button.secondary]}
+            onPress={onViewMap}
+            accessibilityRole="button"
+            accessibilityLabel={`View map for ${location.name}`}
+          >
+            <Text style={commonStyles.button.text}>View map</Text>
+          </TouchableOpacity>
+        )}
+
+        {onRemovePin && (
+          <TouchableOpacity
+            style={[styles.actionButton, commonStyles.button.outline]}
+            onPress={onRemovePin}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove pin for ${location.name}`}
+          >
+            <Text style={commonStyles.button.text}>Remove pin</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -82,9 +110,10 @@ const styles = StyleSheet.create({
     ...commonStyles.text.body,
     marginBottom: spacing.base,
   },
-  detailsButton: {
-    ...commonStyles.button.base,
-    ...commonStyles.button.primary,
+  actions: {
+    gap: spacing.sm,
   },
-  detailsButtonText: commonStyles.button.text,
+  actionButton: {
+    ...commonStyles.button.base,
+  },
 });

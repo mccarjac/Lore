@@ -4,6 +4,7 @@ import {
   GameCharacter,
   GameLocation,
   LocationDataset,
+  LocationMapPin,
   GameEvent,
   EventDataset,
   GameQuest,
@@ -1388,6 +1389,69 @@ export const migrateImageUris = async (): Promise<void> => {
   }
 };
 
+// Runtime-only shape for a location that still carries the pre-multi-map
+// single `mapCoordinates` field (removed from `GameLocation`), kept here
+// only so this migration can see it.
+interface LegacyLocationMapEntity {
+  mapCoordinates?: { x: number; y: number };
+}
+
+/**
+ * One-time migration from the old ruleset-singleton map (one global map, one
+ * `mapCoordinates` pin per location) to per-location maps (#44): every
+ * location that had `mapCoordinates` becomes a pin on a single synthetic
+ * "Legacy Map" location. The old map's background image can't be carried
+ * over automatically (it was a bundled ruleset asset, not a photo URI) — the
+ * "Legacy Map" location is left without a `mapImageUri` so whoever owns that
+ * data notices it and attaches a real photo. Idempotent - safe to call on
+ * every app start (see CharacterListScreen.loadData).
+ */
+export const migrateLegacyLocationMapCoordinates = async (): Promise<void> => {
+  try {
+    await runExclusive(LOCATION_STORAGE_KEY, async () => {
+      const dataset =
+        await SafeAsyncStorageJSONParser.getItem<LocationDataset>(
+          LOCATION_STORAGE_KEY
+        );
+      const locations = dataset?.locations;
+      if (!locations) return;
+
+      const legacy = locations as (GameLocation & LegacyLocationMapEntity)[];
+      const pinned = legacy.filter(l => l.mapCoordinates !== undefined);
+      if (pinned.length === 0) return;
+
+      const now = new Date().toISOString();
+      const mapPins: LocationMapPin[] = pinned.map(l => ({
+        id: uuidv4(),
+        locationId: l.id,
+        x: l.mapCoordinates!.x,
+        y: l.mapCoordinates!.y,
+      }));
+
+      const updatedLocations = legacy.map(l => {
+        if (l.mapCoordinates === undefined) return l as GameLocation;
+        const rest: GameLocation & LegacyLocationMapEntity = { ...l };
+        delete rest.mapCoordinates;
+        return rest;
+      });
+
+      const legacyMapLocation: GameLocation = {
+        id: uuidv4(),
+        name: 'Legacy Map',
+        description:
+          'Created automatically from the previous single-map data. Attach a map image and re-check pin positions.',
+        mapPins,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await saveLocations([...updatedLocations, legacyMapLocation]);
+    });
+  } catch (error) {
+    console.error('Error migrating legacy location map coordinates:', error);
+  }
+};
+
 // Location management functions
 export const saveLocations = async (
   locations: GameLocation[]
@@ -1421,6 +1485,7 @@ export const createLocation = async (locationData: {
   name: string;
   description: string;
   imageUris?: string[];
+  mapImageUri?: string;
 }): Promise<GameLocation | null> =>
   runExclusive(LOCATION_STORAGE_KEY, async () => {
     const existingLocations = await loadLocations();
@@ -1439,6 +1504,7 @@ export const createLocation = async (locationData: {
       name: locationData.name,
       description: locationData.description,
       imageUris: locationData.imageUris,
+      mapImageUri: locationData.mapImageUri,
       createdAt: now,
       updatedAt: now,
     };

@@ -738,6 +738,22 @@ describe('characterStorage', () => {
         expect(result?.createdAt).toBe(mockDate);
         expect(result?.updatedAt).toBe(mockDate);
       });
+
+      it('should persist mapImageUri when creating a location', async () => {
+        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
+          locations: [],
+          version: '1.0',
+          lastUpdated: mockDate,
+        });
+
+        const result = await createLocation({
+          name: 'Portland 2026',
+          description: '',
+          mapImageUri: 'file:///portland-map.jpg',
+        });
+
+        expect(result?.mapImageUri).toBe('file:///portland-map.jpg');
+      });
     });
 
     describe('updateLocation', () => {
@@ -766,6 +782,22 @@ describe('characterStorage', () => {
         const result = await updateLocation('non-existent', { name: 'Test' });
 
         expect(result).toBeNull();
+      });
+
+      it('should persist mapPins added to a location', async () => {
+        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
+          locations: [mockLocation],
+          version: '1.0',
+          lastUpdated: mockDate,
+        });
+
+        const result = await updateLocation('loc-1', {
+          mapPins: [{ id: 'pin-1', locationId: 'loc-2', x: 0.5, y: 0.5 }],
+        });
+
+        expect(result?.mapPins).toEqual([
+          { id: 'pin-1', locationId: 'loc-2', x: 0.5, y: 0.5 },
+        ]);
       });
     });
 
@@ -1852,6 +1884,103 @@ describe('characterStorage', () => {
 
         await expect(
           CharacterStorage.migrateImageUris()
+        ).resolves.toBeUndefined();
+        expect(SafeAsyncStorageJSONParser.setItem).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('migrateLegacyLocationMapCoordinates', () => {
+      it('converts every legacy mapCoordinates pin onto a synthetic "Legacy Map" location', async () => {
+        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
+          locations: [
+            {
+              id: 'loc-1',
+              name: 'The Docks',
+              description: '',
+              mapCoordinates: { x: 0.25, y: 0.75 },
+              createdAt: mockDate,
+              updatedAt: mockDate,
+            },
+            {
+              id: 'loc-2',
+              name: 'Rust Alley',
+              description: '',
+              createdAt: mockDate,
+              updatedAt: mockDate,
+            },
+          ],
+          version: '1.0',
+        });
+
+        await CharacterStorage.migrateLegacyLocationMapCoordinates();
+
+        const saved = (
+          SafeAsyncStorageJSONParser.setItem as jest.Mock
+        ).mock.calls.find(c => c[0] === 'gameCharacterManager_locations')?.[1];
+
+        expect(saved.locations).toHaveLength(3);
+        const docks = saved.locations.find(
+          (l: GameLocation) => l.id === 'loc-1'
+        );
+        expect(docks.mapCoordinates).toBeUndefined();
+        const legacyMap = saved.locations.find(
+          (l: GameLocation) => l.name === 'Legacy Map'
+        );
+        expect(legacyMap).toBeDefined();
+        expect(legacyMap.mapPins).toEqual([
+          { id: 'mock-uuid-1234', locationId: 'loc-1', x: 0.25, y: 0.75 },
+        ]);
+      });
+
+      it('does not write to storage when no location has legacy mapCoordinates', async () => {
+        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue({
+          locations: [{ id: 'loc-1', name: 'The Docks', description: '' }],
+          version: '1.0',
+        });
+
+        await CharacterStorage.migrateLegacyLocationMapCoordinates();
+
+        expect(SafeAsyncStorageJSONParser.setItem).not.toHaveBeenCalled();
+      });
+
+      it('is idempotent — a second run is a no-op since the field is already gone', async () => {
+        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValueOnce(
+          {
+            locations: [
+              {
+                id: 'loc-1',
+                name: 'The Docks',
+                description: '',
+                mapCoordinates: { x: 0.5, y: 0.5 },
+                createdAt: mockDate,
+                updatedAt: mockDate,
+              },
+            ],
+            version: '1.0',
+          }
+        );
+        await CharacterStorage.migrateLegacyLocationMapCoordinates();
+        expect(SafeAsyncStorageJSONParser.setItem).toHaveBeenCalledTimes(1);
+
+        const savedAfterFirstRun = (
+          SafeAsyncStorageJSONParser.setItem as jest.Mock
+        ).mock.calls[0][1];
+        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValueOnce(
+          savedAfterFirstRun
+        );
+
+        await CharacterStorage.migrateLegacyLocationMapCoordinates();
+
+        expect(SafeAsyncStorageJSONParser.setItem).toHaveBeenCalledTimes(1);
+      });
+
+      it('is a no-op when storage is empty', async () => {
+        (SafeAsyncStorageJSONParser.getItem as jest.Mock).mockResolvedValue(
+          null
+        );
+
+        await expect(
+          CharacterStorage.migrateLegacyLocationMapCoordinates()
         ).resolves.toBeUndefined();
         expect(SafeAsyncStorageJSONParser.setItem).not.toHaveBeenCalled();
       });

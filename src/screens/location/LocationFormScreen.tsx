@@ -16,6 +16,7 @@ import { createLocation, updateLocation } from '@utils/characterStorage';
 import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
 import { BaseFormScreen } from '@/components';
+import { useFeature } from '@/ruleset';
 
 type LocationFormNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -28,17 +29,20 @@ interface LocationFormData {
   name: string;
   description: string;
   imageUris?: string[];
+  mapImageUri?: string;
 }
 
 export const LocationFormScreen: React.FC = () => {
   const navigation = useNavigation<LocationFormNavigationProp>();
   const route = useRoute<LocationFormRouteProp>();
   const { location } = route.params || {};
+  const mapEnabled = useFeature('map');
 
   const [formData, setFormData] = useState<LocationFormData>({
     name: '',
     description: '',
     imageUris: [],
+    mapImageUri: undefined,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -204,11 +208,12 @@ export const LocationFormScreen: React.FC = () => {
         name: location.name,
         description: location.description,
         imageUris: location.imageUris || [],
+        mapImageUri: location.mapImageUri,
       });
     }
   }, [location]);
 
-  const pickImage = async () => {
+  const requestImagePickerPermission = async (): Promise<boolean> => {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -218,6 +223,13 @@ export const LocationFormScreen: React.FC = () => {
         'Permission to access camera roll is required!',
         [{ text: 'OK' }]
       );
+      return false;
+    }
+    return true;
+  };
+
+  const pickImage = async () => {
+    if (!(await requestImagePickerPermission())) {
       return;
     }
 
@@ -248,6 +260,32 @@ export const LocationFormScreen: React.FC = () => {
     });
   };
 
+  const pickMapImage = async () => {
+    if (!(await requestImagePickerPermission())) {
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setFormData({
+        ...formData,
+        mapImageUri: result.assets[0].uri,
+      });
+    }
+  };
+
+  const removeMapImage = () => {
+    setFormData({
+      ...formData,
+      mapImageUri: undefined,
+    });
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -275,6 +313,7 @@ export const LocationFormScreen: React.FC = () => {
           name: formData.name.trim(),
           description: formData.description.trim(),
           imageUris: formData.imageUris,
+          mapImageUri: formData.mapImageUri,
         });
 
         if (updated) {
@@ -293,6 +332,7 @@ export const LocationFormScreen: React.FC = () => {
           name: formData.name.trim(),
           description: formData.description.trim(),
           imageUris: formData.imageUris,
+          mapImageUri: formData.mapImageUri,
         });
 
         if (newLocation) {
@@ -385,6 +425,48 @@ export const LocationFormScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Map Image Picker */}
+        {mapEnabled && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Map Image</Text>
+            {formData.mapImageUri ? (
+              <View style={styles.imageGalleryContainer}>
+                <View style={styles.imageGrid}>
+                  <View style={styles.imageItemContainer}>
+                    <Image
+                      source={{ uri: formData.mapImageUri }}
+                      style={styles.locationImageThumbnail}
+                      resizeMode="cover"
+                    />
+                    <TouchableOpacity
+                      style={styles.removeImageIconButton}
+                      onPress={removeMapImage}
+                    >
+                      <Text style={styles.removeImageIconText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.addImageButton}
+                  onPress={pickMapImage}
+                >
+                  <Text style={styles.addImageButtonText}>
+                    Replace Map Image
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.imagePickerButton}
+                onPress={pickMapImage}
+              >
+                <Text style={styles.imagePickerIcon}>🗺️</Text>
+                <Text style={styles.imagePickerText}>Add Map Image</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>

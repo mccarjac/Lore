@@ -14,11 +14,20 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+  RouteProp,
+} from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
-import { GameLocation } from '@models/types';
-import { loadLocations, updateLocation } from '@utils/characterStorage';
+import { GameLocation, LocationMapPin } from '@models/types';
+import {
+  getLocation,
+  loadLocations,
+  updateLocation,
+} from '@utils/characterStorage';
 import { colors as themeColors } from '@/styles/theme';
 import { commonStyles } from '@/styles/commonStyles';
 import {
@@ -26,35 +35,39 @@ import {
   MapInfoCard,
   MapLocationPickerModal,
 } from '@/components';
-// Coordinate handling is deliberately image-agnostic: locations store
-// normalized 0-1 `mapCoordinates`, so swapping in a different map image (or a
-// different ruleset's map entirely) needs no data migration.
+// Coordinate handling is deliberately image-agnostic: pins store normalized
+// 0-1 coordinates, so a different map image needs no data migration.
 import {
   containerPointToNormalized,
   clampTranslation,
   Point,
   Size,
 } from '@/utils/mapCoordinates';
-import { useRuleset, resolveAsset } from '@/ruleset';
+import { v4 as uuidv4 } from 'uuid';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 type LocationMapNavigationProp = StackNavigationProp<RootStackParamList>;
+type LocationMapRouteProp = RouteProp<RootStackParamList, 'LocationMap'>;
+
+interface ResolvedPin {
+  pin: LocationMapPin;
+  location: GameLocation;
+}
 
 export const LocationMapScreen: React.FC = () => {
   const navigation = useNavigation<LocationMapNavigationProp>();
-  const { ruleset, assets } = useRuleset();
-  const mapImage = resolveAsset(assets, ruleset.map?.imageKey);
+  const route = useRoute<LocationMapRouteProp>();
+  const { locationId } = route.params;
 
+  const [location, setLocation] = useState<GameLocation | null>(null);
+  const [locations, setLocations] = useState<GameLocation[]>([]);
   const [imageSize, setImageSize] = useState<Size>({ width: 0, height: 0 });
   const [containerSize, setContainerSize] = useState<Size>({
     width: 0,
     height: 0,
   });
-  const [locations, setLocations] = useState<GameLocation[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<GameLocation | null>(
-    null
-  );
+  const [selectedPin, setSelectedPin] = useState<ResolvedPin | null>(null);
   const [pendingCoords, setPendingCoords] = useState<Point | null>(null);
 
   const scale = useSharedValue(1);
@@ -64,35 +77,47 @@ export const LocationMapScreen: React.FC = () => {
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
+  const reload = useCallback(async () => {
+    const [loadedLocation, allLocations] = await Promise.all([
+      getLocation(locationId),
+      loadLocations(),
+    ]);
+    setLocation(loadedLocation);
+    setLocations(allLocations);
+  }, [locationId]);
+
   useFocusEffect(
     useCallback(() => {
-      loadLocations().then(setLocations);
-    }, [])
+      reload();
+    }, [reload])
   );
 
-  // Get the actual image dimensions. Keyed on the resolved asset, not [] —
-  // a ruleset swap otherwise keeps the previous map's dimensions forever.
+  const mapImageUri = location?.mapImageUri;
+
+  // Get the actual image dimensions. Keyed on the resolved URI, not [] — a
+  // different map image otherwise keeps the previous one's dimensions
+  // forever.
   React.useEffect(() => {
-    if (!mapImage) {
+    if (!mapImageUri) {
       setImageSize({ width: 0, height: 0 });
       return;
     }
-    // For local assets, we can use Image.resolveAssetSource
-    const source = Image.resolveAssetSource(mapImage);
-    if (source) {
-      const { width, height } = source;
-      // Scale the image to fit within the screen while maintaining aspect ratio
-      const scaleValue = Math.min(
-        (screenWidth - 32) / width, // Account for padding
-        (screenHeight - 100) / height, // Account for header and padding
-        1 // Don't scale up, only down
-      );
-      setImageSize({
-        width: width * scaleValue,
-        height: height * scaleValue,
-      });
-    }
-  }, [mapImage]);
+    Image.getSize(
+      mapImageUri,
+      (width, height) => {
+        const scaleValue = Math.min(
+          (screenWidth - 32) / width,
+          (screenHeight - 100) / height,
+          1
+        );
+        setImageSize({
+          width: width * scaleValue,
+          height: height * scaleValue,
+        });
+      },
+      () => setImageSize({ width: 0, height: 0 })
+    );
+  }, [mapImageUri]);
 
   const handleContainerLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -103,19 +128,42 @@ export const LocationMapScreen: React.FC = () => {
     setPendingCoords(coords);
   };
 
-  const handlePlaceLocation = async (locationId: string) => {
-    if (!pendingCoords) {
+  const handlePlaceLocation = async (targetLocationId: string) => {
+    if (!pendingCoords || !location) {
       return;
     }
-    await updateLocation(locationId, { mapCoordinates: pendingCoords });
+    const newPin: LocationMapPin = {
+      id: uuidv4(),
+      locationId: targetLocationId,
+      x: pendingCoords.x,
+      y: pendingCoords.y,
+    };
+    await updateLocation(location.id, {
+      mapPins: [...(location.mapPins ?? []), newPin],
+    });
     setPendingCoords(null);
-    const updated = await loadLocations();
-    setLocations(updated);
+    await reload();
   };
 
-  const handleViewDetails = (locationId: string) => {
-    setSelectedLocation(null);
-    navigation.navigate('LocationDetails', { locationId });
+  const handleRemovePin = async (pinId: string) => {
+    if (!location) {
+      return;
+    }
+    await updateLocation(location.id, {
+      mapPins: (location.mapPins ?? []).filter(p => p.id !== pinId),
+    });
+    setSelectedPin(null);
+    await reload();
+  };
+
+  const handleViewDetails = (targetLocationId: string) => {
+    setSelectedPin(null);
+    navigation.navigate('LocationDetails', { locationId: targetLocationId });
+  };
+
+  const handleViewMap = (targetLocationId: string) => {
+    setSelectedPin(null);
+    navigation.navigate('LocationMap', { locationId: targetLocationId });
   };
 
   const pinchGesture = Gesture.Pinch()
@@ -231,13 +279,30 @@ export const LocationMapScreen: React.FC = () => {
     ],
   }));
 
-  const placedLocations = locations.filter(location => location.mapCoordinates);
+  const resolvedPins: ResolvedPin[] = (location?.mapPins ?? [])
+    .map(pin => {
+      const target = locations.find(l => l.id === pin.locationId);
+      return target ? { pin, location: target } : null;
+    })
+    .filter((entry): entry is ResolvedPin => entry !== null);
+
+  const pickerLocations = locations.filter(l => l.id !== locationId);
+  const placedLocationIds = new Set(
+    (location?.mapPins ?? []).map(p => p.locationId)
+  );
 
   return (
     <View style={styles.container}>
+      {location && (
+        <View style={styles.titleBar}>
+          <Text style={styles.titleText} numberOfLines={1}>
+            {location.name}
+          </Text>
+        </View>
+      )}
       <GestureDetector gesture={composedGesture}>
         <View style={styles.imageContainer} onLayout={handleContainerLayout}>
-          {imageSize.width > 0 ? (
+          {imageSize.width > 0 && mapImageUri ? (
             <Animated.View
               style={[
                 {
@@ -248,28 +313,29 @@ export const LocationMapScreen: React.FC = () => {
               ]}
             >
               <Image
-                source={mapImage}
+                source={{ uri: mapImageUri }}
                 style={styles.mapImage}
                 resizeMode="contain"
               />
-              {placedLocations.map(location => (
+              {resolvedPins.map(({ pin, location: pinnedLocation }) => (
                 <LocationMarker
-                  key={location.id}
-                  location={location}
+                  key={pin.id}
+                  x={pin.x}
+                  y={pin.y}
+                  location={pinnedLocation}
                   imageWidth={imageSize.width}
                   imageHeight={imageSize.height}
                   scale={scale}
-                  onPress={setSelectedLocation}
+                  onPress={() =>
+                    setSelectedPin({ pin, location: pinnedLocation })
+                  }
                 />
               ))}
             </Animated.View>
-          ) : !mapImage ? (
-            // A ruleset need not declare a map. The drawer/stack entry is
-            // hidden by the `map` feature flag, but the route can still be
-            // reached directly, so say so rather than spinning forever.
+          ) : !mapImageUri ? (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>
-                This ruleset has no map to show.
+                This location has no map image yet.
               </Text>
             </View>
           ) : (
@@ -280,17 +346,24 @@ export const LocationMapScreen: React.FC = () => {
         </View>
       </GestureDetector>
 
-      {selectedLocation && (
+      {selectedPin && (
         <MapInfoCard
-          location={selectedLocation}
+          location={selectedPin.location}
           onViewDetails={handleViewDetails}
-          onClose={() => setSelectedLocation(null)}
+          onClose={() => setSelectedPin(null)}
+          onViewMap={
+            selectedPin.location.mapImageUri
+              ? () => handleViewMap(selectedPin.location.id)
+              : undefined
+          }
+          onRemovePin={() => handleRemovePin(selectedPin.pin.id)}
         />
       )}
 
       <MapLocationPickerModal
         visible={pendingCoords !== null}
-        locations={locations}
+        locations={pickerLocations}
+        placedLocationIds={placedLocationIds}
         onSelect={handlePlaceLocation}
         onCancel={() => setPendingCoords(null)}
       />
@@ -301,6 +374,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: themeColors.primary,
+  },
+  titleBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  titleText: {
+    ...commonStyles.text.h3,
   },
   imageContainer: {
     flex: 1,

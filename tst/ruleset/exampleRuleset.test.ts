@@ -53,21 +53,18 @@ describe('the example ruleset', () => {
     ]);
   });
 
-  it('declares no map, because images belong to the ruleset that uses them', () => {
-    expect(exampleRuleset.map).toBeUndefined();
-    expect(exampleRuleset.features.map).toBe(false);
+  it('enables map, since a map is per-location data rather than a bundled ruleset asset', () => {
+    expect(exampleRuleset.features.map).toBe(true);
   });
 
   it('enables the core features, previewing two reporting screens', () => {
-    const { map, ...rest } = exampleRuleset.features;
-    expect(map).toBe(false);
     // Reporting/statistics screens are opt-in; this ruleset turns on two of
     // the four kinds so the "Statistics" nav section has something to show.
     expect(exampleRuleset.reports).toEqual([
       { kind: 'characterStats' },
       { kind: 'factionStats' },
     ]);
-    expect(Object.values(rest).every(Boolean)).toBe(true);
+    expect(Object.values(exampleRuleset.features).every(Boolean)).toBe(true);
   });
 
   it('actually computes — it is a working ruleset, not a stub', () => {

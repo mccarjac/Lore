@@ -156,12 +156,6 @@ export interface RulesetDefinition {
    * empty array (the default) renders no such section. See `reports.ts`.
    */
   reports?: ReportDefinition[];
-  /**
-   * Asset key resolved through RulesetAssets — never a require() result.
-   * The map's display name is `terminology['map.label']`, not a field here:
-   * two sources for one string only drift.
-   */
-  map?: { imageKey: string };
   branding: {
     appName: string;
     iconKey?: string;

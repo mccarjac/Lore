@@ -7,12 +7,13 @@ import { getStorageMock, primeStorageDefaults } from '../../helpers/storage';
 import { makeLocation } from '../../helpers/factories';
 import {
   installNavigationMock,
+  installRouteParams,
   resetNavigationMocks,
 } from '../../helpers/navigation';
 import { renderWithRuleset } from '../../helpers/ruleset';
-import { genericRuleset } from '../../fixtures/genericRuleset';
 
 jest.mock('@utils/characterStorage');
+jest.mock('uuid', () => ({ v4: jest.fn(() => 'mock-pin-uuid') }));
 
 const storage = getStorageMock();
 
@@ -20,23 +21,40 @@ const storage = getStorageMock();
 // LocationMapScreen never kicks in and imageSize == {300, 200} exactly.
 const IMAGE_SIZE = { width: 300, height: 200 };
 
-/**
- * A ruleset that *has* a map, since the engine's own example ruleset ships no
- * bundled image. These tests are about map rendering, so the map has to come
- * from the provider rather than from whatever the build defaults to.
- */
-const mapRuleset = { ...genericRuleset, map: { imageKey: 'realm' } };
-const mapAssets = { realm: { uri: 'test-map-uri' } };
+const mockGetSizeResolves = () =>
+  jest
+    .spyOn(Image, 'getSize')
+    .mockImplementation((_uri, success) =>
+      success(IMAGE_SIZE.width, IMAGE_SIZE.height)
+    );
 
-const renderMap = () =>
-  renderWithRuleset(<LocationMapScreen />, {
-    ruleset: mapRuleset,
-    assets: mapAssets,
-  });
+const renderMap = (locationId = 'loc-current') => {
+  installRouteParams({ locationId });
+  return renderWithRuleset(<LocationMapScreen />);
+};
 
 const getLatestLongPressStub = () => {
   const results = (Gesture.LongPress as jest.Mock).mock.results;
   return results[results.length - 1].value;
+};
+
+// Before the location loads, the screen shows "no map image yet" (not
+// "Loading map..."), so waiting only for the loading text to disappear
+// resolves immediately — before the image size has actually come back from
+// the mocked, synchronous `Image.getSize`. The location load and the size
+// lookup each land in their own effect/passive-effect pass, so flush a few
+// full act() cycles rather than relying on `waitFor`'s own retry timing to
+// catch a render that lands between polls.
+const waitForMapImageLoaded = async (
+  queryByText: (text: string) => unknown
+) => {
+  for (let i = 0; i < 5; i++) {
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
+  expect(queryByText('Loading map...')).toBeNull();
+  expect(queryByText('This location has no map image yet.')).toBeNull();
 };
 
 describe('LocationMapScreen', () => {
@@ -49,28 +67,50 @@ describe('LocationMapScreen', () => {
     resetNavigationMocks();
   });
 
-  it('shows a loading state before the map asset size resolves', () => {
-    jest.spyOn(Image, 'resolveAssetSource').mockReturnValue(undefined as any);
+  it('says so when the location has no map image yet', async () => {
+    storage.getLocation.mockResolvedValue(
+      makeLocation({ id: 'loc-current', name: 'The Vault' })
+    );
 
-    const { getByText } = renderMap();
+    const { findByText } = renderMap();
 
-    expect(getByText('Loading map...')).toBeTruthy();
+    expect(
+      await findByText('This location has no map image yet.')
+    ).toBeTruthy();
   });
 
-  it('renders markers only for locations that have map coordinates', async () => {
-    jest.spyOn(Image, 'resolveAssetSource').mockReturnValue({
-      width: IMAGE_SIZE.width,
-      height: IMAGE_SIZE.height,
-      uri: 'test-map-uri',
-      scale: 1,
+  it('shows a loading state before the map image size resolves', async () => {
+    jest.spyOn(Image, 'getSize').mockImplementation(() => {
+      // Never resolves — simulates the size lookup still in flight.
     });
-    storage.loadLocations.mockResolvedValue([
+    storage.getLocation.mockResolvedValue(
       makeLocation({
-        id: 'loc-placed',
-        name: 'The Docks',
-        mapCoordinates: { x: 0.5, y: 0.5 },
-      }),
-      makeLocation({ id: 'loc-unplaced', name: 'Rust Alley' }),
+        id: 'loc-current',
+        name: 'The Vault',
+        mapImageUri: 'test-map-uri',
+      })
+    );
+
+    const { findByText } = renderMap();
+
+    expect(await findByText('Loading map...')).toBeTruthy();
+  });
+
+  it('renders markers only for pins whose target location still exists', async () => {
+    mockGetSizeResolves();
+    storage.getLocation.mockResolvedValue(
+      makeLocation({
+        id: 'loc-current',
+        name: 'The Vault',
+        mapImageUri: 'test-map-uri',
+        mapPins: [
+          { id: 'pin-1', locationId: 'loc-placed', x: 0.5, y: 0.5 },
+          { id: 'pin-2', locationId: 'loc-deleted', x: 0.2, y: 0.2 },
+        ],
+      })
+    );
+    storage.loadLocations.mockResolvedValue([
+      makeLocation({ id: 'loc-placed', name: 'The Docks' }),
     ]);
 
     const { getByLabelText, queryByLabelText } = renderMap();
@@ -81,19 +121,21 @@ describe('LocationMapScreen', () => {
     expect(queryByLabelText('Rust Alley')).toBeNull();
   });
 
-  it('shows the info card with a "View details" link when a marker is pressed', async () => {
-    jest.spyOn(Image, 'resolveAssetSource').mockReturnValue({
-      width: IMAGE_SIZE.width,
-      height: IMAGE_SIZE.height,
-      uri: 'test-map-uri',
-      scale: 1,
-    });
+  it('shows the info card with "View details" when a marker is pressed', async () => {
+    mockGetSizeResolves();
+    storage.getLocation.mockResolvedValue(
+      makeLocation({
+        id: 'loc-current',
+        name: 'The Vault',
+        mapImageUri: 'test-map-uri',
+        mapPins: [{ id: 'pin-1', locationId: 'loc-1', x: 0.5, y: 0.5 }],
+      })
+    );
     storage.loadLocations.mockResolvedValue([
       makeLocation({
         id: 'loc-1',
         name: 'The Docks',
         description: 'A rundown pier.',
-        mapCoordinates: { x: 0.5, y: 0.5 },
       }),
     ]);
 
@@ -106,19 +148,18 @@ describe('LocationMapScreen', () => {
     expect(await findByText('View details')).toBeTruthy();
   });
 
-  it('navigates to LocationDetails with the location id from the info card', async () => {
-    jest.spyOn(Image, 'resolveAssetSource').mockReturnValue({
-      width: IMAGE_SIZE.width,
-      height: IMAGE_SIZE.height,
-      uri: 'test-map-uri',
-      scale: 1,
-    });
-    storage.loadLocations.mockResolvedValue([
+  it('navigates to LocationDetails with the pinned location id', async () => {
+    mockGetSizeResolves();
+    storage.getLocation.mockResolvedValue(
       makeLocation({
-        id: 'loc-1',
-        name: 'The Docks',
-        mapCoordinates: { x: 0.5, y: 0.5 },
-      }),
+        id: 'loc-current',
+        name: 'The Vault',
+        mapImageUri: 'test-map-uri',
+        mapPins: [{ id: 'pin-1', locationId: 'loc-1', x: 0.5, y: 0.5 }],
+      })
+    );
+    storage.loadLocations.mockResolvedValue([
+      makeLocation({ id: 'loc-1', name: 'The Docks' }),
     ]);
     const nav = installNavigationMock();
 
@@ -134,31 +175,62 @@ describe('LocationMapScreen', () => {
     });
   });
 
-  it('places a location at the long-pressed coordinates via the picker', async () => {
-    jest.spyOn(Image, 'resolveAssetSource').mockReturnValue({
-      width: IMAGE_SIZE.width,
-      height: IMAGE_SIZE.height,
-      uri: 'test-map-uri',
-      scale: 1,
-    });
+  it('shows "View map" only when the pinned location has its own map image, and drills down into it', async () => {
+    mockGetSizeResolves();
+    storage.getLocation.mockResolvedValue(
+      makeLocation({
+        id: 'loc-current',
+        name: 'The Vault',
+        mapImageUri: 'test-map-uri',
+        mapPins: [{ id: 'pin-1', locationId: 'loc-1', x: 0.5, y: 0.5 }],
+      })
+    );
     storage.loadLocations.mockResolvedValue([
-      makeLocation({ id: 'loc-1', name: 'The Docks' }),
-    ]);
-    storage.updateLocation.mockResolvedValue(
       makeLocation({
         id: 'loc-1',
         name: 'The Docks',
-        mapCoordinates: { x: 0.5, y: 0.5 },
-      })
-    );
+        mapImageUri: 'nested-map-uri',
+      }),
+    ]);
+    const nav = installNavigationMock();
 
-    const { findByText } = renderMap();
+    const { getByLabelText, findByText } = renderMap();
 
-    // Let the initial `loadLocations()` from `useFocusEffect` resolve before
-    // long-pressing, so the picker has the location to list.
+    const marker = await waitFor(() => getByLabelText('The Docks'));
+    fireEvent.press(marker);
+
+    fireEvent.press(await findByText('View map'));
+
+    expect(nav.navigate).toHaveBeenCalledWith('LocationMap', {
+      locationId: 'loc-1',
+    });
+  });
+
+  it('places a pin at the long-pressed coordinates via the picker', async () => {
+    mockGetSizeResolves();
+    const current = makeLocation({
+      id: 'loc-current',
+      name: 'The Vault',
+      mapImageUri: 'test-map-uri',
+    });
+    storage.getLocation.mockResolvedValue(current);
+    storage.loadLocations.mockResolvedValue([
+      current,
+      makeLocation({ id: 'loc-1', name: 'The Docks' }),
+    ]);
+    storage.updateLocation.mockResolvedValue({
+      ...current,
+      mapPins: [{ id: 'mock-pin-uuid', locationId: 'loc-1', x: 0.5, y: 0.5 }],
+    });
+
+    const { findByText, queryByText } = renderMap();
+
+    // Let the initial loads and the map image size resolve before
+    // long-pressing, so the picker has the location to list and the
+    // gesture's coordinate math sees the real image dimensions.
+    await waitForMapImageLoaded(queryByText);
     const loadCallsBeforePlacement = () =>
       storage.loadLocations.mock.calls.length;
-    await waitFor(() => expect(loadCallsBeforePlacement()).toBeGreaterThan(0));
     const callsBeforePlacement = loadCallsBeforePlacement();
 
     const longPressStub = getLatestLongPressStub();
@@ -169,57 +241,70 @@ describe('LocationMapScreen', () => {
     fireEvent.press(await findByText('The Docks'));
 
     await waitFor(() => {
-      expect(storage.updateLocation).toHaveBeenCalledWith('loc-1', {
-        mapCoordinates: { x: 0.5, y: 0.5 },
+      expect(storage.updateLocation).toHaveBeenCalledWith('loc-current', {
+        mapPins: [{ id: 'mock-pin-uuid', locationId: 'loc-1', x: 0.5, y: 0.5 }],
       });
     });
-    // Placement reloads the location list so the new marker appears.
+    // Placement reloads the location so the new marker appears.
     await waitFor(() => {
       expect(loadCallsBeforePlacement()).toBeGreaterThan(callsBeforePlacement);
     });
   });
-});
 
-describe('LocationMapScreen — the map is a ruleset asset', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    primeStorageDefaults();
-  });
+  it('excludes the current location itself from the placement picker', async () => {
+    mockGetSizeResolves();
+    const current = makeLocation({
+      id: 'loc-current',
+      name: 'The Vault',
+      mapImageUri: 'test-map-uri',
+    });
+    storage.getLocation.mockResolvedValue(current);
+    storage.loadLocations.mockResolvedValue([
+      current,
+      makeLocation({ id: 'loc-1', name: 'The Docks' }),
+    ]);
 
-  afterEach(() => {
-    resetNavigationMocks();
-  });
+    const { queryByText, queryByLabelText } = renderMap();
 
-  it('renders the image the active ruleset points at', async () => {
-    const resolve = jest.spyOn(Image, 'resolveAssetSource').mockReturnValue({
-      width: IMAGE_SIZE.width,
-      height: IMAGE_SIZE.height,
-      uri: 'swapped-map-uri',
-      scale: 1,
-    } as never);
+    await waitForMapImageLoaded(queryByText);
 
-    const swappedAsset = { uri: 'swapped-map-uri' };
-    const { queryByText } = renderWithRuleset(<LocationMapScreen />, {
-      ruleset: {
-        ...genericRuleset,
-        map: { imageKey: 'realm' },
-      },
-      assets: { realm: swappedAsset },
+    const longPressStub = getLatestLongPressStub();
+    act(() => {
+      longPressStub.callbacks.onStart({ x: 0, y: 0 });
     });
 
-    await waitFor(() => expect(queryByText('Loading map...')).toBeNull());
-    // The screen resolved *this* ruleset's asset, not the bundled Junktown one.
-    expect(resolve).toHaveBeenCalledWith(swappedAsset);
+    await waitFor(() =>
+      expect(queryByLabelText('Place The Docks here')).toBeTruthy()
+    );
+    expect(queryByLabelText('Place The Vault here')).toBeNull();
   });
 
-  it('says so when the ruleset declares no map, rather than spinning', () => {
-    // genericRuleset has no `map` at all, so resolveAsset returns undefined.
-    const { getByText, queryByText } = renderWithRuleset(
-      <LocationMapScreen />,
-      { ruleset: genericRuleset }
-    );
+  it('removes a pin from the info card', async () => {
+    mockGetSizeResolves();
+    const current = makeLocation({
+      id: 'loc-current',
+      name: 'The Vault',
+      mapImageUri: 'test-map-uri',
+      mapPins: [{ id: 'pin-1', locationId: 'loc-1', x: 0.5, y: 0.5 }],
+    });
+    storage.getLocation.mockResolvedValue(current);
+    storage.loadLocations.mockResolvedValue([
+      current,
+      makeLocation({ id: 'loc-1', name: 'The Docks' }),
+    ]);
+    storage.updateLocation.mockResolvedValue({ ...current, mapPins: [] });
 
-    expect(getByText('This ruleset has no map to show.')).toBeTruthy();
-    expect(queryByText('Loading map...')).toBeNull();
+    const { getByLabelText, findByText } = renderMap();
+
+    const marker = await waitFor(() => getByLabelText('The Docks'));
+    fireEvent.press(marker);
+
+    fireEvent.press(await findByText('Remove pin'));
+
+    await waitFor(() => {
+      expect(storage.updateLocation).toHaveBeenCalledWith('loc-current', {
+        mapPins: [],
+      });
+    });
   });
 });
