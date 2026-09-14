@@ -6,7 +6,6 @@ import {
   ScrollView,
   Alert,
   Text,
-  Image,
   Modal,
 } from 'react-native';
 import { GameCharacter, FactionMembership } from '@models/types';
@@ -34,6 +33,7 @@ import {
   Section,
   CollapsibleSection,
   ErrorBoundary,
+  StoredImage,
 } from '@/components';
 import { Picker } from '@react-native-picker/picker';
 import Markdown from 'react-native-markdown-display';
@@ -791,9 +791,9 @@ export const FactionDetailsScreen: React.FC = () => {
               style={styles.imageGallery}
             >
               {factionImageUris.map((uri, index) => (
-                <Image
+                <StoredImage
                   key={index}
-                  source={{ uri }}
+                  uri={uri}
                   style={styles.factionImage}
                 />
               ))}

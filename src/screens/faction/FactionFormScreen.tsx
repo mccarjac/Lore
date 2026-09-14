@@ -6,10 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Image,
   Modal,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { pickAndPersistImage } from '@utils/pickImage';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
@@ -21,7 +20,7 @@ import {
 } from '@utils/characterStorage';
 import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
-import { BaseFormScreen } from '@/components';
+import { BaseFormScreen, StoredImage } from '@/components';
 import { Picker } from '@react-native-picker/picker';
 import { useLabels, useRuleset } from '@/ruleset';
 import {
@@ -413,27 +412,16 @@ export const FactionFormScreen: React.FC = () => {
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Sorry, we need camera roll permissions to make this work!');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
+    const uri = await pickAndPersistImage('factions', {
       aspect: [1, 1],
       quality: 1,
     });
+    if (!uri) return;
 
-    if (!result.canceled) {
-      const newImageUri = result.assets[0].uri;
-      const currentImages = formData.imageUris || [];
-      setFormData({
-        ...formData,
-        imageUris: [...currentImages, newImageUri],
-      });
-    }
+    setFormData({
+      ...formData,
+      imageUris: [...(formData.imageUris || []), uri],
+    });
   };
 
   const removeImage = (index: number) => {
@@ -664,8 +652,8 @@ export const FactionFormScreen: React.FC = () => {
               <View style={styles.imageGrid}>
                 {formData.imageUris.map((uri, index) => (
                   <View key={index} style={styles.imageItemContainer}>
-                    <Image
-                      source={{ uri }}
+                    <StoredImage
+                      uri={uri}
                       style={styles.factionImageThumbnail}
                     />
                     <TouchableOpacity

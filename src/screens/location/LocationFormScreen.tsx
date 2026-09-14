@@ -6,16 +6,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Image,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { pickAndPersistImage } from '@utils/pickImage';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
 import { createLocation, updateLocation } from '@utils/characterStorage';
 import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
-import { BaseFormScreen } from '@/components';
+import { BaseFormScreen, StoredImage } from '@/components';
 
 type LocationFormNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -209,34 +208,16 @@ export const LocationFormScreen: React.FC = () => {
   }, [location]);
 
   const pickImage = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permissionResult.granted) {
-      Alert.alert(
-        'Permission Required',
-        'Permission to access camera roll is required!',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
+    const uri = await pickAndPersistImage('locations', {
       aspect: [4, 3],
       quality: 0.8,
     });
+    if (!uri) return;
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const newImageUri = result.assets[0].uri;
-      const currentImages = formData.imageUris || [];
-      const newImages = [...currentImages, newImageUri];
-      setFormData({
-        ...formData,
-        imageUris: newImages,
-      });
-    }
+    setFormData({
+      ...formData,
+      imageUris: [...(formData.imageUris || []), uri],
+    });
   };
 
   const removeImage = (index: number) => {
@@ -354,8 +335,8 @@ export const LocationFormScreen: React.FC = () => {
               <View style={styles.imageGrid}>
                 {formData.imageUris.map((uri, index) => (
                   <View key={index} style={styles.imageItemContainer}>
-                    <Image
-                      source={{ uri }}
+                    <StoredImage
+                      uri={uri}
                       style={styles.locationImageThumbnail}
                       resizeMode="cover"
                     />

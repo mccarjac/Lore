@@ -634,7 +634,32 @@ key)`, mirroring the `useLabels`/`getLabel` pair, plus `FEATURE_KEYS` as
   Never do `new Date('YYYY-MM-DD')` — it parses as UTC and shifts the day in
   local time zones (this caused a real off-by-one display bug).
 - **Discord messages:** downloaded image URIs are on `DiscordMessage.imageUris`
-  (there is no `images` field).
+  (there is no `images` field), stored as managed references like every other
+  image.
+- **Stored files are managed references, never absolute paths.** Anything a
+  record points at (`imageUris` on characters, factions, locations, events,
+  quests and Discord messages) is a `lore-file://` URI holding a path relative
+  to `FileSystem.documentDirectory` — see `src/utils/fileStore.ts`, which owns
+  the scheme, the on-disk layout (`images/<collection>/`, `discord_images/`)
+  and every helper for it.
+  - **Never hand a stored URI straight to `<Image>` or `FileSystem`.** Render
+    with `<StoredImage uri={…}>` (`src/components/common/StoredImage.tsx`) and
+    read bytes through `resolveFileUri()`. Forgetting resolves to a blank box,
+    not an error.
+  - **The cache directory is never a durable location.** `expo-image-picker`
+    hands back a cache path, and clearing the app cache deletes the file —
+    which is exactly how every image in every record went blank. Copy into
+    managed storage at pick time with `pickAndPersistImage()`
+    (`src/utils/pickImage.ts`); an absolute documents path is no better, since
+    iOS rotates the container uuid on reinstall.
+  - **Copying at pick time orphans files** when a form is abandoned or an image
+    replaced. That is deliberate: `sweepOrphanFiles()` reclaims them from a
+    keep-list built by `migrateStoredImages()` (`characterStorage.ts`). The
+    sweep only runs when _every_ collection was read successfully — a keep-list
+    from a partial read would look like proof that live images are orphans.
+  - `migrateStoredImages()` runs once per app start via
+    `StoredImageMigrationHost` in `LoreApp.tsx`, re-homing pre-managed data and
+    dropping references whose files are genuinely gone.
 - **Bidirectional faction relationships:** creating/updating/deleting a faction
   relationship must keep the reciprocal relationship on the other faction in
   sync, and renaming a faction must update its references on characters and on

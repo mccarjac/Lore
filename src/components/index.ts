@@ -9,6 +9,8 @@ export { Section } from './common/Section';
 export { CollapsibleSection } from './common/CollapsibleSection';
 export { Card } from './common/Card';
 export { InfoButton } from './common/InfoButton';
+export { StoredImage, type StoredImageProps } from './common/StoredImage';
+export { StoredImageMigrationHost } from './common/StoredImageMigrationHost';
 export { SyncConflictModal } from './common/SyncConflictModal';
 export { DataStoreSection } from './common/DataStoreSection';
 export {

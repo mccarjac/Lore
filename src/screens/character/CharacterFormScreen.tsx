@@ -7,10 +7,9 @@ import {
   TouchableOpacity,
   Button,
   Alert,
-  Image,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from 'expo-image-picker';
+import { pickAndPersistImage } from '@utils/pickImage';
 import {
   RouteProp,
   useNavigation,
@@ -43,6 +42,7 @@ import {
   FacetAuthoredEditor,
   FacetMultiSelectField,
   FacetSingleSelectField,
+  StoredImage,
 } from '@/components';
 import { useLabels, useRuleset } from '@/ruleset';
 import {
@@ -663,24 +663,13 @@ export const CharacterFormScreen: React.FC = () => {
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Sorry, we need camera roll permissions to make this work!');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
+    const uri = await pickAndPersistImage('characters', {
       aspect: [1, 1],
       quality: 1,
     });
+    if (!uri) return;
 
-    if (!result.canceled) {
-      const newImageUri = result.assets[0].uri;
-      const currentImages = form.imageUris || [];
-      handleChange('imageUris', [...currentImages, newImageUri]);
-    }
+    handleChange('imageUris', [...(form.imageUris || []), uri]);
   };
 
   const removeImage = (index: number) => {
@@ -756,8 +745,8 @@ export const CharacterFormScreen: React.FC = () => {
             <View style={styles.imageGrid}>
               {form.imageUris.map((uri, index) => (
                 <View key={index} style={styles.imageItemContainer}>
-                  <Image
-                    source={{ uri }}
+                  <StoredImage
+                    uri={uri}
                     style={styles.characterImageThumbnail}
                   />
                   <TouchableOpacity

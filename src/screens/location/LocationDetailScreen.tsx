@@ -6,7 +6,6 @@ import {
   ScrollView,
   Alert,
   Text,
-  Image,
 } from 'react-native';
 import { GameCharacter, GameLocation } from '@models/types';
 import {
@@ -24,7 +23,12 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
 import { useTheme } from '@/styles/theme';
 import { useCommonStyles } from '@/styles/commonStyles';
-import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
+import {
+  BaseDetailScreen,
+  CollapsibleSection,
+  Section,
+  StoredImage,
+} from '@/components';
 import { useRuleset } from '@/ruleset';
 import { getPrimaryFacetLabel } from '@/ruleset/facets';
 
@@ -279,8 +283,8 @@ export const LocationDetailsScreen: React.FC = () => {
           >
             {location.imageUris.map((uri, index) => (
               <View key={index} style={styles.imageContainer}>
-                <Image
-                  source={{ uri }}
+                <StoredImage
+                  uri={uri}
                   style={styles.locationImage}
                   resizeMode="cover"
                 />

@@ -9,8 +9,8 @@ import {
   Alert,
   Modal,
   ScrollView,
-  Image,
 } from 'react-native';
+import { StoredImage } from '@/components';
 import { useFocusEffect } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
 import { colors as themeColors } from '@/styles/theme';
@@ -376,9 +376,9 @@ export const DiscordMessagesScreen: React.FC = () => {
                     <Text style={styles.modalLabel}>Images:</Text>
                     <ScrollView horizontal style={styles.imageScroll}>
                       {selectedMessage.imageUris.map((uri, index) => (
-                        <Image
+                        <StoredImage
                           key={index}
-                          source={{ uri }}
+                          uri={uri}
                           style={styles.thumbnailImage}
                           resizeMode="cover"
                         />

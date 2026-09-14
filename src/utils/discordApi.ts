@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { managedRoot, toManagedUri } from './fileStore';
 import { DiscordMessage, DiscordAttachment } from '@models/types';
 import {
   getDiscordConfig,
@@ -232,25 +233,31 @@ const downloadDiscordImage = async (
   url: string,
   filename: string
 ): Promise<string | null> => {
+  if (!managedRoot()) {
+    // Web: no filesystem to download into. Previously this fell back to the
+    // cache directory, which is not storage — the attachment's own URL is a
+    // more honest thing for the message to keep.
+    return null;
+  }
+
   try {
     const timestamp = Date.now();
     const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const localUri =
-      (FileSystem.documentDirectory || FileSystem.cacheDirectory || '') +
-      `discord_images/${timestamp}_${safeFilename}`;
+    const relativePath = `discord_images/${timestamp}_${safeFilename}`;
+    const localUri = managedRoot() + relativePath;
 
     // Ensure directory exists
-    const dirUri =
-      (FileSystem.documentDirectory || FileSystem.cacheDirectory || '') +
-      'discord_images/';
+    const dirUri = `${managedRoot()}discord_images/`;
     const dirInfo = await FileSystem.getInfoAsync(dirUri);
     if (!dirInfo.exists) {
       await FileSystem.makeDirectoryAsync(dirUri, { intermediates: true });
     }
 
     // Download the image
-    const downloadResult = await FileSystem.downloadAsync(url, localUri);
-    return downloadResult.uri;
+    await FileSystem.downloadAsync(url, localUri);
+    // A managed reference rather than `downloadResult.uri`: the absolute path
+    // stops naming this file the moment the OS moves the app container.
+    return toManagedUri(relativePath);
   } catch (error) {
     console.error('Failed to download Discord image:', error);
     return null;

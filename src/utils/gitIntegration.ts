@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import * as FileSystem from 'expo-file-system/legacy';
+import { isLocalFileUri, resolveFileUri, toManagedUri } from './fileStore';
 import { Alert } from 'react-native';
 import { Buffer } from 'buffer';
 import { exportDataset, applyMergedDataset } from './characterStorage';
@@ -37,6 +38,17 @@ export const DATA_REPO_BRANCH =
 
 /** `owner/name`, for display. */
 export const DATA_REPO_SLUG = `${DATA_REPO_OWNER}/${DATA_REPO_NAME}`;
+
+/**
+ * An absolute `file://` path for a stored reference, whatever shape it is in.
+ *
+ * A managed URI resolves against the current documents container; a legacy
+ * bare path (`/var/...`, pre-migration data) only needs the scheme.
+ */
+const localReadPath = (uri: string): string => {
+  const resolved = resolveFileUri(uri);
+  return resolved.startsWith('/') ? `file://${resolved}` : resolved;
+};
 
 /**
  * Extract image data from a data URI
@@ -108,13 +120,13 @@ const collectImageFiles = async (
               });
               images.push(filename);
             }
-          } else if (uri.startsWith('file://') || uri.startsWith('/')) {
+          } else if (isLocalFileUri(uri)) {
             // Handle file URI - read file and convert to base64
             try {
-              const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
-              const base64Data = await FileSystem.readAsStringAsync(fileUri, {
-                encoding: FileSystem.EncodingType.Base64,
-              });
+              const base64Data = await FileSystem.readAsStringAsync(
+                localReadPath(uri),
+                { encoding: FileSystem.EncodingType.Base64 }
+              );
               const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
               const filename = `images/${entityType}/${entityId}_${i}.${extension}`;
               imageFiles.push({
@@ -147,12 +159,12 @@ const collectImageFiles = async (
           });
           images.push(filename);
         }
-      } else if (uri.startsWith('file://') || uri.startsWith('/')) {
+      } else if (isLocalFileUri(uri)) {
         try {
-          const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
-          const base64Data = await FileSystem.readAsStringAsync(fileUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
+          const base64Data = await FileSystem.readAsStringAsync(
+            localReadPath(uri),
+            { encoding: FileSystem.EncodingType.Base64 }
+          );
           const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
           const filename = `images/${entityType}/${entityId}.${extension}`;
           imageFiles.push({
@@ -783,6 +795,12 @@ export const importFromGitHub = async (): Promise<{
               const filename = imagePath.split('/').pop() || 'image.jpg';
               const entityType = imagePath.split('/')[1]; // characters, locations, events, or factions
               const localPath = permanentImageDir + entityType + '/' + filename;
+              // What gets *stored* is the managed reference, not `localPath`:
+              // the documents container's uuid changes on reinstall, so an
+              // absolute path stops naming this file (see utils/fileStore.ts).
+              const storedUri = toManagedUri(
+                `images/${entityType}/${filename}`
+              );
 
               // Check if image already exists locally
               const localFileInfo = await FileSystem.getInfoAsync(localPath);
@@ -793,7 +811,7 @@ export const importFromGitHub = async (): Promise<{
                 localFileInfo.size === fileInfo.size
               ) {
                 // Image already exists with the same size - skip download
-                localPaths.push(localPath);
+                localPaths.push(storedUri);
                 console.log(
                   `[GitHub Import] Image already exists (${fileInfo.size} bytes): ${imagePath} -> ${localPath}`
                 );
@@ -813,7 +831,7 @@ export const importFromGitHub = async (): Promise<{
                   encoding: FileSystem.EncodingType.Base64,
                 });
 
-                localPaths.push(localPath);
+                localPaths.push(storedUri);
                 console.log(
                   `[GitHub Import] Successfully downloaded image (${fileInfo.size} bytes): ${imagePath} -> ${localPath}`
                 );

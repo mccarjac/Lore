@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
   Alert,
 } from 'react-native';
@@ -39,6 +38,7 @@ import {
   CollapsibleSection,
   FacetCategoryScores,
   FacetDetailSection,
+  StoredImage,
 } from '@/components';
 
 type CharacterDetailRouteProp = RouteProp<
@@ -634,7 +634,7 @@ export const CharacterDetailScreen: React.FC = () => {
           >
             {character.imageUris.map((uri, index) => (
               <View key={index} style={styles.imageContainer}>
-                <Image source={{ uri }} style={styles.characterImage} />
+                <StoredImage uri={uri} style={styles.characterImage} />
               </View>
             ))}
           </ScrollView>

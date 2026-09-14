@@ -12,7 +12,17 @@ import {
 } from '@models/types';
 import { v4 as uuidv4 } from 'uuid';
 import { SafeAsyncStorageJSONParser } from './safeAsyncStorageJSONParser';
-import { exportDiscordDataset, importDiscordDataset } from './discordStorage';
+import {
+  exportDiscordDataset,
+  importDiscordDataset,
+  migrateDiscordMessageImages,
+} from './discordStorage';
+import { sweepOrphanFiles } from './fileStore';
+import {
+  collectManagedUris,
+  migrateRecordImages,
+  type ImageBearingRecord,
+} from './imageMigration';
 import { sortDatasetDeterministically } from './datasetSorting';
 import { runExclusive } from './storageQueue';
 import { notifyLocalDataChanged } from './dataChangeSignal';
@@ -2007,5 +2017,107 @@ export const migrateRulesetFields = async (): Promise<void> => {
     });
   } catch (error) {
     console.error('Error migrating faction ruleset fields:', error);
+  }
+};
+
+/**
+ * Re-home every stored image reference onto managed storage, then reclaim the
+ * files nothing points at any more.
+ *
+ * This is the repair half of the cache-clear fix: `pickAndPersistImage()` stops
+ * new records from ever holding a cache path, and this stops old ones from
+ * keeping one. See `imageMigration.ts` for what happens to each reference.
+ *
+ * The five dataset keys are locked **sequentially, never nested** — the same
+ * concurrency rule `migrateRulesetFields()` above follows. Each is written only
+ * when migration actually changed something, so a steady-state app pays reads
+ * and no writes.
+ *
+ * The sweep is deliberately gated on every collection having been read without
+ * error. A keep-list assembled from a partial read would look like proof that
+ * live images are orphans, and the sweep would delete them — exactly the bug
+ * this function exists to fix, inflicted by the fix.
+ */
+export const migrateStoredImages = async (): Promise<void> => {
+  // Fold the deprecated single `imageUri` into `imageUris` first, so a record
+  // that never had the plural field still gets its image re-homed rather than
+  // silently skipped. Both lock the same keys, so this runs to completion
+  // *before* the loop below rather than nested inside it.
+  await migrateImageUris();
+
+  const referenced = new Set<string>();
+  let complete = true;
+
+  const migrateCollection = async <T>(
+    key: string,
+    collection: string,
+    read: (dataset: T | null) => ImageBearingRecord[] | undefined,
+    write: (records: ImageBearingRecord[]) => Promise<void>
+  ): Promise<void> => {
+    try {
+      await runExclusive(key, async () => {
+        const dataset = await SafeAsyncStorageJSONParser.getItem<T>(key);
+        const records = read(dataset);
+        if (!records?.length) return;
+
+        if (await migrateRecordImages(records, collection)) {
+          await write(records);
+        }
+        collectManagedUris(records, referenced);
+      });
+    } catch (error) {
+      complete = false;
+      console.error(`Error migrating ${collection} images:`, error);
+    }
+  };
+
+  await migrateCollection<CharacterDataset>(
+    STORAGE_KEY,
+    'characters',
+    dataset => dataset?.characters,
+    records => saveCharacters(records as GameCharacter[])
+  );
+  await migrateCollection<FactionDataset>(
+    FACTION_STORAGE_KEY,
+    'factions',
+    dataset => dataset?.factions,
+    records => saveFactions(records as StoredFaction[])
+  );
+  await migrateCollection<LocationDataset>(
+    LOCATION_STORAGE_KEY,
+    'locations',
+    dataset => dataset?.locations,
+    records => saveLocations(records as GameLocation[])
+  );
+  await migrateCollection<EventDataset>(
+    EVENT_STORAGE_KEY,
+    'events',
+    dataset => dataset?.events,
+    records => saveEvents(records as GameEvent[])
+  );
+  await migrateCollection<QuestDataset>(
+    QUEST_STORAGE_KEY,
+    'quests',
+    dataset => dataset?.quests,
+    records => saveQuests(records as GameQuest[])
+  );
+
+  try {
+    for (const uri of await migrateDiscordMessageImages()) {
+      referenced.add(uri);
+    }
+  } catch (error) {
+    complete = false;
+    console.error('Error migrating discord images:', error);
+  }
+
+  if (!complete) {
+    return;
+  }
+
+  try {
+    await sweepOrphanFiles(referenced);
+  } catch (error) {
+    console.error('Error sweeping orphaned image files:', error);
   }
 };

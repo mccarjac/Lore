@@ -420,8 +420,10 @@ describe('gitIntegration', () => {
       expect(result.success).toBe(true);
       expect(client.rest.git.getBlob).not.toHaveBeenCalled();
       const parsed = JSON.parse(result.data as string);
+      // Stored as a managed reference even though the bytes are read back
+      // from the absolute path below — see utils/fileStore.ts.
       expect(parsed.characters[0].imageUris[0]).toBe(
-        'file://mock-document-directory/images/characters/c1_0.jpg'
+        'lore-file://images/characters/c1_0.jpg'
       );
     });
 
