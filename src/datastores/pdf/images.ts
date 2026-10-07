@@ -6,10 +6,11 @@
  * URI. A `file://` path would resolve against the print WebView rather than the
  * app, and a remote URL would race the snapshot.
  *
- * URI classification is shared with the local JSON store rather than repeated:
- * `extractImageData`, `isLocalFileUri` and `extensionOf` all come from
- * `json/fileArchive.ts`, which is where the same three shapes are already
- * distinguished on the way into a `.zip`.
+ * URI classification is shared rather than repeated: `extractImageData` comes
+ * from `json/fileArchive.ts`, and `isLocalFileUri`/`extensionOf`/
+ * `resolveFileUri` from `utils/fileStore.ts`. A stored reference is a
+ * `lore-file://` managed URI, so it has to be resolved to an absolute path
+ * before anything reads bytes off disk.
  *
  * **Nothing here fails an export.** An unreadable file, a dead URL, an image
  * too large to embed — each is simply absent from the returned map, and the
@@ -18,11 +19,8 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import {
-  extensionOf,
-  extractImageData,
-  isLocalFileUri,
-} from '../json/fileArchive';
+import { extractImageData } from '../json/fileArchive';
+import { extensionOf, isLocalFileUri, resolveFileUri } from '@utils/fileStore';
 import {
   collectImageUris,
   type CampaignDataset,
@@ -150,7 +148,7 @@ export const resolveDatasetImages = async (
         // dropped here instead of producing a broken <img> in the document.
         dataUri = extractImageData(uri) ? uri : null;
       } else if (isLocalFileUri(uri)) {
-        dataUri = await readLocalImage(uri, uri);
+        dataUri = await readLocalImage(resolveFileUri(uri), uri);
       } else if (isRemoteUri(uri)) {
         dataUri = await readRemoteImage(uri);
       }

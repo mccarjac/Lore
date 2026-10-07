@@ -17,6 +17,12 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
+import {
+  extensionOf,
+  isLocalFileUri,
+  resolveFileUri,
+  toManagedUri,
+} from '@utils/fileStore';
 
 /** Collections whose records carry images, in archive-path order. */
 export const IMAGE_COLLECTIONS = [
@@ -76,15 +82,11 @@ export const extractImageData = (
 };
 
 /**
- * Exported because the PDF store classifies the same three URI shapes on its
- * way to `data:` URIs (#28). One definition of "is this ours to read?" rather
- * than two that drift.
+ * Re-exported because the PDF store classifies the same URI shapes on its way
+ * to `data:` URIs (#28). Both now live in `utils/fileStore.ts`, which owns what
+ * a stored reference means; this module only consumes that definition.
  */
-export const isLocalFileUri = (uri: string): boolean =>
-  uri.startsWith('file://') || uri.startsWith('/');
-
-export const extensionOf = (uri: string): string =>
-  uri.split('.').pop()?.toLowerCase() || 'jpg';
+export { extensionOf, isLocalFileUri };
 
 /**
  * Copy one image into the staging directory, returning its archive-relative
@@ -114,7 +116,10 @@ const stageImage = async (
   if (isLocalFileUri(uri)) {
     try {
       const filename = `${archivePath}.${extensionOf(uri)}`;
-      await FileSystem.copyAsync({ from: uri, to: stagingDir + filename });
+      await FileSystem.copyAsync({
+        from: resolveFileUri(uri),
+        to: stagingDir + filename,
+      });
       return filename;
     } catch {
       // Image file not accessible — the dataset is still worth exporting.
@@ -336,12 +341,17 @@ export const restoreImagesFromArchive = async (
     const key = match[1];
     const index = match[2] ? parseInt(match[2], 10) : 0;
 
-    const permanentPath = `${permanentImageDir}${collection}/${filename}`;
-    await FileSystem.copyAsync({ from: file.path, to: permanentPath });
+    const relativePath = `images/${collection}/${filename}`;
+    await FileSystem.copyAsync({
+      from: file.path,
+      to: `${permanentImageDir}${collection}/${filename}`,
+    });
 
     restored[collection] ??= {};
     restored[collection][key] ??= {};
-    restored[collection][key][index] = permanentPath;
+    // A managed reference, not the absolute path: the documents container's
+    // uuid changes on reinstall, and a restored archive has to outlive that.
+    restored[collection][key][index] = toManagedUri(relativePath);
   }
 
   for (const [collection, byKey] of Object.entries(restored)) {

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { GameEvent } from '@models/types';
 import {
   loadEvents,
@@ -22,6 +22,7 @@ import {
   ActiveFiltersBar,
   useEntitySearch,
   type FilterFieldConfig,
+  StoredImage,
 } from '@/components';
 import { formatEventDateShort, parseDateString } from '@utils/dateUtils';
 
@@ -290,10 +291,7 @@ export const EventsTimelineScreen: React.FC = () => {
           </Text>
         </View>
         {item.imageUris && item.imageUris.length > 0 && (
-          <Image
-            source={{ uri: item.imageUris[0] }}
-            style={styles.eventThumbnail}
-          />
+          <StoredImage uri={item.imageUris[0]} style={styles.eventThumbnail} />
         )}
       </View>
 

@@ -7,7 +7,7 @@ import {
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ErrorBoundary } from '@/components';
+import { ErrorBoundary, StoredImageMigrationHost } from '@/components';
 import { RulesetProvider } from '@/ruleset';
 import { AppNavigator } from '@/navigation/AppNavigator';
 import { AutoSyncHost } from '@/datastores/autoSync/AutoSyncHost';
@@ -70,13 +70,15 @@ export const LoreApp: React.FC<LoreAppProps> = ({
   <ErrorBoundary>
     <RulesetProvider ruleset={ruleset} assets={assets}>
       <AutoSyncHost>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={appStyles.root}>
-            <NavigationContainer theme={theme}>
-              <AppNavigator />
-            </NavigationContainer>
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
+        <StoredImageMigrationHost>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={appStyles.root}>
+              <NavigationContainer theme={theme}>
+                <AppNavigator />
+              </NavigationContainer>
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </StoredImageMigrationHost>
       </AutoSyncHost>
     </RulesetProvider>
   </ErrorBoundary>

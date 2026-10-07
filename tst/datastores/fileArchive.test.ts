@@ -196,13 +196,14 @@ describe('fileArchive', () => {
       // `_1` is listed first on disk; the restored order comes from the index
       // in the filename, not from readDirectoryAsync's ordering.
       expect(dataset.characters[0].imageUris).toEqual([
-        'file://mock-document-directory/images/characters/char-1_0.png',
-        'file://mock-document-directory/images/characters/char-1_1.png',
+        'lore-file://images/characters/char-1_0.png',
+        'lore-file://images/characters/char-1_1.png',
       ]);
-      // Restored as file URIs, never base64: a dataset that inlined every
-      // image would be re-serialized into storage on every write.
+      // Restored as managed references, never base64: a dataset that inlined
+      // every image would be re-serialized into storage on every write, and an
+      // absolute path would not survive the next reinstall.
       expect(dataset.factions[0].imageUris).toEqual([
-        'file://mock-document-directory/images/factions/The_Rust_Kings.png',
+        'lore-file://images/factions/The_Rust_Kings.png',
       ]);
     });
 

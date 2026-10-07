@@ -1,12 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  Image,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import {
   useNavigation,
   useRoute,
@@ -24,7 +17,12 @@ import {
 } from '@utils/characterStorage';
 import { GameCharacter, GameEvent, QuestStatus } from '@models/types';
 import { useTheme } from '@/styles/theme';
-import { BaseDetailScreen, Section, CollapsibleSection } from '@/components';
+import {
+  BaseDetailScreen,
+  CollapsibleSection,
+  Section,
+  StoredImage,
+} from '@/components';
 import Markdown from 'react-native-markdown-display';
 import { formatEventDate } from '@utils/dateUtils';
 import { useFeature, useRuleset } from '@/ruleset';
@@ -375,7 +373,7 @@ export const EventsDetailScreen: React.FC = () => {
         <View style={styles.imageGallery}>
           {event.imageUris.map((uri, index) => (
             <View key={index} style={styles.imageContainer}>
-              <Image source={{ uri }} style={styles.eventImage} />
+              <StoredImage uri={uri} style={styles.eventImage} />
             </View>
           ))}
         </View>

@@ -8,6 +8,7 @@ import {
 } from '@models/types';
 import { SafeAsyncStorageJSONParser } from './safeAsyncStorageJSONParser';
 import { runExclusive } from './storageQueue';
+import { collectManagedUris, migrateRecordImages } from './imageMigration';
 
 const DISCORD_CONFIG_KEY = 'gameCharacterManager_discord_config';
 const DISCORD_MAPPINGS_KEY = 'gameCharacterManager_discord_mappings';
@@ -724,3 +725,31 @@ export const importDiscordDataset = async (
     });
   }
 };
+
+/**
+ * Rewrite stored message images onto managed URIs, dropping the ones whose
+ * files a cache clear took. Returns the managed URIs still referenced, for the
+ * orphan sweep's keep-list.
+ *
+ * Lives here rather than with the rest of `migrateStoredImages()` because
+ * `DISCORD_MESSAGES_KEY` is this module's to lock — the same reason every
+ * other mutator of it is a function here.
+ */
+export const migrateDiscordMessageImages = async (): Promise<Set<string>> =>
+  runExclusive(DISCORD_MESSAGES_KEY, async () => {
+    const referenced = new Set<string>();
+    const messages =
+      await SafeAsyncStorageJSONParser.getItem<DiscordMessage[]>(
+        DISCORD_MESSAGES_KEY
+      );
+    if (!messages?.length) {
+      return referenced;
+    }
+
+    const changed = await migrateRecordImages(messages, 'discord');
+    if (changed) {
+      await SafeAsyncStorageJSONParser.setItem(DISCORD_MESSAGES_KEY, messages);
+    }
+    collectManagedUris(messages, referenced);
+    return referenced;
+  });

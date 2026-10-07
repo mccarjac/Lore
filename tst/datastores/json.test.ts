@@ -216,7 +216,7 @@ describe('jsonDataStore', () => {
         SafeAsyncStorageJSONParser.setItem as jest.Mock
       ).mock.calls.find(c => c[0] === 'gameCharacterManager')?.[1];
       expect(saved.characters[0].imageUris).toEqual([
-        'file://mock-document-directory/images/characters/char-1_0.png',
+        'lore-file://images/characters/char-1_0.png',
       ]);
       expect(FileSystem.deleteAsync).toHaveBeenCalledWith(
         expect.stringContaining('import_temp_'),

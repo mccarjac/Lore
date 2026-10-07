@@ -6,9 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Image,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { pickAndPersistImage } from '@utils/pickImage';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/navigation/types';
@@ -28,7 +27,7 @@ import {
   GameQuest,
   CertaintyLevel,
 } from '@models/types';
-import { BaseFormScreen } from '@/components';
+import { BaseFormScreen, StoredImage } from '@/components';
 import { useFeature } from '@/ruleset';
 
 type EventsFormNavigationProp = StackNavigationProp<
@@ -296,34 +295,16 @@ export const EventsFormScreen: React.FC = () => {
   }, [event]);
 
   const pickImage = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permissionResult.granted) {
-      Alert.alert(
-        'Permission Required',
-        'Permission to access camera roll is required!',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
+    const uri = await pickAndPersistImage('events', {
       aspect: [4, 3],
       quality: 0.8,
     });
+    if (!uri) return;
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const newImageUri = result.assets[0].uri;
-      const currentImages = formData.imageUris || [];
-      const newImages = [...currentImages, newImageUri];
-      setFormData({
-        ...formData,
-        imageUris: newImages,
-      });
-    }
+    setFormData({
+      ...formData,
+      imageUris: [...(formData.imageUris || []), uri],
+    });
   };
 
   const removeImage = (index: number) => {
@@ -659,7 +640,7 @@ export const EventsFormScreen: React.FC = () => {
             <View style={styles.imageGrid}>
               {formData.imageUris.map((uri, index) => (
                 <View key={index} style={styles.imageItemContainer}>
-                  <Image source={{ uri }} style={styles.imageThumbnail} />
+                  <StoredImage uri={uri} style={styles.imageThumbnail} />
                   <TouchableOpacity
                     style={styles.removeImageIconButton}
                     onPress={() => removeImage(index)}
